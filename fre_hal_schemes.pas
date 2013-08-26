@@ -262,7 +262,7 @@ type
 
   { TFRE_DB_Site_Captive_Extension }
 
-  TFRE_DB_Site_Captive_Extension = class (TFRE_DB_ObjectEx)
+  TFRE_DB_Site_Captive_Extension = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
   end;
@@ -272,7 +272,7 @@ type
 
   { TFRE_DB_Endpoint }
 
-  TFRE_DB_Endpoint = class (TFRE_DB_ObjectEx)
+  TFRE_DB_Endpoint = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -292,7 +292,7 @@ type
 
   { TFRE_DB_Accesspoint }
 
-  TFRE_DB_Accesspoint = class (TFRE_DB_Endpoint)
+  TFRE_DB_Accesspoint = class(TFRE_DB_Endpoint)
   private
     function  HasAnotherAP        (const site_id:TGUID)  : boolean;
   protected
@@ -307,7 +307,7 @@ type
 
   { TFRE_DB_AP_Linksys }
 
-  TFRE_DB_AP_Linksys = class (TFRE_DB_Accesspoint)
+  TFRE_DB_AP_Linksys = class(TFRE_DB_Accesspoint)
   private
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
@@ -318,59 +318,65 @@ type
 
   { TFRE_DB_AP_Linksys_E1000 }
 
-  TFRE_DB_AP_Linksys_E1000 = class (TFRE_DB_AP_Linksys)
+  TFRE_DB_AP_Linksys_E1000 = class(TFRE_DB_AP_Linksys)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
   end;
 
   { TFRE_DB_AP_Linksys_E1200 }
 
-  TFRE_DB_AP_Linksys_E1200 = class (TFRE_DB_AP_Linksys)
+  TFRE_DB_AP_Linksys_E1200 = class(TFRE_DB_AP_Linksys)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
   end;
 
   { TFRE_DB_AP_Linksys_E1200V2 }
 
-  TFRE_DB_AP_Linksys_E1200V2 = class (TFRE_DB_AP_Linksys_E1200)
+  TFRE_DB_AP_Linksys_E1200V2 = class(TFRE_DB_AP_Linksys_E1200)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
   end;
 
   { TFRE_DB_AP_Lancom }
 
-  TFRE_DB_AP_Lancom = class (TFRE_DB_Accesspoint)
+  TFRE_DB_AP_Lancom = class(TFRE_DB_Accesspoint)
   protected
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
   end;
 
   { TFRE_DB_AP_Lancom_IAP321 }
 
-  TFRE_DB_AP_Lancom_IAP321 = class (TFRE_DB_AP_Lancom)
+  TFRE_DB_AP_Lancom_IAP321 = class(TFRE_DB_AP_Lancom)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
     function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
   end;
 
   { TFRE_DB_AP_Lancom_OAP321 }
 
-  TFRE_DB_AP_Lancom_OAP321 = class (TFRE_DB_AP_Lancom)
+  TFRE_DB_AP_Lancom_OAP321 = class(TFRE_DB_AP_Lancom)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
     function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
   end;
 
   { TFRE_DB_Monitoring_Status }
 
-  TFRE_DB_Monitoring_Status = class (TFRE_DB_ObjectEx)
+  TFRE_DB_Monitoring_Status = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
   published
@@ -382,7 +388,7 @@ type
 
   { TFRE_DB_CMS_PAGE }
 
-  TFRE_DB_CMS_PAGE = class (TFRE_DB_ObjectEx)
+  TFRE_DB_CMS_PAGE = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -405,7 +411,7 @@ type
 
   { TFRE_DB_MobileDevice }
 
-  TFRE_DB_MobileDevice = class (TFRE_DB_ObjectEx)
+  TFRE_DB_MobileDevice = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -417,7 +423,7 @@ type
 
   { TFRE_DB_Network }
 
-  TFRE_DB_Network = class (TFRE_DB_ObjectEx)
+  TFRE_DB_Network = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -431,7 +437,7 @@ type
 
   { TFRE_DB_WifiNetwork }
 
-  TFRE_DB_WifiNetwork = class (TFRE_DB_Network)
+  TFRE_DB_WifiNetwork = class(TFRE_DB_Network)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -441,14 +447,15 @@ type
 
   { TFRE_DB_OpenWifiNetwork }
 
-  TFRE_DB_OpenWifiNetwork = class (TFRE_DB_WifiNetwork)
+  TFRE_DB_OpenWifiNetwork = class(TFRE_DB_WifiNetwork)
   protected
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
   end;
 
   { TFRE_DB_WPA2Network }
 
-  TFRE_DB_WPA2Network = class (TFRE_DB_WifiNetwork)
+  TFRE_DB_WPA2Network = class(TFRE_DB_WifiNetwork)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -457,7 +464,7 @@ type
 
   { TFRE_DB_RadiusNetwork }
 
-  TFRE_DB_RadiusNetwork = class (TFRE_DB_WifiNetwork)
+  TFRE_DB_RadiusNetwork = class(TFRE_DB_WifiNetwork)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -467,7 +474,7 @@ type
 
   { TFRE_DB_CA }
 
-  TFRE_DB_CA = class (TFRE_DB_Service)
+  TFRE_DB_CA = class(TFRE_DB_Service)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -480,7 +487,7 @@ type
 
   { TFRE_DB_Certificate }
 
-  TFRE_DB_Certificate = class (TFRE_DB_ObjectEx)
+  TFRE_DB_Certificate = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -491,7 +498,7 @@ type
 
   { TFRE_DB_DHCP }
 
-  TFRE_DB_DHCP = class (TFRE_DB_Service)
+  TFRE_DB_DHCP = class(TFRE_DB_Service)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -505,7 +512,7 @@ type
 
   { TFRE_DB_DHCP_Subnet }
 
-  TFRE_DB_DHCP_Subnet = class (TFRE_DB_ObjectEx)
+  TFRE_DB_DHCP_Subnet = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -516,7 +523,7 @@ type
 
   { TFRE_DB_DHCP_Fixed }
 
-  TFRE_DB_DHCP_Fixed = class (TFRE_DB_ObjectEx)
+  TFRE_DB_DHCP_Fixed = class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -527,9 +534,10 @@ type
 
   { TFRE_DB_VPN }
 
-  TFRE_DB_VPN = class (TFRE_DB_Service)
+  TFRE_DB_VPN = class(TFRE_DB_Service)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION); override;
   published
     function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
     function IMI_Content(const input:IFRE_DB_Object):IFRE_DB_Object;
@@ -537,9 +545,10 @@ type
 
   { TFRE_DB_Radius }
 
-  TFRE_DB_Radius = class (TFRE_DB_Service)
+  TFRE_DB_Radius = class(TFRE_DB_Service)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION); override;
   published
     function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
     function IMI_Content    (const input:IFRE_DB_Object):IFRE_DB_Object;
@@ -547,9 +556,10 @@ type
 
   { TFRE_DB_Captiveportal }
 
-  TFRE_DB_Captiveportal = class (TFRE_DB_Service)
+  TFRE_DB_Captiveportal = class(TFRE_DB_Service)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION); override;
   published
     function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
     function IMI_Content    (const input:IFRE_DB_Object):IFRE_DB_Object;
@@ -557,7 +567,7 @@ type
 
   { TFRE_DB_Routing }
 
-  TFRE_DB_Routing = class (TFRE_DB_Service)
+  TFRE_DB_Routing = class(TFRE_DB_Service)
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
@@ -697,7 +707,7 @@ implementation
   writeln (result);
  end;
 
- function CheckClass (const new_net:string) : boolean;
+ function CheckClass(const new_net:string) : boolean;
  var
      mask       : string;
  begin
@@ -757,6 +767,10 @@ implementation
 
 { TFRE_DB_OpenWifiNetwork }
 
+class procedure TFRE_DB_OpenWifiNetwork.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
+
 class procedure TFRE_DB_OpenWifiNetwork.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
@@ -789,6 +803,10 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_AP_LANCOM');
 end;
 
+class procedure TFRE_DB_AP_Lancom_OAP321.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
+
 function TFRE_DB_AP_Lancom_OAP321.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
 begin
   result := GFRE_DBI.NewObject;
@@ -803,6 +821,10 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_AP_LANCOM');
 end;
 
+class procedure TFRE_DB_AP_Lancom_IAP321.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
+
 function TFRE_DB_AP_Lancom_IAP321.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
 begin
   result := GFRE_DBI.NewObject;
@@ -810,6 +832,10 @@ begin
 end;
 
 { TFRE_DB_AP_Lancom }
+
+class procedure TFRE_DB_AP_Lancom.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
 
 class procedure TFRE_DB_AP_Lancom.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var group : IFRE_DB_InputGroupSchemeDefinition;
@@ -826,6 +852,10 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_AP_LINKSYS_E1200');
 end;
 
+class procedure TFRE_DB_AP_Linksys_E1200V2.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
+
 function TFRE_DB_AP_Linksys_E1200V2.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
 begin
   result := GFRE_DBI.NewObject;
@@ -840,6 +870,10 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_AP_LINKSYS');
 end;
 
+class procedure TFRE_DB_AP_Linksys_E1200.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
+
 function TFRE_DB_AP_Linksys_E1200.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
 begin
   result := GFRE_DBI.NewObject;
@@ -852,6 +886,10 @@ class procedure TFRE_DB_AP_Linksys_E1000.RegisterSystemScheme(const scheme: IFRE
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName('TFRE_DB_AP_LINKSYS');
+end;
+
+class procedure TFRE_DB_AP_Linksys_E1000.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
 end;
 
 
@@ -882,7 +920,6 @@ end;
 
 class procedure TFRE_DB_AP_Linksys.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_AP_LINKSYS_options_group','Device Options'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_AP_LINKSYS_routing','Routing'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_AP_LINKSYS_vpn_cert','VPN Certificate'));
@@ -930,7 +967,6 @@ end;
 
 class procedure TFRE_DB_Accesspoint.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_main_group','Accesspoint Configuration'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_serial','Serialnumber'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_exip','IP'));
@@ -1114,6 +1150,10 @@ begin
   scheme.AddSchemeField('vpn_caid',fdbft_ObjLink);
 end;
 
+class procedure TFRE_DB_Captiveportal.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
+
 function TFRE_DB_Captiveportal.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
 begin
 
@@ -1189,7 +1229,6 @@ end;
 
 class procedure TFRE_DB_CMS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_main_group','CMS'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_baseurl','Base URL'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_execeptions','Url Exceptions'));
@@ -1243,7 +1282,6 @@ end;
 
 class procedure TFRE_DB_CMS_ADPAGE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_starttime','Start Time'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_endtime','End Time'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_startdaily','Start Daily'));
@@ -1267,7 +1305,6 @@ end;
 
 class procedure TFRE_DB_WPA2Network.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WPA2NETWORK_main_group','WPA2 Wifi Network'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WPA2NETWORK_wpa2psk','WPA2PSK'));
 end;
@@ -1344,7 +1381,6 @@ end;
 
 class procedure TFRE_DB_Routing.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ROUTING_main_group','Routing'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ROUTING_default','Default Routing'));
 end;
@@ -1367,6 +1403,10 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
 end;
 
+class procedure TFRE_DB_Radius.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+end;
+
 function TFRE_DB_Radius.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
 begin
 
@@ -1383,6 +1423,10 @@ class procedure TFRE_DB_VPN.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJ
 begin
   inherited RegisterSystemScheme(scheme);
   Scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+end;
+
+class procedure TFRE_DB_VPN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
 end;
 
 function TFRE_DB_VPN.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
@@ -1525,7 +1569,6 @@ end;
 
 class procedure TFRE_DB_DHCP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_main_group','General Information'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_default_domainname','Default Domainname'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_default_dns','Default DNS'));
@@ -1742,7 +1785,6 @@ end;
 
 class procedure TFRE_DB_CA.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_main_group','Certificate Authority'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_objname','Name'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_cn','Common Name'));
@@ -1843,7 +1885,6 @@ end;
 
 class procedure TFRE_DB_WifiNetwork.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WIFINETWORK_main_group','Wifi Network'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WIFINETWORK_ssid','SSID'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WIFINETWORK_hidden','Hidden Network'));
@@ -1867,7 +1908,6 @@ end;
 
 class procedure TFRE_DB_RadiusNetwork.InstallDBObjects( const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_RADIUSNETWORK_main_group','Radius Wifi Network'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_RADIUSNETWORK_caid','CAID'));
 end;
@@ -2232,7 +2272,6 @@ end;
 
 class procedure TFRE_DB_Endpoint.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
 begin
-  inherited InstallDBObjects(conn);
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ENDPOINT_main_group','End Point Configuration'));
 end;
 
