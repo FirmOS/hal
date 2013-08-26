@@ -1,0 +1,3030 @@
+unit fre_hal_schemes;
+
+{
+(§LIC)
+  (c) Autor,Copyright
+      Dipl.Ing.- Helmut Hartl, Dipl.Ing.- Franz Schober, Dipl.Ing.- Christian Koch
+      FirmOS Business Solutions GmbH
+      www.openfirmos.org
+      New Style BSD Licence (OSI)
+
+  Copyright (c) 2001-2013, FirmOS Business Solutions GmbH
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without modification,
+  are permitted provided that the following conditions are met:
+
+      * Redistributions of source code must retain the above copyright notice,
+        this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above copyright notice,
+        this list of conditions and the following disclaimer in the documentation
+        and/or other materials provided with the distribution.
+      * Neither the name of the <FirmOS Business Solutions GmbH> nor the names
+        of its contributors may be used to endorse or promote products derived
+        from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+  THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+  PURPOSE ARE DISCLAIMED.
+  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+  AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+(§LIC_END)
+} 
+
+{$mode objfpc}{$H+}
+{$modeswitch nestedprocvars}
+{$codepage utf-8}
+
+interface
+
+uses
+  Classes, SysUtils,FOS_TOOL_INTERFACES,
+  Process,
+
+  FRE_HAL_UTILS,
+  FRE_DB_COMMON,
+  FRE_DBBUSINESS,
+  FRE_DB_INTERFACE,
+  FRE_HAL_TRANSPORT,
+  FRE_DB_SYSRIGHT_CONSTANTS,
+  fre_system,
+  fre_testcase,
+  fre_alert,
+  fre_zfs;
+
+type
+
+   TFRE_DB_ServiceGroup=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   TFRE_DB_Service=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   { TFRE_DB_MACHINE }
+
+   TFRE_DB_MACHINE=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_GetDisplayAddress  (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_GetDisplayName     (const input: IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_MACHINE_SETTING }
+
+   TFRE_DB_MACHINE_SETTING=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   { TFRE_DB_MACHINE_SETTING_POWER }
+
+   TFRE_DB_MACHINE_SETTING_POWER=class(TFRE_DB_MACHINE_SETTING)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_Shutdown           (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_Reboot             (const input:IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_MACHINE_SETTING_HOSTNAME }
+
+   TFRE_DB_MACHINE_SETTING_HOSTNAME=class(TFRE_DB_MACHINE_SETTING)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   { TFRE_DB_MACHINE_SETTING_MAIL }
+
+   TFRE_DB_MACHINE_SETTING_MAIL=class(TFRE_DB_MACHINE_SETTING)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   { TFRE_DB_MACHINE_SETTING_TIME }
+
+   TFRE_DB_MACHINE_SETTING_TIME=class(TFRE_DB_MACHINE_SETTING)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   { TFRE_DB_FC_PORT }
+
+   TFRE_DB_FC_PORT=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   { TFRE_DB_DATALINK }
+
+   TFRE_DB_DATALINK=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_DATALINK_PHYS }
+
+   TFRE_DB_DATALINK_PHYS=class(TFRE_DB_DATALINK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_AddVNIC            (const input:IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_DATALINK_VNIC }
+
+   TFRE_DB_DATALINK_VNIC=class(TFRE_DB_DATALINK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_DATALINK_STUB }
+
+   TFRE_DB_DATALINK_STUB=class(TFRE_DB_DATALINK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_AddVNIC            (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_DATALINK_AGGR }
+
+   TFRE_DB_DATALINK_AGGR=class(TFRE_DB_DATALINK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_AddVNIC            (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_TESTER }
+
+   TFRE_DB_TESTER=class(TFRE_DB_MACHINE)
+   protected
+     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+   end;
+
+   { TFRE_DB_VMACHINE }
+
+   TFRE_DB_VMACHINE=class(TFRE_DB_MACHINE)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_GetDisplayName     (const input:IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+   { TFRE_DB_ZONE }
+
+   TFRE_DB_ZONE=class(TFRE_DB_MACHINE)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
+   published
+     function        IMI_GetDisplayName     (const input: IFRE_DB_Object): IFRE_DB_Object;
+   end;
+
+
+
+  { TFRE_DB_DEVICE }
+
+  TFRE_DB_DEVICE=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  end;
+
+  { TFRE_DB_NETWORK_GROUP }
+
+  TFRE_DB_NETWORK_GROUP=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  end;
+
+  { TFRE_DB_CMS }
+
+  TFRE_DB_CMS=class(TFRE_DB_SERVICE)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  end;
+
+  TFRE_DB_REDIRECTION_FLOW=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+   end;
+
+  { TFRE_DB_ROUTE }
+
+  TFRE_DB_ROUTE=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  end;
+
+
+
+
+  { TFRE_DB_Site_Captive_Extension }
+
+  TFRE_DB_Site_Captive_Extension = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  end;
+
+
+
+
+  { TFRE_DB_Endpoint }
+
+  TFRE_DB_Endpoint = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+    function IMI_Content         (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_Configuration   (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_Monitoring      (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_Monitoring_Con  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_Monitoring_All  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_Monitoring_Data (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_Provision       (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_addOpenWifiNetwork  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_addWPA2Network  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_ChildrenData    (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_Accesspoint }
+
+  TFRE_DB_Accesspoint = class (TFRE_DB_Endpoint)
+  private
+    function  HasAnotherAP        (const site_id:TGUID)  : boolean;
+  protected
+    class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
+    class procedure AccessPointOnChange   (const conn: IFRE_DB_CONNECTION; const is_dhcp:boolean ; const dhcp_id : TGUID; const mac : TFRE_DB_String); virtual;
+  published
+   class function  IMC_NewOperation       (const input: IFRE_DB_Object): IFRE_DB_Object; override;
+   function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
+   function        IMI_SaveOperation      (const input:IFRE_DB_Object):IFRE_DB_Object;virtual;
+  end;
+
+  { TFRE_DB_AP_Linksys }
+
+  TFRE_DB_AP_Linksys = class (TFRE_DB_Accesspoint)
+  private
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+    function IMI_Configuration   (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_AP_Linksys_E1000 }
+
+  TFRE_DB_AP_Linksys_E1000 = class (TFRE_DB_AP_Linksys)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+   function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_AP_Linksys_E1200 }
+
+  TFRE_DB_AP_Linksys_E1200 = class (TFRE_DB_AP_Linksys)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+   function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_AP_Linksys_E1200V2 }
+
+  TFRE_DB_AP_Linksys_E1200V2 = class (TFRE_DB_AP_Linksys_E1200)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+   function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_AP_Lancom }
+
+  TFRE_DB_AP_Lancom = class (TFRE_DB_Accesspoint)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  end;
+
+  { TFRE_DB_AP_Lancom_IAP321 }
+
+  TFRE_DB_AP_Lancom_IAP321 = class (TFRE_DB_AP_Lancom)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_AP_Lancom_OAP321 }
+
+  TFRE_DB_AP_Lancom_OAP321 = class (TFRE_DB_AP_Lancom)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_Monitoring_Status }
+
+  TFRE_DB_Monitoring_Status = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+    function IMI_GetStatusIcon(const input: IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+
+
+
+  { TFRE_DB_CMS_PAGE }
+
+  TFRE_DB_CMS_PAGE = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+    function IMI_Content  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function IMI_Menu     (const input:IFRE_DB_Object): IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_CMS_ADPAGE }
+
+  TFRE_DB_CMS_ADPAGE = class(TFRE_DB_CMS_PAGE)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+  end;
+
+
+
+
+  { TFRE_DB_MobileDevice }
+
+  TFRE_DB_MobileDevice = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+   function IMI_Content  (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_Menu     (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_unassign (const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_Network }
+
+  TFRE_DB_Network = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION); override;
+    class procedure NetworkOnChange      (const dbc : IFRE_DB_Connection; const is_dhcp:boolean; const subnet : string; const ep_id: TGUID; const dns:string; const range_start, range_end : integer ); virtual;
+  published
+   class function  IMC_NewOperation      (const input:IFRE_DB_Object): IFRE_DB_Object; override;
+   function IMI_Content                  (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_Menu                     (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_SaveOperation            (const input:IFRE_DB_Object):IFRE_DB_Object; override;
+  end;
+
+  { TFRE_DB_WifiNetwork }
+
+  TFRE_DB_WifiNetwork = class (TFRE_DB_Network)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+   function IMI_Content(const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_OpenWifiNetwork }
+
+  TFRE_DB_OpenWifiNetwork = class (TFRE_DB_WifiNetwork)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  end;
+
+  { TFRE_DB_WPA2Network }
+
+  TFRE_DB_WPA2Network = class (TFRE_DB_WifiNetwork)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  end;
+
+
+  { TFRE_DB_RadiusNetwork }
+
+  TFRE_DB_RadiusNetwork = class (TFRE_DB_WifiNetwork)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+   function IMI_Content(const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_CA }
+
+  TFRE_DB_CA = class (TFRE_DB_Service)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+   function IMI_Menu           (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_Content        (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_ChildrenData   (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_AddCertificate (const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_Certificate }
+
+  TFRE_DB_Certificate = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+   function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_Content    (const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_DHCP }
+
+  TFRE_DB_DHCP = class (TFRE_DB_Service)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+   function IMI_Content      (const input:IFRE_DB_Object) : IFRE_DB_Object;
+   function IMI_Menu         (const input:IFRE_DB_Object) : IFRE_DB_Object;
+   function IMI_ChildrenData (const input:IFRE_DB_Object) : IFRE_DB_Object;
+   function IMI_addSubnet    (const input:IFRE_DB_Object) : IFRE_DB_Object;
+   function IMI_addFixedHost (const input:IFRE_DB_Object) : IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_DHCP_Subnet }
+
+  TFRE_DB_DHCP_Subnet = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+    function IMI_Content  (const input:IFRE_DB_Object) : IFRE_DB_Object;
+    function IMI_Menu     (const input:IFRE_DB_Object) : IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_DHCP_Fixed }
+
+  TFRE_DB_DHCP_Fixed = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+    function IMI_Content  (const input:IFRE_DB_Object) : IFRE_DB_Object;
+    function IMI_Menu     (const input:IFRE_DB_Object) : IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_VPN }
+
+  TFRE_DB_VPN = class (TFRE_DB_Service)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+    function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
+    function IMI_Content(const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_Radius }
+
+  TFRE_DB_Radius = class (TFRE_DB_Service)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+    function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
+    function IMI_Content    (const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_Captiveportal }
+
+  TFRE_DB_Captiveportal = class (TFRE_DB_Service)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+  published
+    function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
+    function IMI_Content    (const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+  { TFRE_DB_Routing }
+
+  TFRE_DB_Routing = class (TFRE_DB_Service)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
+  published
+   function IMI_Menu       (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function IMI_Content    (const input:IFRE_DB_Object):IFRE_DB_Object;
+  end;
+
+procedure Register_DB_Extensions;
+
+implementation
+
+
+
+ procedure SetReprovision (const dbc: IFRE_DB_Connection; const id:TGUID);
+ var
+     obj       :    IFRE_DB_Object;
+ begin
+   writeln  ('set reprovision :'+GUIDToString(id));
+   if  not  dbc.Fetch(id,obj)  then raise EFRE_DB_Exception.Create(edb_ERROR,'NO OBJ FOUND FOR REPROVISION '+GUIDToString(id));
+   obj.Field('reprovision').asboolean:=true;
+   writeln  (obj.DumpToString());
+   CheckDbResult(dbc.Update(obj),'failure on cloned/update');
+ end;
+
+ function GetService     (const dbc: IFRE_DB_Connection; const serviceclass:string): TGUID;
+ var
+     coll    : IFRE_DB_COLLECTION;
+     id      : TGUID;
+
+     function _get(const obj:IFRE_DB_Object):boolean;
+     begin
+       result := false;
+       writeln('SERVICE '+obj.UID_String);
+       if obj.IsA(serviceclass) then begin
+         writeln('FOUND '+serviceclass+' '+obj.UID_String);
+         id:=obj.uid;
+         Result := true;
+       end;
+     end;
+
+
+ begin
+   writeln('GET SERVICE');
+   coll   := dbc.Collection('service');
+   coll.ForAllBreak(@_get);
+   result := id;
+ end;
+
+
+ procedure HasNets(const ep_id : IFRE_DB_Object; out has_open, has_wpa2: boolean);
+ var
+     childs              : TFRE_DB_GUIDArray;
+
+ begin
+   writeln('HAS NETS');
+   has_open:=false; has_wpa2:=false;
+   childs:=ep_id.ReferencedByList('TFRE_DB_OPENWIFINETWORK');
+   has_open:=length(childs)>0;
+   writeln ('WIFI :',length(childs));
+   childs:=ep_id.ReferencedByList('TFRE_DB_WPA2NETWORK');
+   writeln ('WPA2 :',length(childs));
+   has_wpa2:=length(childs)>0;
+ end;
+
+
+ function GetNextNet (const dbc: IFRE_DB_CONNECTION; const ep_id:TGUID) : string;
+ var
+     ep_obj     : IFRE_DB_Object;
+     cap_id     : TGUID;
+     cap_obj    : IFRE_DB_Object;
+     net        : string;
+     colln      : IFRE_DB_COLLECTION;
+     highest    : integer;
+     cp_net     : string;
+     cp_ip      : TFRE_HAL_IP4;
+     result_ip  : TFRE_HAL_IP4;
+     mask       : string;
+
+     procedure _getnets(const obj:IFRE_DB_Object);
+     var
+         lcurrent     : string;
+         lnet         : string;
+         lsplit       : string;
+         lmask        : string;
+         lip          : TFRE_HAL_IP4;
+
+     begin
+       lnet       := obj.Field('ip_net').AsString;
+       SplitCIDR(lnet,lcurrent,lmask);
+       lip        := StringtoIP4 (lcurrent);
+       if (cp_ip._bytes[0]=lip._bytes[0]) and (cp_ip._bytes[1]=lip._bytes[1]) then begin
+        writeln (lcurrent);
+        if lip._bytes[2]>highest then begin
+         highest  := lip._bytes[2];
+        end;
+       end;
+     end;
+
+ begin
+   if not dbc.Fetch(ep_id,ep_obj) then raise EFRE_DB_Exception.Create(edb_ERROR,'NO EP FOUND IN GET NEXT NET '+GUIDToString(ep_id));
+   cap_id:=GetService(dbc,'TFRE_DB_CAPTIVEPORTAL');
+   if not dbc.Fetch(cap_id,cap_obj) then raise EFRE_DB_Exception.Create(edb_ERROR,'NO CAPSERVICE FOUND IN GET NEXT NET '+GUIDToString(cap_id));
+
+   if ep_obj.IsA('TFRE_DB_AP_Lancom') then begin
+     net := cap_obj.Field('lancom_net').asstring;
+     writeln('lancom ');
+
+   end else begin
+     writeln('linksys');
+     if ep_obj.FieldExists('vpn_crtid') then begin
+      net := cap_obj.Field('vpn_net').asstring;
+      writeln('vpn');
+     end else begin
+      net := cap_obj.Field('linksys_net').asstring;
+      writeln('no vpn');
+     end;
+   end;
+  writeln(net);
+
+  SplitCIDR(net,cp_net ,mask);
+
+
+  cp_ip   := StringtoIP4(cp_net );
+  highest := cp_ip._bytes[2];
+  writeln (highest);
+
+  colln   :=dbc.Collection('network');
+  colln.ForAll(@_getnets);
+
+  writeln (highest);
+
+  result_ip._long     := cp_ip._long;
+  result_ip._bytes[2] := highest + 1;
+  result_ip._bytes[3] := 1;
+  result              := IP4toString(result_ip)+'/24';
+  writeln (result);
+ end;
+
+ function CheckClass (const new_net:string) : boolean;
+ var
+     mask       : string;
+ begin
+  result := true;
+  writeln('CHECK CLASS :'+new_net+':');
+  if new_net='' then exit;                     // accept empty nets
+
+  mask:= Copy(new_net,Pos('/',new_net)+1,maxint);
+  if mask<>'24' then begin
+   result:=false;
+  end;
+ end;
+
+ function UniqueNet (const dbc: IFRE_DB_CONNECTION; const network_id:TGUID; const new_net: string) : boolean;
+  var
+      colln      : IFRE_DB_COLLECTION;
+      check_net  : TFRE_HAL_IP4;
+      ip         : string;
+      mask       : string;
+      gresult    : boolean;
+
+      procedure _checknets(const obj:IFRE_DB_Object);
+      var
+          lcurrent     : string;
+          lnet         : string;
+          lsplit       : string;
+          lmask        : string;
+          lip          : TFRE_HAL_IP4;
+
+      begin
+        lnet       := obj.Field('ip_net').AsString;
+        SplitCIDR(lnet,lcurrent,lmask);
+        lip        := StringtoIP4 (lcurrent);
+        if FREDB_Guids_Same(obj.UID,network_id)=false then begin    // check all other nets
+         if (check_net._bytes[0]=lip._bytes[0]) and (check_net._bytes[1]=lip._bytes[1]) and (check_net._bytes[2]=lip._bytes[2]) then begin        // TODO FIXXME  Other Than /24 Networks
+          writeln (lcurrent);
+          gresult := false;
+         end;
+        end;
+      end;
+
+  begin
+
+   gresult  := true;
+
+   if new_net='' then exit;                     // accept empty nets
+
+   SplitCIDR (new_net,ip,mask);
+   check_net := StringtoIP4(ip);
+
+   colln   := dbc.Collection('network');
+   colln.ForAll(@_checknets);
+
+   result   := gresult;
+  end;
+
+
+{ TFRE_DB_OpenWifiNetwork }
+
+class procedure TFRE_DB_OpenWifiNetwork.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_WIFINETWORK');
+end;
+
+{ TFRE_DB_Monitoring_Status }
+
+class procedure TFRE_DB_Monitoring_Status.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+  scheme.AddSchemeField         ('status',fdbft_String).SetupFieldDef(true,false,'signal_status');
+  scheme.AddSchemeField         ('provisioned_time',fdbft_DateTimeUTC);
+  scheme.AddSchemeField         ('online_time',fdbft_DateTimeUTC);
+  scheme.AddCalculatedField     ('status_icon','GetStatusIcon',cft_OnStoreUpdate);
+end;
+
+function TFRE_DB_Monitoring_Status.IMI_GetStatusIcon(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  result := GFRE_DBI.NewObject;
+  result.Field(CalcFieldResultKey(fdbft_String)).AsString:=GetStatusIconURI(Field('status').asstring);
+end;
+
+{ TFRE_DB_AP_Lancom_OAP321 }
+
+class procedure TFRE_DB_AP_Lancom_OAP321.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_AP_LANCOM');
+end;
+
+function TFRE_DB_AP_Lancom_OAP321.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  result := GFRE_DBI.NewObject;
+  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Lancom OAP321 ('+Field('provisioningmac').AsString+')';
+end;
+
+{ TFRE_DB_AP_Lancom_IAP321 }
+
+class procedure TFRE_DB_AP_Lancom_IAP321.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_AP_LANCOM');
+end;
+
+function TFRE_DB_AP_Lancom_IAP321.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  result := GFRE_DBI.NewObject;
+  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Lancom IAP321 ('+Field('provisioningmac').AsString+')';
+end;
+
+{ TFRE_DB_AP_Lancom }
+
+class procedure TFRE_DB_AP_Lancom.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_ACCESSPOINT');
+end;
+
+{ TFRE_DB_AP_Linksys_E1200V2 }
+
+class procedure TFRE_DB_AP_Linksys_E1200V2.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_AP_LINKSYS_E1200');
+end;
+
+function TFRE_DB_AP_Linksys_E1200V2.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  result := GFRE_DBI.NewObject;
+  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Linksys E1200V2 ('+Field('provisioningmac').AsString+')';
+end;
+
+{ TFRE_DB_AP_Linksys_E1200 }
+
+class procedure TFRE_DB_AP_Linksys_E1200.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_AP_LINKSYS');
+end;
+
+function TFRE_DB_AP_Linksys_E1200.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  result := GFRE_DBI.NewObject;
+  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Linksys E1200 ('+Field('provisioningmac').AsString+')';
+end;
+
+{ TFRE_DB_AP_Linksys_E1000 }
+
+class procedure TFRE_DB_AP_Linksys_E1000.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_AP_LINKSYS');
+end;
+
+
+
+function TFRE_DB_AP_Linksys_E1000.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  result := GFRE_DBI.NewObject;
+  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Linksys E1000 ('+Field('reprovision').AsString+') ('+Field('provisioningmac').AsString+')';
+end;
+
+{ TFRE_DB_AP_Linksys }
+
+
+class procedure TFRE_DB_AP_Linksys.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_ACCESSPOINT');
+
+  scheme.AddSchemeField('routing',fdbft_String).SetupFieldDef(true,false,'routing');
+  scheme.AddSchemeField('vpn_crtid',fdbft_ObjLink);
+
+  group:=scheme.AddInputGroup('options').Setup('$scheme_TFRE_DB_AP_LINKSYS_options_group');
+  group.AddInput('routing','$scheme_TFRE_DB_AP_LINKSYS_routing');
+  group.AddInput('vpn_crtid','$scheme_TFRE_DB_AP_LINKSYS_vpn_cert',false,false,'certificate');
+
+end;
+
+class procedure TFRE_DB_AP_Linksys.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_AP_LINKSYS_options_group','Device Options'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_AP_LINKSYS_routing','Routing'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_AP_LINKSYS_vpn_cert','VPN Certificate'));
+end;
+
+function TFRE_DB_AP_Linksys.IMI_Configuration(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+  scheme: IFRE_DB_SchemeObject;
+begin
+  result:=inherited;
+
+  GetDBConnection.GetScheme(SchemeClass,scheme);
+  res:=result.Implementor_HC as TFRE_DB_FORM_PANEL_DESC;
+  res.AddSchemeFormGroup(scheme.GetInputGroup('options'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+
+end;
+
+{ TFRE_DB_Accesspoint }
+
+
+
+class procedure TFRE_DB_Accesspoint.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_ENDPOINT');
+
+  scheme.AddSchemeField('external_ip',fdbft_String).SetupFieldDef(False,False,'','ip');
+  scheme.AddSchemeField('dhcp',fdbft_Boolean).addDepField('external_ip');
+  scheme.AddSchemeField('channel',fdbft_UInt16).required:=true;
+  scheme.AddSchemeField('password',fdbft_String);
+  scheme.AddSchemeField('serialnumber',fdbft_String);
+  scheme.AddSchemeField('mountingdetail',fdbft_String);
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_ACCESSPOINT_main_group');
+  group.UseInputGroup('TFRE_DB_ENDPOINT','main');
+  group.AddInput('serialnumber','Serialnumber');
+  group.AddInput('external_ip','$scheme_TFRE_DB_ACCESSPOINT_exip');
+  group.AddInput('dhcp','$scheme_TFRE_DB_ACCESSPOINT_dhcp');
+  group.AddInput('channel','$scheme_TFRE_DB_ACCESSPOINT_channel');
+  group.AddInput('password','$scheme_TFRE_DB_ACCESSPOINT_pw');
+end;
+
+class procedure TFRE_DB_Accesspoint.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_main_group','Accesspoint Configuration'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_serial','Serialnumber'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_exip','IP'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_dhcp','DHCP'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_channel','Channel'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ACCESSPOINT_pw','Password'));
+end;
+
+
+
+class function TFRE_DB_Accesspoint.IMC_NewOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+var dbc        :   IFRE_DB_CONNECTION;
+    raw_object :   IFRE_DB_Object;
+    dhcp       :   boolean;
+    mac        :   string;
+    dhcp_id    :   TGUID;
+
+
+begin
+  writeln ('AP AddOperation');
+  writeln(input.DumpToString());
+  dbc          := input.GetReference as IFRE_DB_CONNECTION;
+  raw_object   := input.Field('data').AsObject;
+
+  dhcp    := raw_object.Field('dhcp').asboolean;
+  mac     := lowercase(raw_object.Field('provisioningmac').AsString);
+  writeln('now get dhcp');
+  dhcp_id := GetService(dbc,'TFRE_DB_DHCP');
+  raw_object.Field('reprovision').AsString:='true';
+
+  Result:=inherited IMC_NewOperation(input);
+  writeln ('After new AP');
+  AccesspointOnChange (dbc, dhcp, dhcp_id, mac);
+end;
+
+function TFRE_DB_Accesspoint.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res       :   TFRE_DB_MENU_DESC;
+  has_open  :   boolean;
+  has_wpa2  :   boolean;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  if HasAnotherAP(Field('site').asguid)=false then begin
+   HasNets(self, has_open,has_wpa2);
+   if not has_open then res.AddEntry.Describe('Add Open Wifi Network','images_apps/cloudcontrol/add_open_wifi.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addopenwifinetwork'));
+   if not has_wpa2 then res.AddEntry.Describe('Add WPA2 Wifi Network','images_apps/cloudcontrol/add_wpa2_wifi.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addwpa2network'));
+  end;
+  res.AddEntry.Describe('Update Provisioning','images_apps/cloudcontrol/update_provisioning.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'provision'));
+  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_accesspoint.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
+  Result:=res;
+end;
+
+
+function TFRE_DB_Accesspoint.HasAnotherAP(const site_id: TGUID): boolean;
+var site_object       : IFRE_DB_Object;
+    site_fnd          : boolean;
+    childs            : TFRE_DB_GUIDArray;
+    i                 : integer;
+    has_open          : boolean;
+    has_wpa2          : boolean;
+    ep_obj            : IFRE_DB_Object;
+begin
+  result:=false;
+  site_fnd          :=GetDBConnection.Fetch(site_id,site_object);
+  if site_fnd        then begin
+    writeln (site_object.DumpToString());
+    childs:=site_object.ReferencedByList('TFRE_DB_ACCESSPOINT');
+    for i := 0 to Length(childs) - 1 do begin
+      if FREDB_Guids_Same(UID,childs[i])=false then begin
+        GetDBConnection.Fetch(childs[i],ep_obj);
+        HasNets(ep_obj,has_open,has_wpa2);
+        if (has_open or has_wpa2) then begin
+         result := true;
+         break;
+        end;
+      end;
+    end;
+  end;
+end;
+
+
+class procedure TFRE_DB_Accesspoint.AccessPointOnChange(const conn: IFRE_DB_CONNECTION; const is_dhcp: boolean; const dhcp_id: TGUID; const mac: TFRE_DB_String);
+var dhcp_obj        : IFRE_DB_Object;
+    childs          : TFRE_DB_GUIDArray;
+    dhcp_fixed_obj  : IFRE_DB_Object;
+    i               : integer;
+    collf           : IFRE_DB_Collection;
+    current_ip      : string;
+    highest         : integer;
+    sub_ip          : integer;
+begin
+  writeln('PostSave');
+  if is_dhcp then begin
+    writeln('DHCP');
+    if       not conn.Fetch(dhcp_id,dhcp_obj)          then raise EFRE_DB_Exception.Create(edb_ERROR,'NO DHCP SERVICE FOUND IN AP AFTER SAVE');
+    writeln('ChiLDS');
+    writeln(dhcp_obj.DumpToString);
+    current_ip := dhcp_obj.Field('fixed_start').AsString;
+    writeln(current_ip);
+    highest    := StringtoIP4(current_ip)._bytes[3];                    // TODO implement for other classes than /24
+    childs     := dhcp_obj.ReferencedByList('TFRE_DB_DHCP_FIXED');
+    for i := 0 to Length(childs) - 1 do begin
+      writeln('FETCH ChiLDS');
+      conn.Fetch(childs[i],dhcp_fixed_obj);
+      if lowercase(dhcp_fixed_obj.Field('mac').AsString)=mac then begin
+        writeln('ALREADY IN DHCP !');
+        exit;
+      end else begin
+        current_ip := dhcp_fixed_obj.Field('ip').AsString;
+        sub_ip     := StringtoIP4(current_ip)._bytes[3];
+        writeln(sub_ip);
+        if sub_ip>highest then highest:=sub_ip;
+      end;
+    end;
+    writeln('HIGHEST :', highest);
+    inc(highest);
+    // create new dhcp_fixed
+    writeln('NOW ADD DHCP');
+    collf          := conn .Collection('dhcp_fixed');
+    dhcp_fixed_obj := conn .NewObject('TFRE_DB_DHCP_Fixed');
+    dhcp_fixed_obj.Field('ip').AsString      := GetIPDots(dhcp_obj.Field('fixed_start').AsString,3)+inttostr(highest);
+    dhcp_fixed_obj.Field('mac').AsString     := lowercase (mac);
+    dhcp_fixed_obj.Field('objname').AsString := 'Automatic'+StringReplace(lowercase(mac),':','',[rfReplaceAll]);
+    dhcp_fixed_obj.Field('dhcp').AsObjectLink:= dhcp_id;
+    writeln('NOW STORE');
+    CheckDBResult(COLLF.Store(dhcp_fixed_obj),'Add DHCP Fixed');                            // TODO Update DHCP Tree
+    writeln ('DHCP FIXED CREATED !!');
+  end;
+end;
+
+
+function TFRE_DB_Accesspoint.IMI_SaveOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+var scheme            : IFRE_DB_SCHEMEOBJECT;
+    update_object_uid : TGUid;
+    raw_object        : IFRE_DB_Object;
+    dbc               : IFRE_DB_CONNECTION;
+    dhcp              : boolean;
+    dhcp_id           : TGUID;
+    mac               : TFRE_DB_String;
+
+
+begin
+  if assigned(Parent) then begin
+    result := TFRE_DB_MESSAGE_DESC(result).Describe('SAVE','Error on saving! Saving of Subobject not supported!',fdbmt_error);
+    exit;
+  end;
+  dbc := GetDBConnection;
+  result            := nil;
+  scheme            := GetScheme;
+  update_object_uid := UID;
+  raw_object        := input.Field('data').AsObject;
+
+  scheme.SetObjectFieldsWithScheme(raw_object,self,false,GetDBConnection);
+
+  dhcp    := Field('dhcp').asboolean;
+  mac     := lowercase(Field('provisioningmac').AsString);
+  dhcp_id := GetService(dbc,'TFRE_DB_DHCP');
+  Field('reprovision').AsBoolean:=true;
+
+  CheckDbResult(dbc.Update(self),'failure on cloned/update');  // This instance is freed by now, so rely on the stackframe only (self) pointer is garbage(!!)
+  result := GFRE_DB_NIL_DESC;
+
+  AccesspointOnChange (dbc, dhcp, dhcp_id, mac);
+end;
+
+{ TFRE_DB_Site_Captive_Extension }
+
+class procedure TFRE_DB_Site_Captive_Extension.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('site',fdbft_ObjLink);
+  scheme.AddSchemeField('captiveportal',fdbft_ObjLink);
+end;
+
+{ TFRE_DB_Captiveportal }
+
+class procedure TFRE_DB_Captiveportal.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+  scheme.AddSchemeField('vpn_caid',fdbft_ObjLink);
+end;
+
+function TFRE_DB_Captiveportal.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+
+end;
+
+function TFRE_DB_Captiveportal.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+
+end;
+
+{ TFRE_DB_REDIRECTION_FLOW }
+
+class procedure TFRE_DB_REDIRECTION_FLOW.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('redirection_start',fdbft_ObjLink);
+  scheme.AddSchemeField('redirection_customer',fdbft_ObjLink);
+  scheme.AddSchemeField('redirection_agb_ipad',fdbft_ObjLink);
+  scheme.AddSchemeField('redirection_agb_open',fdbft_ObjLink);
+  scheme.AddSchemeField('redirection_end',fdbft_ObjLink);
+end;
+
+
+class procedure TFRE_DB_NETWORK_GROUP.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('networks',fdbft_ObjLink).multiValues:=true;
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_NETWORK_GROUP_main_group');
+  group.AddInput('objname','$scheme_TFRE_DB_NETWORK_GROUP_name');
+  group.AddInput('networks','$scheme_TFRE_DB_NETWORK_GROUP_networks');
+end;
+
+class procedure TFRE_DB_NETWORK_GROUP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_GROUP_main_group','Network Group'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_GROUP_name','Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_GROUP_networks','Networks'));
+end;
+
+class procedure TFRE_DB_ROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('subnet',fdbft_String).required:=true;
+  scheme.AddSchemeField('gateway',fdbft_String).required:=true;
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_ROUTE_main_group');
+  group.AddInput('subnet','$scheme_TFRE_DB_ROUTE_subnet');
+  group.AddInput('gateway','$scheme_TFRE_DB_ROUTE_gateway');
+end;
+
+class procedure TFRE_DB_ROUTE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ROUTE_main_group','General Information'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ROUTE_subnet','Subnet'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ROUTE_gateway','Gateway'));
+end;
+
+class procedure TFRE_DB_CMS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('baseurl',fdbft_String).required:=true;
+  scheme.AddSchemeField('urlexceptions',fdbft_String).multiValues:=true;
+  group := scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_CMS_main_group');
+  group.UseInputGroup('TFRE_DB_SERVICE','main');
+  group.AddInput('baseurl','$scheme_TFRE_DB_CMS_baseurl');
+  group.AddInput('urlexceptions','$scheme_TFRE_DB_CMS_execeptions');
+end;
+
+class procedure TFRE_DB_CMS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_main_group','CMS'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_baseurl','Base URL'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_execeptions','Url Exceptions'));
+end;
+
+
+
+class procedure TFRE_DB_DEVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
+  scheme.AddSchemeField('provisioningmac',fdbft_String).SetupFieldDef(true,false,'','mac');
+  scheme.AddSchemeField('provisioning_serial',fdbft_Int32);
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_DEVICE_main_group');
+  group.AddInput('provisioningmac','$scheme_TFRE_DB_DEVICE_pmac');
+end;
+
+class procedure TFRE_DB_DEVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DEVICE_main_group','General Information'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DEVICE_pmac','Mac'));
+end;
+
+class procedure TFRE_DB_CMS_ADPAGE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_CMS_PAGE');
+  scheme.AddSchemeField('start_time',fdbft_DateTimeUTC).required:=true;
+  scheme.AddSchemeField('end_time',fdbft_DateTimeUTC).required:=true;
+  scheme.AddSchemeField('start_daily',fdbft_String).required:=true;
+  scheme.AddSchemeField('end_daily',fdbft_String).required:=true;
+  scheme.AddSchemeField('insertpoint',fdbft_Int16).required:=true;
+  scheme.AddSchemeField('max_inserts',fdbft_UInt32).required:=true;
+  scheme.AddSchemeField('shown_inserts',fdbft_UInt32);
+  scheme.AddSchemeField('networkgroups',fdbft_ObjLink).multiValues:=true;
+
+  group:=scheme.AddInputGroup('main').Setup('Page');
+  group.UseInputGroup('TFRE_DB_CMS_PAGE','main');
+  group.AddInput('start_time','$scheme_TFRE_DB_CMS_ADPAGE_starttime');
+  group.AddInput('end_time','$scheme_TFRE_DB_CMS_ADPAGE_endtime');
+  group.AddInput('start_daily','$scheme_TFRE_DB_CMS_ADPAGE_startdaily');
+  group.AddInput('end_daily','$scheme_TFRE_DB_CMS_ADPAGE_enddaily');
+  group.AddInput('insertpoint','$scheme_TFRE_DB_CMS_ADPAGE_insertpoint');
+  group.AddInput('max_inserts','$scheme_TFRE_DB_CMS_ADPAGE_max_inserts');
+  group.AddInput('shown_inserts','$scheme_TFRE_DB_CMS_ADPAGE_show_inserts',true);
+  group.AddInput('networkgroups','$scheme_TFRE_DB_CMS_ADPAGE_networkgroups');
+end;
+
+class procedure TFRE_DB_CMS_ADPAGE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_starttime','Start Time'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_endtime','End Time'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_startdaily','Start Daily'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_enddaily','End Daily'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_insertpoint','Insertion Point'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_max_inserts','Maximum Insertion Count'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_show_inserts','Already Shown Inserts'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_ADPAGE_networkgroups','Network Groups'));
+end;
+
+class procedure TFRE_DB_WPA2Network.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_WIFINETWORK');
+  scheme.AddSchemeField('wpa2psk',fdbft_String).required:=true;
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_WPA2NETWORK_main_group');
+  group.UseInputGroup('TFRE_DB_WIFINETWORK','main');
+  group.AddInput('wpa2psk','$scheme_TFRE_DB_WPA2NETWORK_wpa2psk');
+end;
+
+class procedure TFRE_DB_WPA2Network.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WPA2NETWORK_main_group','WPA2 Wifi Network'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WPA2NETWORK_wpa2psk','WPA2PSK'));
+end;
+
+
+{ TFRE_DB_CMS_PAGE }
+
+class procedure TFRE_DB_CMS_PAGE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('cms',fdbft_ObjLink).required:=true;
+  scheme.AddSchemeField('active',fdbft_Boolean).required:=true;
+  scheme.AddSchemeField('relativeurl',fdbft_Boolean).required:=true;
+  scheme.AddSchemeField('url',fdbft_String).required:=true;
+  scheme.AddSchemeField('urlexceptions',fdbft_String).multiValues:=true;
+  scheme.SetSysDisplayField(GFRE_DBI.ConstructStringArray(['url']),'%s');
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_CMS_PAGE_main_group');
+  group.AddInput('cms','',false,true);
+  group.AddInput('active','$scheme_TFRE_DB_CMS_PAGE_active');
+  group.AddInput('relativeurl','$scheme_TFRE_DB_CMS_PAGE_relurl');
+  group.AddInput('url','$scheme_TFRE_DB_CMS_PAGE_url');
+  group.AddInput('urlexceptions','$scheme_TFRE_DB_CMS_PAGE_exceptions');
+end;
+
+class procedure TFRE_DB_CMS_PAGE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_PAGE_main_group','Page'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_PAGE_active','Active'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_PAGE_relurl','Relative Url'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_PAGE_url','Url'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CMS_PAGE_exceptions','Url Exceptions'));
+end;
+
+function TFRE_DB_CMS_PAGE.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+  scheme: IFRE_DB_SchemeObject;
+begin
+  GetDBConnection.GetScheme(SchemeClass,scheme);
+  res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('CMS Page');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_CMS_PAGE.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_cms_page.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
+  Result:=res;
+end;
+
+
+{ TFRE_DB_Routing }
+
+class procedure TFRE_DB_Routing.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+  scheme.AddSchemeField('default',fdbft_String).required:=true;
+  scheme.AddSchemeFieldSubscheme('static','TFRE_DB_ROUTE').multiValues:=true;
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_ROUTING_main_group');
+  group.UseInputGroup('TFRE_DB_SERVICE','main');
+  group.AddInput('default','$scheme_TFRE_DB_ROUTING_default');
+end;
+
+class procedure TFRE_DB_Routing.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ROUTING_main_group','Routing'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ROUTING_default','Default Routing'));
+end;
+
+function TFRE_DB_Routing.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+
+end;
+
+function TFRE_DB_Routing.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+
+end;
+
+{ TFRE_DB_Radius }
+
+class procedure TFRE_DB_Radius.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+end;
+
+function TFRE_DB_Radius.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+
+end;
+
+function TFRE_DB_Radius.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+
+end;
+
+{ TFRE_DB_VPN }
+
+class procedure TFRE_DB_VPN.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  Scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+end;
+
+function TFRE_DB_VPN.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+
+end;
+
+function TFRE_DB_VPN.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+ // result := nil;
+end;
+
+{ TFRE_DB_DHCP_Fixed }
+
+class procedure TFRE_DB_DHCP_Fixed.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('dhcp',fdbft_ObjLink).required:=true;
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('mac',fdbft_String).required:=true;
+  scheme.AddSchemeField('ip',fdbft_String).required:=true;
+  scheme.AddSchemeField('router',fdbft_String).multiValues:=true;
+  scheme.AddSchemeField('dns',fdbft_String).multiValues:=true;
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_DHCP_FIXED_main_group');
+  group.AddInput('dhcp','',false,true);
+  group.AddInput('objname','$scheme_TFRE_DB_DHCP_FIXED_objname');
+  group.AddInput('mac','$scheme_TFRE_DB_DHCP_FIXED_mac');
+  group.AddInput('ip','$scheme_TFRE_DB_DHCP_FIXED_ip');
+  group.AddInput('router','$scheme_TFRE_DB_DHCP_FIXED_router');
+  group.AddInput('dns','$scheme_TFRE_DB_DHCP_FIXED_dns');
+end;
+
+class procedure TFRE_DB_DHCP_Fixed.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_FIXED_main_group','DHCP Fixed'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_FIXED_objname','Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_FIXED_mac','Mac'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_FIXED_ip','Ip'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_FIXED_router','Router'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_FIXED_dns','DNS'));
+end;
+
+function TFRE_DB_DHCP_Fixed.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+begin
+  res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Fixed Host');
+  res.AddSchemeFormGroup(getscheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_DHCP_Fixed.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_fixed_dhcp.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
+  Result:=res;
+end;
+
+{ TFRE_DB_DHCP_Subnet }
+
+class procedure TFRE_DB_DHCP_Subnet.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('dhcp',fdbft_ObjLink).required:=true;
+  scheme.AddSchemeField('subnet',fdbft_String).required:=true;
+  scheme.AddSchemeField('range_start',fdbft_String).required:=true;
+  scheme.AddSchemeField('range_end',fdbft_String).required:=true;
+  scheme.AddSchemeField('router',fdbft_String).multiValues:=true;
+  scheme.AddSchemeField('dns',fdbft_String).multiValues:=true;
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_DHCP_SUBNET_main_group');
+  group.AddInput('dhcp','',false,true);
+  group.AddInput('subnet','$scheme_TFRE_DB_DHCP_SUBNET_subnet');
+  group.AddInput('range_start','$scheme_TFRE_DB_DHCP_SUBNET_range_start');
+  group.AddInput('range_end','$scheme_TFRE_DB_DHCP_SUBNET_range_end');
+  group.AddInput('router','$scheme_TFRE_DB_DHCP_SUBNET_router');
+  group.AddInput('dns','$scheme_TFRE_DB_DHCP_SUBNET_dns');
+end;
+
+class procedure TFRE_DB_DHCP_Subnet.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_SUBNET_main_group','DHCP Subnet'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_SUBNET_subnet','Subnet'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_SUBNET_range_start','Range Start'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_SUBNET_range_end','Range End'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_SUBNET_router','Router'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_SUBNET_dns','DNS'));
+end;
+
+function TFRE_DB_DHCP_Subnet.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+begin
+  res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Subnet');
+  res.AddSchemeFormGroup(getscheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_DHCP_Subnet.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_subnet.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
+  Result:=res;
+end;
+
+{ TFRE_DB_DHCP }
+
+class procedure TFRE_DB_DHCP.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+  scheme.AddSchemeField('default_domainname',fdbft_String).required:=true;
+  scheme.AddSchemeField('default_dns',fdbft_String).required:=true;
+  scheme.AddSchemeField('default_leasetime',fdbft_Int16).required:=true;
+  scheme.AddSchemeField('fixed_start',fdbft_String).required:=true;
+  scheme.AddSchemeField('fixed_end',fdbft_String).required:=true;
+
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_DHCP_main_group');
+  group.UseInputGroup('TFRE_DB_SERVICE','main');
+  group.AddInput('default_domainname','$scheme_TFRE_DB_DHCP_default_domainname');
+  group.AddInput('default_dns','$scheme_TFRE_DB_DHCP_default_domainname');
+  group.AddInput('default_leasetime','$scheme_TFRE_DB_DHCP_default_leasetime');
+  group.AddInput('fixed_start','$scheme_TFRE_DB_DHCP_fixed_start');
+  group.AddInput('fixed_end','$scheme_TFRE_DB_DHCP_fixed_end');
+end;
+
+class procedure TFRE_DB_DHCP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_main_group','General Information'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_default_domainname','Default Domainname'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_default_dns','Default DNS'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_default_leasetime','Default Leasetime'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_fixed_start','Begin of fixed addresses'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DHCP_fixed_end','End of fixed addresses'));
+end;
+
+function TFRE_DB_DHCP.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+begin
+  res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('DHCP Service');
+  res.AddSchemeFormGroup(getscheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_DHCP.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  res.AddEntry.Describe('Add Subnet','images_apps/cloudcontrol/add_subnet.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addSubnet'));
+  res.AddEntry.Describe('Add Fixed Host','images_apps/cloudcontrol/add_fixed_host.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addFixedHost'));
+  Result:=res;
+end;
+
+function TFRE_DB_DHCP.IMI_ChildrenData(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_STORE_DATA_DESC;
+  entry : IFRE_DB_Object;
+  childs: TFRE_DB_GUIDArray;
+  i     : Integer;
+  dbo   : IFRE_DB_Object;
+  txt   : String;
+
+begin
+  res := TFRE_DB_STORE_DATA_DESC.create;
+  childs:=ReferencedByList;
+  for i := 0 to Length(childs) - 1 do begin
+    getDBConnection.Fetch(childs[i],dbo);
+    if dbo.IsA('TFRE_DB_DHCP_SUBNET') or dbo.IsA('TFRE_DB_DHCP_FIXED') then begin
+      if dbo.IsA('TFRE_DB_DHCP_SUBNET') then begin
+        txt:=dbo.field('subnet').AsString;
+      end else begin
+        txt:=dbo.field('objname').AsString;
+      end;
+
+      entry:=GFRE_DBI.NewObject;
+      entry.Field('text').AsString:=txt;
+      entry.Field('uid').AsGUID:=dbo.UID;
+      entry.Field('uidpath').AsStringArr:=dbo.GetUIDPath;
+      entry.Field('_funcclassname_').AsString:=dbo.SchemeClass;
+      entry.Field('_childrenfunc_').AsString:='ChildrenData';
+      entry.Field('_menufunc_').AsString:='Menu';
+      entry.Field('_contentfunc_').AsString:='Content';
+      res.addEntry(entry);
+
+    end;
+  end;
+  Result:=res;
+end;
+
+function TFRE_DB_DHCP.IMI_addSubnet(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res       :TFRE_DB_DIALOG_DESC;
+  scheme    : IFRE_DB_SchemeObject;
+  serverFunc: TFRE_DB_SERVER_FUNC_DESC;
+begin
+  GetDBConnection.GetScheme('TFRE_DB_DHCP_SUBNET',scheme);
+  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Subnet');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.SetElementValue('dhcp',UID_String);
+  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_DHCP_SUBNET','newOperation');
+  serverFunc.AddParam.Describe('collection','dhcp_subnet');
+  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_DHCP.IMI_addFixedHost(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res       : TFRE_DB_DIALOG_DESC;
+  scheme    : IFRE_DB_SchemeObject;
+  serverFunc: TFRE_DB_SERVER_FUNC_DESC;
+begin
+  GetDBConnection.GetScheme('TFRE_DB_DHCP_FIXED',scheme);
+  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Subnet');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.SetElementValue('dhcp',UID_String);
+  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_DHCP_FIXED','newOperation');
+  serverFunc.AddParam.Describe('collection','dhcp_fixed');
+  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
+  Result:=res;
+end;
+
+
+
+{ TFRE_DB_Certificate }
+
+class procedure TFRE_DB_Certificate.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('ca',fdbft_ObjLink).required:=true;
+  scheme.AddSchemeField('cn',fdbft_String).required:=true;
+  scheme.AddSchemeField('c',fdbft_String);
+  scheme.AddSchemeField('email',fdbft_String);
+  scheme.AddSchemeField('st',fdbft_String);
+  scheme.AddSchemeField('l',fdbft_String);
+  scheme.AddSchemeField('ou',fdbft_String);
+  scheme.AddSchemeField('crt',fdbft_String);
+  scheme.AddSchemeField('key',fdbft_String);
+  scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
+  scheme.AddSchemeField('revoked',fdbft_DateTimeUTC);
+  scheme.AddSchemeField('valid',fdbft_DateTimeUTC);
+  scheme.AddSchemeField('revoke',fdbft_Boolean);
+  scheme.SetSysDisplayField(GFRE_DBI.ConstructStringArray(['cn']),'%s');
+
+  group:=scheme.AddInputGroup('main_create').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
+  group.AddInput('ca','',false,true);
+  group.AddInput('cn','$scheme_TFRE_DB_CERTIFICATE_cn');
+  group.AddInput('c','$scheme_TFRE_DB_CERTIFICATE_c');
+  group.AddInput('email','$scheme_TFRE_DB_CERTIFICATE_email');
+  group.AddInput('st','$scheme_TFRE_DB_CERTIFICATE_st');
+  group.AddInput('l','$scheme_TFRE_DB_CERTIFICATE_l');
+  group.AddInput('ou','$scheme_TFRE_DB_CERTIFICATE_ou');
+
+  group:=scheme.AddInputGroup('main_edit').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
+  group.UseInputGroup(scheme.DefinedSchemeName,'main_create');
+  group.AddInput('revoke','$scheme_TFRE_DB_CERTIFICATE_revoke',true);
+  group.AddInput('issued','$scheme_TFRE_DB_CERTIFICATE_issued',true);
+  group.AddInput('revoked','$scheme_TFRE_DB_CERTIFICATE_revoked',true);
+  group.AddInput('valid','$scheme_TFRE_DB_CERTIFICATE_valid',true);
+  group.AddInput('crt','$scheme_TFRE_DB_CERTIFICATE_crt');
+  group.AddInput('key','$scheme_TFRE_DB_CERTIFICATE_key');
+end;
+
+class procedure TFRE_DB_Certificate.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_main_group','Certificate'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_cn','Common Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_c','Country'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_email','EMail'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_st','State'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_l','Location'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_ou','Organization Unit'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_revoke','Revoke'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_issued','Issued'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_revoked','Revoked'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_valid','Valid'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_crt','Certificate'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_key','Key'));
+end;
+
+function TFRE_DB_Certificate.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  res.AddEntry.Describe('Revoke Certificate','images_apps/cloudcontrol/revoke_certificate.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'revoke'));
+  Result:=res;
+end;
+
+function TFRE_DB_Certificate.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res    :TFRE_DB_FORM_PANEL_DESC;
+  scheme :IFRE_DB_SchemeObject;
+begin
+  GetDBConnection.GetScheme(SchemeClass,scheme);
+  res:=TFRE_DB_FORM_PANEL_DESC.create.Describe('Certificate Authority');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+{ TFRE_DB_CA }
+
+class procedure TFRE_DB_CA.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('cn',fdbft_String).required:=true;
+  scheme.AddSchemeField('c',fdbft_String);
+  scheme.AddSchemeField('email',fdbft_String);
+  scheme.AddSchemeField('st',fdbft_String);
+  scheme.AddSchemeField('l',fdbft_String);
+  scheme.AddSchemeField('o',fdbft_String);
+  scheme.AddSchemeField('ou',fdbft_String);
+  scheme.AddSchemeField('crt',fdbft_String);
+  scheme.AddSchemeField('key',fdbft_String);
+  scheme.AddSchemeField('pass',fdbft_String);
+  scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_CA_main_group');
+  group.AddInput('objname','$scheme_TFRE_DB_CA_objname');
+  group.AddInput('cn','$scheme_TFRE_DB_CA_cn');
+  group.AddInput('c','$scheme_TFRE_DB_CA_c');
+  group.AddInput('email','$scheme_TFRE_DB_CA_email');
+  group.AddInput('st','$scheme_TFRE_DB_CA_st');
+  group.AddInput('l','$scheme_TFRE_DB_CA_l');
+  group.AddInput('o','$scheme_TFRE_DB_CA_o');
+  group.AddInput('ou','$scheme_TFRE_DB_CA_ou');
+  group.AddInput('crt','$scheme_TFRE_DB_CA_crt');
+  group.AddInput('key','$scheme_TFRE_DB_CA_key');
+  group.AddInput('pass','$scheme_TFRE_DB_CA_pass');
+  group.AddInput('issued','$scheme_TFRE_DB_CA_issued',true);
+end;
+
+class procedure TFRE_DB_CA.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_main_group','Certificate Authority'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_objname','Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_cn','Common Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_c','Country'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_email','EMail'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_st','State'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_l','Location'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_o','Organization Unit'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_ou','Organization Unit'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_crt','Certificate'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_key','Key'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_pass','Password'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_issued','Issued'));
+end;
+
+function TFRE_DB_CA.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  res.AddEntry.Describe('Add Certificate','images_apps/cloudcontrol/add_certificate.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addCertificate'));
+  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_ca.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
+  Result:=res;
+end;
+
+function TFRE_DB_CA.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+  scheme: IFRE_DB_SchemeObject;
+begin
+  GetDBConnection.GetScheme(SchemeClass,scheme);
+  res:=TFRE_DB_FORM_PANEL_DESC.create.Describe('Certificate Authority');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_CA.IMI_ChildrenData(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_STORE_DATA_DESC;
+  entry : IFRE_DB_Object;
+  childs: TFRE_DB_GUIDArray;
+  i     : Integer;
+  dbo   : IFRE_DB_Object;
+
+begin
+  res := TFRE_DB_STORE_DATA_DESC.create;
+  childs:=ReferencedByList;
+  for i := 0 to Length(childs) - 1 do begin
+    GetDBConnection.Fetch(childs[i],dbo);
+    if dbo.IsA('TFRE_DB_CERTIFICATE') then begin
+      entry:=GFRE_DBI.NewObject;
+      entry.Field('text').AsString:=dbo.field('cn').AsString;
+      entry.Field('uid').AsGUID:=dbo.UID;
+      entry.Field('uidpath').AsStringArr:=dbo.GetUIDPath;
+      entry.Field('_funcclassname_').AsString:=dbo.SchemeClass;
+      entry.Field('_childrenfunc_').AsString:='ChildrenData';
+      entry.Field('_menufunc_').AsString:='Menu';
+      entry.Field('_contentfunc_').AsString:='Content';
+      res.addEntry(entry);
+    end;
+  end;
+  Result:=res;
+end;
+
+function TFRE_DB_CA.IMI_AddCertificate(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  scheme    : IFRE_DB_SchemeObject;
+  res       : TFRE_DB_DIALOG_DESC;
+  serverFunc: TFRE_DB_SERVER_FUNC_DESC;
+begin
+  GetDBConnection.GetScheme('TFRE_DB_Certificate',scheme);
+  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Certificate');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main_create'),GetSession(input));
+  res.SetElementValue('ca',UID_String);
+  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_Certificate','newOperation');
+  serverFunc.AddParam.Describe('collection','certificate');
+  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
+  Result:=res;
+end;
+
+
+{ TFRE_DB_WifiNetwork }
+
+class procedure TFRE_DB_WifiNetwork.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_NETWORK');
+  scheme.AddSchemeField('ssid',fdbft_String).required:=true;
+  scheme.AddSchemeField('hidden',fdbft_Boolean);
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_WIFINETWORK_main_group');
+  group.AddInput('ssid','$scheme_TFRE_DB_WIFINETWORK_ssid');
+  group.AddInput('hidden','$scheme_TFRE_DB_WIFINETWORK_hidden');
+  group.UseInputGroup('TFRE_DB_NETWORK','main');
+end;
+
+class procedure TFRE_DB_WifiNetwork.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WIFINETWORK_main_group','Wifi Network'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WIFINETWORK_ssid','SSID'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_WIFINETWORK_hidden','Hidden Network'));
+end;
+
+function TFRE_DB_WifiNetwork.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  Result:=inherited IMI_Content(input);
+end;
+
+class procedure TFRE_DB_RadiusNetwork.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_WIFINETWORK');
+  scheme.AddSchemeField('caid',fdbft_ObjLink).required:=false; //TODO FRANZ
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_RADIUSNETWORK_main_group');
+  group.UseInputGroup('TFRE_DB_WIFINETWORK','main');
+  group.AddInput('caid','$scheme_TFRE_DB_RADIUSNETWORK_caid');
+end;
+
+class procedure TFRE_DB_RadiusNetwork.InstallDBObjects( const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_RADIUSNETWORK_main_group','Radius Wifi Network'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_RADIUSNETWORK_caid','CAID'));
+end;
+
+function TFRE_DB_RadiusNetwork.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  Result:=inherited IMI_Content(input);
+end;
+
+class procedure TFRE_DB_Network.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddSchemeField('endpoint',fdbft_ObjLink).required:=true;
+  scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ip');
+  scheme.AddSchemeField('dns',fdbft_String);
+  scheme.AddSchemeField('dhcp',fdbft_Boolean);
+  scheme.AddSchemeField('dhcp_range_start',fdbft_UInt16);
+  scheme.AddSchemeField('dhcp_range_end',fdbft_UInt16);
+  scheme.AddSchemeField('dhcp_leasetime',fdbft_UInt16);
+  scheme.AddSchemeField('dhcp_parameters',fdbft_String).multiValues:=true;
+  scheme.AddSchemeField('urlexceptions',fdbft_String).multiValues:=true;
+  scheme.AddSchemeField('redirection_start',fdbft_ObjLink);
+  scheme.AddSchemeField('redirection_customer',fdbft_ObjLink);
+  scheme.AddSchemeField('redirection_agb',fdbft_ObjLink);
+  scheme.AddSchemeField('redirection_end',fdbft_ObjLink);
+  scheme.AddSchemeField('sessiontimeout',fdbft_UInt32);
+  scheme.AddSchemeField('vlan_id',fdbft_Uint16);
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_NETWORK_main_group');
+  group.AddInput('endpoint','',false,true);
+  group.AddInput('ip_net','$scheme_TFRE_DB_NETWORK_ip_net');
+  group.AddInput('dns','$scheme_TFRE_DB_NETWORK_dns');
+  group.AddInput('dhcp','$scheme_TFRE_DB_NETWORK_dhcp');
+  group.AddInput('dhcp_range_start','$scheme_TFRE_DB_NETWORK_dhcp_range_start');
+  group.AddInput('dhcp_range_end','$scheme_TFRE_DB_NETWORK_dhcp_range_end');
+  group.AddInput('dhcp_leasetime','$scheme_TFRE_DB_NETWORK_dhcp_leasetime');
+  group.AddInput('dhcp_parameters','$scheme_TFRE_DB_NETWORK_dhcp_parameters');
+  group.AddInput('urlexceptions','$scheme_TFRE_DB_NETWORK_urlexceptions');
+  group.AddInput('redirection_start','$scheme_TFRE_DB_NETWORK_redirection_start',false,false,'cmspage');
+  group.AddInput('redirection_customer','$scheme_TFRE_DB_NETWORK_redirection_customer',false,false,'cmspage');
+  group.AddInput('redirection_agb','$scheme_TFRE_DB_NETWORK_redirection_agb',false,false,'cmspage');
+  group.AddInput('redirection_end','$scheme_TFRE_DB_NETWORK_redirection_end',false,false,'cmspage');
+  group.AddInput('sessiontimeout','$scheme_TFRE_DB_NETWORK_sessiontimeout');
+  group.AddInput('vlan_id','$scheme_TFRE_DB_NETWORK_vlan_id');
+end;
+
+class procedure TFRE_DB_Network.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_main_group','General Information'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_ip_net','Subnet'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_dns','DNS'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_dhcp','DHCP'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_dhcp_range_start','DHCP Range Start'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_dhcp_range_end','DHCP Range End'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_dhcp_leasetime','DHCP Leasetime'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_dhcp_parameters','DHCP Parameters'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_urlexceptions','Url Exceptions'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_redirection_start','Redirection Start'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_redirection_customer','Redirection Customer'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_redirection_agb','Redirection AGB'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_redirection_end','Redirection End'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_sessiontimeout','Sessiontimeout'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_NETWORK_vlan_id','VLAN Identifier'));
+end;
+
+class procedure TFRE_DB_Network.NetworkOnChange(const dbc: IFRE_DB_Connection; const is_dhcp: boolean; const subnet: string; const ep_id: TGUID; const dns: string; const range_start, range_end: integer);
+  var dhcp_obj        : IFRE_DB_Object;
+      dhcp_id         : TGUID;
+      childs          : TFRE_DB_GUIDArray;
+      dhcp_subnet_obj : IFRE_DB_Object;
+      i               : integer;
+      colls           : IFRE_DB_Collection;
+      current_ip      : string;
+      highest         : integer;
+      sub_ip          : integer;
+      do_update       : boolean;
+      routing_id      : TGUID;
+      routing_obj     : IFRE_DB_Object;
+      route_obj       : IFRE_DB_Object;
+      ep_obj          : IFRE_DB_Object;
+      gw              : string;
+
+      procedure _setfields;
+      begin
+        dhcp_subnet_obj.Field('subnet').AsString:=subnet;
+        dhcp_subnet_obj.Field('range_start').AsString:=GetIPDots(subnet,3)+inttostr(range_start);
+        dhcp_subnet_obj.Field('range_end').AsString:=GetIPDots(subnet,3)+inttostr(range_end);
+        dhcp_subnet_obj.Field('router').AsString:=GetIPDots(subnet,3)+'1';
+        dhcp_subnet_obj.Field('dns').AsString:=dns;
+      end;
+
+begin
+    writeln('NetworkOnChange');
+    if is_dhcp then begin
+      writeln('DHCP');
+      dhcp_id        := GetService(dbc,'TFRE_DB_DHCP');
+      if       not dbc.Fetch(dhcp_id,dhcp_obj)          then raise EFRE_DB_Exception.Create(edb_ERROR,'NO DHCP SERVICE FOUND IN NETWORK ON CHANGE');
+      childs     := dhcp_obj.ReferencedByList('TFRE_DB_DHCP_SUBNET');
+      writeln('ChiLDS');
+
+      do_update  := false;
+
+      for i := 0 to Length(childs) - 1 do begin
+        dbc.Fetch(childs[i],dhcp_subnet_obj);
+        if dhcp_subnet_obj.Field('subnet').AsString=subnet then begin
+          writeln('ALREADY IN DHCP, UPDATING !');
+          do_update  := true;
+          break;
+        end;
+      end;
+
+      if do_update then begin
+        _setfields;
+        CheckDbResult(dbc.Update(dhcp_subnet_obj),'failure on cloned/update');
+      end else begin
+        colls          := dbc.Collection('dhcp_subnet');
+        dhcp_subnet_obj:= dbc.NewObject('TFRE_DB_DHCP_Subnet');
+        _setfields;
+        dhcp_subnet_obj.Field('dhcp').AsObjectLink:=dhcp_id;
+        CheckDbResult(COLLS.Store(dhcp_subnet_obj),'Add DHCP Subnet');
+      end;
+    end;
+
+    // check routing
+    if   not dbc.Fetch(ep_id,ep_obj)          then raise EFRE_DB_Exception.Create(edb_ERROR,'NO EP FOUND IN NETWORK ON CHANGE');
+    if   ep_obj.IsA('TFRE_DB_AP_Lancom') then begin
+      // no routing
+      gw := '';
+    end else begin
+      if ep_obj.FieldExists('vpn_crtid') then begin
+        gw := '';
+      end else begin
+        gw := '1.2.3.4';    // get from mac / dhcp   // TODO XXXX
+      end;
+    end;
+
+    if gw <>'' then begin
+      do_update  := false;
+
+      routing_id := GetService  (dbc,'TFRE_DB_ROUTING');
+      if       not dbc.Fetch    (routing_id, routing_obj)          then raise EFRE_DB_Exception.Create(edb_ERROR,'NO ROUTING SERVICE FOUND IN NETWORK ON CHANGE');
+      for i := 0 to routing_obj.Field('static').ValueCount-1 do begin
+        route_obj   :=    routing_obj.Field('static').AsObjectItem[i];
+        if route_obj.Field('subnet').AsString=subnet then begin
+          writeln('ALREADY IN ROUTING, UPDATING !');
+          do_update  := true;
+          break;
+        end;
+      end;
+
+      if do_update then begin
+       route_obj.Field('gateway').AsString := '1.1.1.1';
+      end else begin
+       route_obj:=dbc.NewObject('TFRE_DB_Route');
+       route_obj.Field('subnet').AsString:=subnet;
+       route_obj.Field('gateway').AsString:='2.2.2.2';
+       routing_obj.Field('static').AddObject(route_obj);
+      end;
+      routing_obj.Field('reprovision').AsBoolean := true;
+      writeln(routing_obj.DumpToString);
+      CheckDbResult (dbc.Update(routing_obj),'failure on cloned/update');
+    end;
+
+    SetReprovision(dbc,dhcp_id);
+end;
+
+class function TFRE_DB_Network.IMC_NewOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+ var
+      dbc        :   IFRE_DB_CONNECTION;
+      raw_object :   IFRE_DB_Object;
+      new_net    :   string;
+      ep_id      :   TGUID;
+      dhcp       :   boolean;
+      range_start:   integer;
+      range_end  :   integer;
+      dns        :   string;
+      s          :   string;
+
+begin
+  writeln ('NETWORK NewOperation');
+  writeln(input.DumpToString());
+  dbc          := input.GetReference as IFRE_DB_CONNECTION;
+  raw_object   := input.Field('data').AsObject;
+  new_net      := raw_object.Field('ip_net').asstring;
+  dhcp         := raw_object.Field('dhcp').asboolean;
+  ep_id        := raw_object.Field('endpoint').AsGUID;
+
+  s            := raw_object.Field('dhcp_range_start').Asstring;
+  if s<>'' then range_start:=strtoint(s) else range_start:=20;
+  s            := raw_object.Field('dhcp_range_end').Asstring;
+  if s<>'' then range_start:=strtoint(s) else range_end:=20;
+  dns          := raw_object.Field('dns').Asstring;
+
+  if CheckClass(new_net)=false then begin
+    result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on creating! Only Class C networks are currently allowed !',fdbmt_error);
+    exit;
+  end;
+
+  if UniqueNet(dbc,GUID_NULL,new_net) then begin
+    writeln('UNIQUE');
+  end else begin
+    writeln('NOT UNIQUE');
+    result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on creating! The network is not unique !',fdbmt_error);
+    exit;
+  end;
+
+  Result:=inherited IMC_NewOperation(input);
+
+  // set reprovision on endpoint
+  SetReprovision(dbc,ep_id);
+  NetworkOnChange(dbc,dhcp,new_net,ep_id,dns,range_start,range_end);
+end;
+
+function TFRE_DB_Network.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res    :TFRE_DB_FORM_PANEL_DESC;
+  scheme :IFRE_DB_SchemeObject;
+begin
+  GetDBConnection.GetScheme(SchemeClass,scheme);
+  res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Network');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_Network.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_network.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
+  Result:=res;
+end;
+
+function TFRE_DB_Network.IMI_SaveOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+var scheme            : IFRE_DB_SCHEMEOBJECT;
+    update_object_uid : TGUid;
+    raw_object        : IFRE_DB_Object;
+    dbc               : IFRE_DB_CONNECTION;
+    ep_id             : TGUID;
+    dhcp              : boolean;
+    subnet            : string;
+    dns               : string;
+    range_start       : integer;
+    range_end         : integer;
+
+begin
+  writeln('NETWORK SAVE');
+  if assigned(Parent) then begin
+    result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on saving! Saving of Subobject not supported!',fdbmt_error);
+    exit;
+  end;
+  dbc := GetDBConnection;
+  result            := nil;
+  scheme            := GetScheme;
+  update_object_uid := UID;
+  raw_object        := input.Field('data').AsObject;
+
+  if CheckClass(raw_object.Field('ip_net').AsString)=false then begin
+    result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on saving! Only Class C networks are currently allowed !',fdbmt_error);
+    exit;
+  end;
+
+  if UniqueNet(dbc,UID,raw_object.Field('ip_net').AsString)=false then begin
+   result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on saving! The network is not unique !',fdbmt_error);
+   exit;
+  end;
+
+  scheme.SetObjectFieldsWithScheme(raw_object,self,false,GetDBConnection);
+
+  ep_id             := Field('endpoint').AsGUID;
+  dhcp              := Field('dhcp').AsBoolean;
+  subnet            := Field('ip_net').AsString;
+  range_start       := Field('dhcp_range_start').AsUInt16;
+  range_end         := Field('dhcp_range_end').AsUInt16;
+  dns               := Field('dns').AsString;
+
+  CheckDbResult     (dbc.Update(self),'failure on cloned/update');  // This instance is freed by now, so rely on the stackframe only (self) pointer is garbage(!!)
+
+  SetReprovision    (dbc,ep_id);
+  NetworkOnChange   (dbc,dhcp,subnet,ep_id,dns,range_start,range_end);
+
+  result := GFRE_DB_NIL_DESC;
+
+end;
+
+
+{ TFRE_DB_MobileDevice }
+
+class procedure TFRE_DB_MobileDevice.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_DEVICE');
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('site',fdbft_ObjLink);
+  scheme.AddSchemeField('crtid',fdbft_ObjLink);
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_MOBILEDEVICE_main_group');
+  group.AddInput('objname','$scheme_TFRE_DB_MOBILEDEVICE_name');
+  group.UseInputGroup('TFRE_DB_DEVICE','main');
+  group.AddInput('site','',false,true);
+  group.AddInput('crtid','$scheme_TFRE_DB_MOBILEDEVICE_certificate');
+end;
+
+class procedure TFRE_DB_MobileDevice.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MOBILEDEVICE_main_group','Mobile Device'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MOBILEDEVICE_name','Device Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MOBILEDEVICE_certificate','Certificate'));
+end;
+
+function TFRE_DB_MobileDevice.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+  scheme: IFRE_DB_SchemeObject;
+begin
+  GetDBConnection.GetScheme(SchemeClass,scheme);
+  res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Mobile Device');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_MobileDevice.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res: TFRE_DB_MENU_DESC;
+begin
+  res:=TFRE_DB_MENU_DESC.create.Describe();
+  //TODO - check if mobiledevice is assigned to a site?
+  res.AddEntry.Describe('Unassign','images_apps/cloudcontrol/unassign_mobile_device.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'unassign'));
+  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_mobile_device.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
+  Result:=res;
+end;
+
+function TFRE_DB_MobileDevice.IMI_unassign(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  Result := TFRE_DB_MESSAGE_DESC.Create.Describe('Unassign Mobile Device','Not implemented yet!',fdbmt_error);
+end;
+
+{ TFRE_DB_Endpoint }
+
+class procedure TFRE_DB_Endpoint.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_DEVICE');
+
+  scheme.AddSchemeField     ('site',fdbft_ObjLink).required:=true;
+  scheme.AddSchemeField     ('status_uid',fdbft_ObjLink);
+  scheme.AddSchemeField     ('reprovision',fdbft_Boolean);
+  scheme.AddCalculatedField ('displayname','GetDisplayName',cft_OnStoreUpdate);
+
+  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_ENDPOINT_main_group');
+  group.UseInputGroup('TFRE_DB_DEVICE','main');
+  group.AddInput('site','',false,true);
+end;
+
+class procedure TFRE_DB_Endpoint.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+begin
+  inherited InstallDBObjects(conn);
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_ENDPOINT_main_group','End Point Configuration'));
+end;
+
+function TFRE_DB_Endpoint.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_SUBSECTIONS_DESC;
+  sec   : TFRE_DB_SECTION_DESC;
+begin
+  res:=TFRE_DB_SUBSECTIONS_DESC.create.Describe;
+  sec:=res.AddSection.Describe(TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'Configuration'),'Configuration',1);
+  res.AddSection.Describe(TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'Monitoring'),'Monitoring',2);
+
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_Configuration(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_FORM_PANEL_DESC;
+  scheme: IFRE_DB_SchemeObject;
+begin
+  GetDBConnection.GetScheme(SchemeClass,scheme);
+  res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Endpoint');
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.FillWithObjectValues(Self,GetSession(input));
+
+  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_Monitoring(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res  : TFRE_DB_SUBSECTIONS_DESC;
+  sub  : TFRE_DB_SECTION_DESC;
+begin
+  res:=TFRE_DB_SUBSECTIONS_DESC.create.Describe(sec_dt_vertical);
+
+  sub:=res.AddSection.Describe(TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'Monitoring_Con'),'Connected',1);
+//  sub.SetContentDesc(IMI_Statistics_Con(nil).Implementor_HC as TFRE_DB_CONTENT_DESC);
+
+  sub:=res.AddSection.Describe(TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'Monitoring_All'),'All',2,'',2);
+//  sub.SetContentDesc(IMI_Statistics_All(nil).Implementor_HC as TFRE_DB_CONTENT_DESC);
+
+  sub:=res.AddSection.Describe(TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'Monitoring_All'),'All',0);
+//  sub.SetContentDesc(IMI_Statistics_All(nil).Implementor_HC as TFRE_DB_CONTENT_DESC);
+
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_Monitoring_Con(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_VIEW_LIST_DESC;
+  layout: TFRE_DB_VIEW_LIST_LAYOUT_DESC;
+  store : TFRE_DB_STORE_DESC;
+begin
+
+  layout:=TFRE_DB_VIEW_LIST_LAYOUT_DESC.create.Describe();
+  layout.AddDataElement.Describe('customernumber','Number');
+  layout.AddDataElement.Describe('company','Company');
+  layout.AddDataElement.Describe('firstname','Firstname');
+  layout.AddDataElement.Describe('lastname','Lastname');
+
+  store:=TFRE_DB_STORE_DESC.create.Describe('Statistics',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'Monitoring_Data'));
+
+  res:=TFRE_DB_VIEW_LIST_DESC.create.Describe(store, layout, nil, 'Monitoring Con',[]);
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_Monitoring_All(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_VIEW_LIST_DESC;
+  layout: TFRE_DB_VIEW_LIST_LAYOUT_DESC;
+  store : TFRE_DB_STORE_DESC;
+begin
+
+  layout:=TFRE_DB_VIEW_LIST_LAYOUT_DESC.create.Describe();
+  layout.AddDataElement.Describe('customernumber','Number');
+  layout.AddDataElement.Describe('company','Company');
+  layout.AddDataElement.Describe('firstname','Firstname');
+  layout.AddDataElement.Describe('lastname','Lastname');
+
+  store:=TFRE_DB_STORE_DESC.create.Describe('Statistics',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'Monitoring_Data'));
+
+  res:=TFRE_DB_VIEW_LIST_DESC.create.Describe(store, layout, nil, 'Monitoring All',[]);
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_Monitoring_Data(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_STORE_DATA_DESC;
+  entry : IFRE_DB_Object;
+begin
+  res:=TFRE_DB_STORE_DATA_DESC.create.Describe(3);
+  entry:=GFRE_DBI.NewObject;
+  entry.Field('customernumber').AsInt16:=1;
+  entry.Field('company').AsString:='A';
+  entry.Field('firstname').AsString:='AF';
+  entry.Field('lastname').AsString:='AL';
+  res.addEntry(entry);
+  entry:=GFRE_DBI.NewObject;
+  entry.Field('customernumber').AsInt16:=2;
+  entry.Field('company').AsString:='B';
+  entry.Field('firstname').AsString:='BF';
+  entry.Field('lastname').AsString:='BL';
+  res.addEntry(entry);
+  entry:=GFRE_DBI.NewObject;
+  entry.Field('customernumber').AsInt16:=3;
+  entry.Field('company').AsString:='C';
+  entry.Field('firstname').AsString:='CF';
+  entry.Field('lastname').AsString:='CL';
+  res.addEntry(entry);
+  Result:=res;
+end;
+
+
+function TFRE_DB_Endpoint.IMI_Provision(const input: IFRE_DB_Object): IFRE_DB_Object;
+var pnr:integer;
+    AProcess: TProcess;
+    res: TFRE_DB_MESSAGE_DESC;
+begin
+  writeln('YEAH GUT PROVISION --- ');
+  if FieldExists('provisioning_serial') then begin
+   pnr:=Field('provisioning_serial').asint32;
+  end else begin
+   pnr:=0;
+  end;
+  inc(pnr);
+  writeln('new frehash:',pnr);
+  Field('provisioning_serial').asint32:=pnr;
+  writeln(DumpToString());
+  Field('reprovision').asboolean := false;
+
+  CheckDbResult(GetDBConnection.Update(self),'failure on cloned/update');  // This instance is freed by now, so rely on the stackframe only (self) pointer is garbage(!!)
+
+  res := TFRE_DB_MESSAGE_DESC.Create.Describe('PROVISIONING','Provisioning OK',fdbmt_info); //TODO - add nil message (nothing to do response)
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_addOpenWifiNetwork(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res       : TFRE_DB_DIALOG_DESC;
+  scheme    : IFRE_DB_SchemeObject;
+  serverFunc: TFRE_DB_SERVER_FUNC_DESC;
+begin
+  GetDBConnection.GetScheme('TFRE_DB_OPENWIFINETWORK',scheme);
+  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Open Wifi Network');
+  res.SendChangedFieldsOnly(false);
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
+  res.SetElementValue('hidden','false');
+  res.SetElementValue('ip_net',GetNextNet(GetDBConnection,UID));
+  res.SetElementValue('dns','172.17.0.1');
+  res.SetElementValue('dhcp','true');
+  res.SetElementValue('dhcp_range_start','10');
+  res.SetElementValue('dhcp_range_end','250');
+  res.SetElementValue('dhcp_leasetime','600');
+  res.SetElementValue('dhcp_leasetime','600');
+  res.SetElementValue('sessiontimeout','1800');
+  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_OPENWIFINETWORK','newOperation');
+  serverFunc.AddParam.Describe('collection','network');
+  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_addWPA2Network(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res       : TFRE_DB_DIALOG_DESC;
+  scheme    : IFRE_DB_SchemeObject;
+  serverFunc: TFRE_DB_SERVER_FUNC_DESC;
+begin
+  GetDBConnection.GetScheme('TFRE_DB_WPA2NETWORK',scheme);
+  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add WPA2 Network');
+  res.SendChangedFieldsOnly(false);
+  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
+  res.SetElementValue('hidden','true');
+  res.SetElementValue('ip_net',GetNextNet(GetDBConnection,UID));
+  res.SetElementValue('dns','172.17.0.1');
+  res.SetElementValue('dhcp','true');
+  res.SetElementValue('dhcp_range_start','10');
+  res.SetElementValue('dhcp_range_end','250');
+  res.SetElementValue('dhcp_leasetime','600');
+  res.SetElementValue('dhcp_leasetime','600');
+  res.SetElementValue('sessiontimeout','1800');
+  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_WPA2NETWORK','newOperation');
+  serverFunc.AddParam.Describe('collection','network');
+  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
+  Result:=res;
+end;
+
+function TFRE_DB_Endpoint.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+begin
+  result := GFRE_DBI.NewObject;
+  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Endpoint('+Field('provisioningmac').AsString+')';
+end;
+
+function TFRE_DB_Endpoint.IMI_ChildrenData(const input: IFRE_DB_Object): IFRE_DB_Object;
+var
+  res   : TFRE_DB_STORE_DATA_DESC;
+  entry : IFRE_DB_Object;
+  childs: TFRE_DB_GUIDArray;
+  i     : Integer;
+  dbo   : IFRE_DB_Object;
+
+begin
+  res := TFRE_DB_STORE_DATA_DESC.create;
+  childs:=ReferencedByList;
+  for i := 0 to Length(childs) - 1 do begin
+    GetDBConnection.Fetch(childs[i],dbo);
+    if dbo.IsA('TFRE_DB_NETWORK') then begin
+      entry:=GFRE_DBI.NewObject;
+      entry.Field('text').AsString:=dbo.field('ssid').AsString;
+      entry.Field('uid').AsGUID:=dbo.UID;
+      entry.Field('uidpath').AsStringArr:=dbo.GetUIDPath;
+      entry.Field('_funcclassname_').AsString:=dbo.SchemeClass;
+      entry.Field('_childrenfunc_').AsString:='ChildrenData';
+      entry.Field('_menufunc_').AsString:='Menu';
+      entry.Field('_contentfunc_').AsString:='Content';
+      res.addEntry(entry);
+    end;
+  end;
+  Result:=res;
+end;
+
+
+
+ { TFRE_DB_ZONE }
+
+ class procedure TFRE_DB_ZONE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_MACHINE.ClassName);
+ end;
+
+ class procedure TFRE_DB_ZONE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+ end;
+
+ function TFRE_DB_ZONE.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result := GFRE_DBI.NewObject;
+   result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Zone '+Field('objname').AsString;
+ end;
+
+ { TFRE_DB_MACHINE_SETTING_TIME }
+
+ class procedure TFRE_DB_MACHINE_SETTING_TIME.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_MACHINE_SETTING.Classname);
+   scheme.AddSchemeField('region',fdbft_String).required:=true;
+   scheme.AddSchemeField('timezone',fdbft_String).required:=true;
+   scheme.AddSchemeField('ntpserver',fdbft_String);
+   group:=scheme.AddInputGroup('setting').Setup('$scheme_TFRE_DB_MACHINE_SETTING_TIME_setting');
+   group.AddInput('region','$scheme_TFRE_DB_MACHINE_SETTING_TIME_region');
+   group.AddInput('timezone','$scheme_TFRE_DB_MACHINE_SETTING_TIME_timezone');
+   group.AddInput('ntpserver','$scheme_TFRE_DB_MACHINE_SETTING_TIME_ntpserver');
+ end;
+
+ class procedure TFRE_DB_MACHINE_SETTING_TIME.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_TIME_setting','Setting'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_TIME_region','Region'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_TIME_timezone','Timezone'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_TIME_ntpserver','NTP Server'));
+ end;
+
+ { TFRE_DB_MACHINE_SETTING_MAIL }
+
+ class procedure TFRE_DB_MACHINE_SETTING_MAIL.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_MACHINE_SETTING.Classname);
+   scheme.AddSchemeField('smtpserver',fdbft_String).required:=true;
+   scheme.AddSchemeField('smtpuser',fdbft_String);
+   scheme.AddSchemeField('smtppassword',fdbft_String);
+   scheme.AddSchemeField('mailfrom',fdbft_String).required:=true;
+   scheme.AddSchemeField('mailto',fdbft_String).required:=true;
+   group:=scheme.AddInputGroup('setting').Setup('$scheme_TFRE_DB_MACHINE_SETTING_MAIL_setting');
+   group.AddInput('smtpserver','$scheme_TFRE_DB_MACHINE_SETTING_MAIL_smtpserver');
+   group.AddInput('smtpuser','$scheme_TFRE_DB_MACHINE_SETTING_MAIL_smtpuser');
+   group.AddInput('smtppassword','$scheme_TFRE_DB_MACHINE_SETTING_MAIL_smtppassword');
+   group.AddInput('mailfrom','$scheme_TFRE_DB_MACHINE_SETTING_MAIL_mailfrom');
+   group.AddInput('mailto','$scheme_TFRE_DB_MACHINE_SETTING_MAIL_mailto');
+ end;
+
+ class procedure TFRE_DB_MACHINE_SETTING_MAIL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_MAIL_setting','Mail Parameters'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_MAIL_smtpserver','SMTP Server'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_MAIL_smtpuser','SMTP User'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_MAIL_smtppassword','SMTP Password'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_MAIL_mailfrom','Mail from'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_MAIL_mailto','Mail to'));
+ end;
+
+ { TFRE_DB_MACHINE_SETTING_HOSTNAME }
+
+ class procedure TFRE_DB_MACHINE_SETTING_HOSTNAME.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_MACHINE_SETTING.Classname);
+   scheme.AddSchemeField('hostname',fdbft_String);
+   scheme.AddSchemeField('domainname',fdbft_String);
+   group:=scheme.AddInputGroup('setting').Setup('$scheme_TFRE_DB_MACHINE_SETTING_HOSTNAME_setting');
+   group.AddInput('hostname','$scheme_TFRE_DB_MACHINE_SETTING_HOSTNAME_hostname');
+   group.AddInput('domainname','$scheme_TFRE_DB_MACHINE_SETTING_HOSTNAME_domainname');
+ end;
+
+ class procedure TFRE_DB_MACHINE_SETTING_HOSTNAME.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_HOSTNAME_setting','Setting'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_HOSTNAME_hostname','Hostname'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_HOSTNAME_domainname','Domainname'));
+ end;
+
+ { TFRE_DB_MACHINE_SETTING_POWER }
+
+ class procedure TFRE_DB_MACHINE_SETTING_POWER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_MACHINE_SETTING.Classname);
+   scheme.AddSchemeField('uptime',fdbft_String);
+   group:=scheme.AddInputGroup('setting').Setup('$scheme_TFRE_DB_MACHINE_SETTING_POWER_setting');
+   group.AddInput('uptime','$scheme_TFRE_DB_MACHINE_SETTING_POWER_uptime',true);
+ end;
+
+ class procedure TFRE_DB_MACHINE_SETTING_POWER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_POWER_setting','Setting'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_POWER_uptime','Uptime'));
+ end;
+
+ function TFRE_DB_MACHINE_SETTING_POWER.IMI_Shutdown(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   Result:=TFRE_DB_MESSAGE_DESC.create.Describe('Shutdown','Shutdown disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ function TFRE_DB_MACHINE_SETTING_POWER.IMI_Reboot(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   Result:=TFRE_DB_MESSAGE_DESC.create.Describe('Reboot','Reboot disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ { TFRE_DB_MACHINE_SETTING }
+
+ class procedure TFRE_DB_MACHINE_SETTING.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+   scheme.GetSchemeField('objname').required:=true;
+   group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_MACHINE_SETTING_main');
+   group.AddInput('objname','$scheme_TFRE_DB_MACHINE_SETTING_name',true);
+   group.AddInput('desc.txt','$scheme_TFRE_DB_MACHINE_SETTING_description',true);
+ end;
+
+ class procedure TFRE_DB_MACHINE_SETTING.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_main','Properties'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_name','Name'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_SETTING_description','Description'));
+ end;
+
+ { TFRE_DB_FC_PORT }
+
+ class procedure TFRE_DB_FC_PORT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+   scheme.GetSchemeField('objname').required:=true;
+   scheme.AddSchemeField('targetmode',fdbft_boolean);
+   scheme.AddSchemeField('portnr',fdbft_UInt16);
+   scheme.AddSchemeField('manufacturer',fdbft_String);
+   scheme.AddSchemeField('model',fdbft_String);
+   scheme.AddSchemeField('firmware',fdbft_String);
+   scheme.AddSchemeField('biosversion',fdbft_String);
+   scheme.AddSchemeField('serial',fdbft_String);
+   scheme.AddSchemeField('driver',fdbft_String);
+   scheme.AddSchemeField('driverversion',fdbft_String);
+   scheme.AddSchemeField('porttype',fdbft_String);
+   scheme.AddSchemeField('state',fdbft_String);
+   scheme.AddSchemeField('supportedspeeds',fdbft_String);
+   scheme.AddSchemeField('currentspeed',fdbft_String);
+   scheme.AddSchemeField('nodewwn',fdbft_String);
+
+   group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_FC_PORT_main');
+   group.AddInput('objname','$scheme_TFRE_DB_FC_PORT_wwn',true);
+   group.AddInput('desc.txt','$scheme_TFRE_DB_FC_PORT_description');
+   group.AddInput('targetmode','$scheme_TFRE_DB_FC_PORT_targetmode');
+   group.AddInput('portnr','$scheme_TFRE_DB_FC_PORT_portnr',true);
+   group.AddInput('manufacturer','$scheme_TFRE_DB_FC_PORT_manufacturer',true);
+   group.AddInput('model','$scheme_TFRE_DB_FC_PORT_model',true);
+   group.AddInput('firmware','$scheme_TFRE_DB_FC_PORT_firmware',true);
+   group.AddInput('biosversion','$scheme_TFRE_DB_FC_PORT_biosversion',true);
+   group.AddInput('serial','$scheme_TFRE_DB_FC_PORT_serial',true);
+   group.AddInput('driver','$scheme_TFRE_DB_FC_PORT_driver',true);
+   group.AddInput('driverversion','$scheme_TFRE_DB_FC_PORT_driverversion',true);
+   group.AddInput('porttype','$scheme_TFRE_DB_FC_PORT_porttype',true);
+   group.AddInput('state','$scheme_TFRE_DB_FC_PORT_state',true);
+   group.AddInput('supportedspeeds','$scheme_TFRE_DB_FC_PORT_supportedspeeds',true);
+   group.AddInput('currentspeed','$scheme_TFRE_DB_FC_PORT_currentspeed',true);
+   group.AddInput('nodewwn','$scheme_TFRE_DB_FC_PORT_nodewwn',true);
+ end;
+
+ class procedure TFRE_DB_FC_PORT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_main','FC Adapter Port'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_wwn','Port WWN'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_description','Description'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_targetmode','Targetmode'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_portnr','Port ID'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_manufacturer','Manufacturer'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_model','Model'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_firmware','Firmware'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_biosversion','Bios Version'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_serial','Serial Number'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_driver','Driver'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_driverversion','Driver Version'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_porttype','Port Type'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_state','State'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_supportedspeeds','Supported Speeds'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_currentspeed','Current Speed'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_FC_PORT_nodewwn','Node WWN'));
+
+ end;
+
+ { TFRE_DB_DATALINK_STUB }
+
+ class procedure TFRE_DB_DATALINK_STUB.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+ end;
+
+ class procedure TFRE_DB_DATALINK_STUB.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+ end;
+
+ function TFRE_DB_DATALINK_STUB.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+ var res       : TFRE_DB_MENU_DESC;
+     func      : TFRE_DB_SERVER_FUNC_DESC;
+ begin
+   res:=TFRE_DB_MENU_DESC.create.Describe;
+   func:=CSF(@IMI_Delete);
+   res.AddEntry.Describe(input.Field('delete_stub').asstring,'images_apps/corebox_appliance/delete_stub.png',func);
+   func:=CSF(@IMI_AddVNIC);
+   res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/corebox_appliance/add_vnic.png',func);
+   Result:=res;
+ end;
+
+ function TFRE_DB_DATALINK_STUB.IMI_AddVNIC(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ function TFRE_DB_DATALINK_STUB.IMI_Delete(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ { TFRE_DB_DATALINK_AGGR }
+
+ class procedure TFRE_DB_DATALINK_AGGR.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+ end;
+
+ class procedure TFRE_DB_DATALINK_AGGR.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+ end;
+
+ function TFRE_DB_DATALINK_AGGR.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+ var res       : TFRE_DB_MENU_DESC;
+     func      : TFRE_DB_SERVER_FUNC_DESC;
+ begin
+   res:=TFRE_DB_MENU_DESC.create.Describe;
+   func:=CSF(@IMI_Delete);
+   res.AddEntry.Describe(input.Field('delete_aggr').asstring,'images_apps/corebox_appliance/delete_aggr.png',func);
+   func:=CSF(@IMI_AddVNIC);
+   res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/corebox_appliance/add_vnic.png',func);
+   Result:=res;
+ end;
+
+ function TFRE_DB_DATALINK_AGGR.IMI_AddVNIC(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ function TFRE_DB_DATALINK_AGGR.IMI_Delete(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ { TFRE_DB_DATALINK_VNIC }
+
+ class procedure TFRE_DB_DATALINK_VNIC.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+ end;
+
+ class procedure TFRE_DB_DATALINK_VNIC.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+ end;
+
+ function TFRE_DB_DATALINK_VNIC.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+ var res       : TFRE_DB_MENU_DESC;
+     func      : TFRE_DB_SERVER_FUNC_DESC;
+ begin
+   res:=TFRE_DB_MENU_DESC.create.Describe;
+   func:=CSF(@IMI_Delete);
+   res.AddEntry.Describe(input.Field('delete_vnic').asstring,'images_apps/corebox_appliance/delete_vnic.png',func);
+   Result:=res;
+ end;
+
+ function TFRE_DB_DATALINK_VNIC.IMI_Delete(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ { TFRE_DB_DATALINK_PHYS }
+
+ class procedure TFRE_DB_DATALINK_PHYS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+ end;
+
+ class procedure TFRE_DB_DATALINK_PHYS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+ end;
+
+ function TFRE_DB_DATALINK_PHYS.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+ var res       : TFRE_DB_MENU_DESC;
+     func      : TFRE_DB_SERVER_FUNC_DESC;
+ begin
+   if Field('parentid').ValueCount=0 then
+     begin
+       res:=TFRE_DB_MENU_DESC.create.Describe;
+       func:=CSF(@IMI_AddVNIC);
+       res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/corebox_appliance/add_vnic.png',func);
+       Result:=res;
+     end
+   else
+     result := GFRE_DB_NIL_DESC;
+ end;
+
+ function TFRE_DB_DATALINK_PHYS.IMI_AddVNIC(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ { TFRE_DB_DATALINK }
+
+ class procedure TFRE_DB_DATALINK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+   scheme.GetSchemeField('objname').required:=true;
+   scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
+   scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ip');
+   scheme.AddSchemeField('mtu',fdbft_Uint16);
+   scheme.AddSchemeField('vlan',fdbft_Uint16);
+   scheme.AddSchemeField('showvirtual',fdbft_Boolean).required:=true;
+   scheme.AddSchemeField('showglobal',fdbft_Boolean).required:=true;
+   group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_DATALINK_main_group');
+   group.AddInput('objname','$scheme_TFRE_DB_DATALINK_name',true);
+   group.AddInput('desc.txt','$scheme_TFRE_DB_DATALINK_description');
+   group.AddInput('ip_net','$scheme_TFRE_DB_DATALINK_ip_net');
+   group.AddInput('mtu','$scheme_TFRE_DB_DATALINK_mtu');
+   group.AddInput('vlan','$scheme_TFRE_DB_DATALINK_vlan');
+ end;
+
+ class procedure TFRE_DB_DATALINK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DATALINK_main_group','Link Properties'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DATALINK_name','Link Name'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DATALINK_description','Description'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DATALINK_ip_net','IP/Subnet'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DATALINK_mtu','MTU'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_DATALINK_vlan','Vlan'));
+ end;
+
+ function TFRE_DB_DATALINK.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   writeln('DATALINK MENU');
+   result := GFRE_DB_NIL_DESC;
+ end;
+
+ { TFRE_DB_TESTER }
+
+ class procedure TFRE_DB_TESTER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ begin
+   inherited RegisterSystemScheme(scheme);
+ end;
+
+ class procedure TFRE_DB_TESTER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+ end;
+
+
+ class procedure TFRE_DB_VMACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_MACHINE.ClassName);
+ end;
+
+ class procedure TFRE_DB_VMACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+ end;
+
+ function TFRE_DB_VMACHINE.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result := GFRE_DBI.NewObject;
+   result.Field(CalcFieldResultKey(fdbft_String)).AsString:='VM '+Field('objname').AsString;
+ end;
+
+
+ class procedure TFRE_DB_MACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+   scheme.GetSchemeField('objname').required:=true;
+   scheme.AddSchemeField('ip',fdbft_String);
+   scheme.AddSchemeField('service',fdbft_ObjLink);
+   scheme.AddSchemeFieldSubscheme('position','TFRE_DB_GEOPOSITION').required:=false;
+   scheme.AddSchemeFieldSubscheme('address','TFRE_DB_ADDRESS').required:=false;
+   scheme.AddCalculatedField('displayaddress','GetDisplayAddress',cft_OnStoreUpdate);
+   scheme.AddSchemeField('domainid',fdbft_GUID);
+   scheme.AddCalculatedField ('displayname','GetDisplayName',cft_OnStoreUpdate);
+
+   group:=scheme.AddInputGroup('address').Setup('$scheme_TFRE_DB_MACHINE_address_group');
+   group.UseInputGroup('TFRE_DB_ADDRESS','main','address');
+   group.UseInputGroup('TFRE_DB_GEOPOSITION','main','position');
+
+ end;
+
+ class procedure TFRE_DB_MACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   inherited InstallDBObjects(conn);
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_address_group','Site Address'));
+ end;
+
+ function TFRE_DB_MACHINE.IMI_GetDisplayAddress(const input: IFRE_DB_Object): IFRE_DB_Object;
+ var s    :  string;
+ begin
+   result := GFRE_DBI.NewObject;
+   s      := '';
+   if FieldExists('address') then begin
+     s := trim(Field('address').AsObject.Field('co').AsString);
+     if length(s)>0 then begin
+       s:= s + ', ';
+     end;
+     s := s+Field('address').AsObject.Field('zip').asstring+' '+Field('address').AsObject.Field('city').asstring+', '+Field('address').AsObject.Field('street').asstring+' '+Field('address').AsObject.Field('nr').asstring;
+   end else begin
+     s := '';
+   end;
+   result.Field(CalcFieldResultKey(fdbft_String)).AsString:=s;
+ end;
+
+ function TFRE_DB_MACHINE.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+ begin
+   result := GFRE_DBI.NewObject;
+   result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Machine '+Field('objname').AsString;
+ end;
+
+ class procedure TFRE_DB_Service.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+   scheme.AddSchemeField('machineid',fdbft_ObjLink);
+   scheme.AddSchemeField('servicegroup',fdbft_ObjLink);
+   group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_SERVICE_main_group');
+   group.AddInput('machineid','',false,true);
+ end;
+
+ class procedure TFRE_DB_Service.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   inherited InstallDBObjects(conn);
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_SERVICE_main_group','General Information'));
+ end;
+
+ class procedure TFRE_DB_ServiceGroup.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var group : IFRE_DB_InputGroupSchemeDefinition;
+ begin
+   inherited RegisterSystemScheme(scheme);
+   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+   scheme.GetSchemeField('objname').required:=true;
+   scheme.AddSchemeField('customerid',fdbft_ObjLink);
+   scheme.AddSchemeField('monitoring',fdbft_Objlink);
+   group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_SERVICEGROUP_main_group');
+   group.AddInput('objname','$scheme_TFRE_DB_SERVICEGROUP_name');
+   group.AddInput('customerid','');
+ end;
+
+ class procedure TFRE_DB_ServiceGroup.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION);
+ begin
+   inherited InstallDBObjects(conn);
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_SERVICEGROUP_main_group','General Information'));
+   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_SERVICEGROUP_name','Name'));
+ end;
+
+ procedure Register_DB_Extensions;
+ var validator : IFRE_DB_ClientFieldValidator;
+     enum      : IFRE_DB_Enum;
+ begin
+   validator:=GFRE_DBI.NewClientFieldValidator('ip').Setup('^([1-9][0-9]{0,1}|1[013-9][0-9]|12[0-689]|2[01][0-9]|22[0-3])([.]([1-9]{0,1}[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){2}[.]([1-9][0-9]{0,1}|[1-9]{0,1}[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-4])(\/([89]|[12][0-9]|3[0-2])|$)$',
+                                                     GFRE_DBI.CreateText('$validator_ip','IP Validator'),
+                                                     GFRE_DBI.CreateText('$validator_help_ip','1.0.0.1 - 223.255.255.254 excluding 127.x.x.x'),
+                                                     '\d\.\/');
+   GFRE_DBI.RegisterSysClientFieldValidator(validator);
+   validator:=GFRE_DBI.NewClientFieldValidator('mac').Setup('^([0-9a-fA-F]{2}(:|$)){6}$',
+                                                      GFRE_DBI.CreateText('$validator_help_mac','MAC Validator'),
+                                                      GFRE_DBI.CreateText('$validator_mac','00:01:02:03:04:05'),
+                                                      '\da-fA-F:');
+   GFRE_DBI.RegisterSysClientFieldValidator(validator);
+
+   enum:=GFRE_DBI.NewEnum('routing').Setup(GFRE_DBI.CreateText('$enum_routing','Routing Enum'));
+   enum.addEntry('enabled',GFRE_DBI.CreateText('$enum_routing_enabled','Enabled'));
+   enum.addEntry('disabled',GFRE_DBI.CreateText('$enum_routing_disabled','Disabled'));
+   enum.addEntry('nat',GFRE_DBI.CreateText('$enum_routing_nat','NAT'));
+   GFRE_DBI.RegisterSysEnum(enum);
+
+
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_POWER);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_MAIL);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_TIME);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_HOSTNAME);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FC_PORT);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_PHYS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_VNIC);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_AGGR);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_STUB);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ServiceGroup);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Service);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMachine);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Tester);
+
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DEVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_NETWORK_GROUP);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CMS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ROUTE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Captiveportal);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Site_Captive_Extension);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Endpoint);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Accesspoint);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_AP_Linksys);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_AP_Linksys_E1000);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_AP_Linksys_E1200);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_AP_Linksys_E1200V2);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_AP_Lancom);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_AP_Lancom_IAP321);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_AP_Lancom_OAP321);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MobileDevice);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Network);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_WifiNetwork);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_OpenWifiNetwork);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_WPA2Network);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_RadiusNetwork);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Monitoring_Status);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CA);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Certificate);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DHCP);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DHCP_Subnet);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DHCP_Fixed);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VPN);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_RADIUS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Routing);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CMS_PAGE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CMS_ADPAGE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_REDIRECTION_FLOW);
+
+   GFRE_DBI.Initialize_Extension_Objects;
+ end;
+
+
+
+end.
+

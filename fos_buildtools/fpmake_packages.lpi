@@ -37,7 +37,7 @@
         <LaunchingApplication PathPlusParams="/usr/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
       </local>
     </RunParams>
-    <Units Count="2">
+    <Units Count="3">
       <Unit0>
         <Filename Value="fpmake_packages.pas"/>
         <IsPartOfProject Value="True"/>
@@ -48,6 +48,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="fos_buildtools"/>
       </Unit1>
+      <Unit2>
+        <Filename Value="../../citycom/captiveportal/fos_captiveportal_app.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="fos_captiveportal_app"/>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

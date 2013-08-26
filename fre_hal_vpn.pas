@@ -44,7 +44,7 @@ unit fre_hal_vpn;
 interface
 
 uses
-  Classes, SysUtils,FOS_TOOL_INTERFACES,FRE_HAL_UTILS,FRE_DB_INTERFACE,process,FRE_DBCLOUDCONTROL,FRE_SYSTEM;
+  Classes, SysUtils,FOS_TOOL_INTERFACES,FRE_HAL_UTILS,FRE_DB_INTERFACE,process,FRE_SYSTEM;
 
   const
     cvpnpath=cFRE_GLOBAL_DIRECTORY+'/openvpn';
@@ -230,7 +230,7 @@ var ob    :IFRE_DB_Object;
       if FREDB_Guids_Same(crt.Field('ca').AsObjectLink,ca.UID) then begin     // endpoint uses the same ca as configured for vpn
        sub:=GFRE_DBI.NewObject;
        sub.Field('cn').AsString:=crt.Field('cn').asstring;
-       linksys   := eob.ReferencedByList(TFRE_DB_Network.ClassName);
+       linksys   := eob.ReferencedByList('TFRE_DB_NETWORK');
        for j:=low(linksys) to high (linksys) do begin
         if Conn.Fetch(linksys[j],nw)=false then begin
          LogError('Network '+GFRE_BT.GUID_2_HexString(linksys[j])+' not found in endpoint '+eob.UID_String);

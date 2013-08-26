@@ -43,11 +43,11 @@
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="foscmd"/>
+      <Filename Value="../bin/foscmd"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="../fos_include;$(ProjOutDir)"/>
-      <OtherUnitFiles Value="../fre_core;../fos_interfaces"/>
+      <IncludeFiles Value="../core/fos_include;$(ProjOutDir)"/>
+      <OtherUnitFiles Value="../core/fre_core;../core/fos_interfaces"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>

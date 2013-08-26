@@ -46,7 +46,9 @@ uses
   Classes, sysutils,
   FRE_DB_INTERFACE,FRE_DB_EMBEDDED_IMPL,
   FOS_TOOL_INTERFACES, FRE_DB_CORE,
-  FOS_DEFAULT_IMPLEMENTATION,fre_configuration,FRE_SYSTEM,FRE_ZFS,FRE_DBBUSINESS,FRE_DBMONITORING,
+  FOS_DEFAULT_IMPLEMENTATION,fre_configuration,FRE_SYSTEM,
+  fre_hal_schemes,
+  FRE_ZFS,FRE_DBBUSINESS,
   fre_do_safejob, FRE_PROCESS,fre_testcase,
   FRE_DBBASE;
 
@@ -60,7 +62,6 @@ begin
 
   FRE_DBBASE.Register_DB_Extensions;
   FRE_DBBUSINESS.Register_DB_Extensions;
-  FRE_DBMONITORING.Register_DB_Extensions;
   fre_testcase.Register_DB_Extensions;
   FRE_ZFS.Register_DB_Extensions;
   //FRE_DBCLOUDCONTROL.Register_DB_Extensions;

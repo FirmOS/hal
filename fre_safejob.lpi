@@ -52,12 +52,11 @@
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="fre_safejob"/>
+      <Filename Value="../bin/fre_safejob"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="../fos_include;$(ProjOutDir)"/>
-      <Libraries Value="../fre_external/mac;../fre_external/win;../fre_external/linux;../fre_external/freebsd;../fre_external/illumos"/>
-      <OtherUnitFiles Value="..;../fre_hal;../fre_apps;../fre_db;../fre_aps;../fre_core;../fre_fcom;../fre_bullet;../fre_external;../fre_server;../fre_jsonrest;../fos_interfaces;../fre_blockcom;../fre_external/synapse;../fos_corebox/common"/>
+      <IncludeFiles Value="../core/fos_include;$(ProjOutDir)"/>
+      <OtherUnitFiles Value="../core/fre_apps;../core/fre_db;../core/fre_aps;../core/fre_core;../core/fre_fcom;../core/fre_external;../core/fos_interfaces;../core/fre_blockcom;../core/fre_external/synapse"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>

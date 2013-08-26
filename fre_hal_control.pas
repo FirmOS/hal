@@ -44,7 +44,7 @@ interface
 
 uses
   Classes, SysUtils,FOS_TOOL_INTERFACES,Sockets,math,FRE_HAL_UTILS,FRE_DB_INTERFACE,
-  FRE_HAL_PS,FRE_HAL_DHCP,FRE_HAL_ROUTING,FRE_HAL_RADIUS,FRE_HAL_CA,FRE_HAL_VPN,FRE_HAL_REDIRECT,
+  FRE_HAL_DHCP,FRE_HAL_ROUTING,FRE_HAL_RADIUS,FRE_HAL_CA,FRE_HAL_VPN,FRE_HAL_REDIRECT,
   fpjson;
 
 type
@@ -78,7 +78,6 @@ var halo:IFRE_DB_Object;
       cfre_hal_service_redirect:  hal:=TFRE_HAL_REDIRECT.Create;
       cfre_hal_service_dhcp    :  hal:=TFRE_HAL_DHCP.Create;
       cfre_hal_service_routing :  hal:=TFRE_HAL_ROUTING.Create;
-      cfre_hal_service_ps      :  hal:=TFRE_HAL_PS.Create;
       cfre_hal_service_vpn     :  hal:=TFRE_HAL_VPN.Create;
       cfre_hal_service_radius  :  hal:=TFRE_HAL_RADIUS.Create;
      end;
@@ -100,7 +99,7 @@ begin
    _addhal(cfre_hal_service_redirect);
 //   _addhal(cfre_hal_service_dhcp);
 //   _addhal(cfre_hal_service_routing);
-   _addhal(cfre_hal_service_ps);
+//   _addhal(cfre_hal_service_ps);
    _addhal(cfre_hal_service_vpn);
 //   _addhal(cfre_hal_service_radius);
    result:=halo;
