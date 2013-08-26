@@ -2,7 +2,7 @@
 usage()
 {
   echo "usage: $0 options"
-  echo "makes a full clean/build/cycle of firmos software"
+  echo "makes a full build/cycle of firmos software"
   echo "OPTIONS:" 
   echo " -h Show this help"
   echo " -3 Enable 32 Bit build" 
@@ -55,13 +55,6 @@ if [ ! "$buildsuf" ]; then
 fi
 
 #echo fpmake install $cflags $buildsuf
-echo "--> Cleaning"
-find .. -name '*.res' -exec rm {} ';'
-find .. -name '*.o' -exec rm {} ';'
-find .. -name '*.ppu' -exec rm {} ';'
-rm -rf full_build_log.txt 1>/dev/null
-rm -rf fos_bin 1>/dev/null
-rm -rf fos_pkg 1>/dev/null
 echo "--> Makeing fpmake files"
 ./makefpmake.sh
 echo "--> Building"
@@ -76,14 +69,23 @@ if [ "$build32" = 1 ]; then
   [ $RETVAL -eq 0 ] && echo "OK:   Packages built.    32Bit : $cflags $buildsuf"
   [ $RETVAL -ne 0 ] && echo "FAIL: No Packages built. 32Bit : $cflags $buildsuf"  1>&2 && exit 1
   
-  ./fpmake_test -C i386 -dc 1>>full_build_log.txt
+#  ./fpmake_test -C i386 -dc 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_test (32)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_packages (32)" 1>&2 && exit 1
+#  ./fpmake_test -C i386 install -v "$cflags" "$buildsuf" 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Tests built. (32)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: Tests built. (32)"  1>&2  && exit 1
+
+  ./fpmake_products -C i386 -dc 1>>full_build_log.txt
   RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_test (32)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_packages (32)" 1>&2 && exit 1
-  ./fpmake_test -C i386 install -v "$cflags" "$buildsuf" 1>>full_build_log.txt
+  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_products (32)"
+  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_products (32)" 1>&2 && exit 1
+  ./fpmake_products -C i386 install -v "$cflags" "$buildsuf" 1>>full_build_log.txt
   RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Tests built. (32)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: Tests built. (32)"  1>&2  && exit 1
+  [ $RETVAL -eq 0 ] && echo "OK:   Products built. (32)"
+  [ $RETVAL -ne 0 ] && echo "FAIL: Products built. (32)"  1>&2  && exit 1
     
 fi
 if [ "$build64" = "1" ]; then 
@@ -96,14 +98,23 @@ if [ "$build64" = "1" ]; then
   [ $RETVAL -eq 0 ] && echo "OK:   Packages built. (64)"
   [ $RETVAL -ne 0 ] && echo "FAIL: Packages built. (64)"  1>&2  && exit 1
   
-  ./fpmake_test -C x86_64 -dc 1>>full_build_log.txt
+#  ./fpmake_test -C x86_64 -dc 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_test (64)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_test (64)" 1>&2  && exit 1
+#  ./fpmake_test -C x86_64 install -v "$cflags" "$buildsuf" 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Tests built. (64)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: Tests built. (64)"  1>&2  && exit 1
+
+  ./fpmake_products -C x86_64 -dc 1>>full_build_log.txt
   RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_test (64)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_test (64)" 1>&2  && exit 1
-  ./fpmake_test -C x86_64 install -v "$cflags" "$buildsuf" 1>>full_build_log.txt
+  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_products (64)"
+  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_products (64)" 1>&2  && exit 1
+  ./fpmake_products -C x86_64 install -v "$cflags" "$buildsuf" 1>>full_build_log.txt
   RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Tests built. (64)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: Tests built. (64)"  1>&2  && exit 1
+  [ $RETVAL -eq 0 ] && echo "OK:   Products built. (64)"
+  [ $RETVAL -ne 0 ] && echo "FAIL: Products built. (64)"  1>&2  && exit 1
   
 fi  
 echo "--> Building Done"

@@ -165,7 +165,7 @@ begin
   Defaults.Options.Add('-Sh'); // ANSI Strings
   Defaults.Options.Add('-Sc'); // C Style Operators
   Defaults.Options.Add('-Mobjfpc');
-  Defaults.Options.Add('-Fi../fos_include');
+  Defaults.Options.Add('-Fi../../core/fos_include');
   Defaults.Options.Add('-P'+CPUToString(Defaults.CPU));
   if cFOS_STATIC_BUILD then
     begin
