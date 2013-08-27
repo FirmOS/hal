@@ -37,6 +37,8 @@ program fpmake_packages;
          AddUnit('fre_do_safejob.pas');
          AddUnit('fre_alert.pas');
          AddUnit('fre_zfs.pas');
+         AddUnit('fos_stats_control_interface.pas');
+         AddUnit('fos_vm_control_interface.pas');
        end;
     end;
     Run;
