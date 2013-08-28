@@ -232,9 +232,9 @@ var i       : integer;
     uvm.Field('domainid').AsGUID   := dbc.DomainId(vm.Field('domain').AsString);
 
     if vm.Field('MState').AsString='running' then begin
-      uvm.Field('MStateIcon').AsString   := 'images_apps/corebox_vm_machines/vm_running.png';
+      uvm.Field('MStateIcon').AsString   := 'images_apps/hal/vm_running.png';
     end else begin
-      uvm.Field('MStateIcon').AsString   := 'images_apps/corebox_vm_machines/vm_stopped.png';
+      uvm.Field('MStateIcon').AsString   := 'images_apps/hal/vm_stopped.png';
     end;
     uvm.Field('MBrand').AsString   := vm.Field('MBrand').AsString;
     if vm.FieldExists('PERFPCPU') then begin

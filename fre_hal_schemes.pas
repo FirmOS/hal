@@ -2721,9 +2721,9 @@ end;
  begin
    res:=TFRE_DB_MENU_DESC.create.Describe;
    func:=CSF(@IMI_Delete);
-   res.AddEntry.Describe(input.Field('delete_stub').asstring,'images_apps/corebox_appliance/delete_stub.png',func);
+   res.AddEntry.Describe(input.Field('delete_stub').asstring,'images_apps/hal/delete_stub.png',func);
    func:=CSF(@IMI_AddVNIC);
-   res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/corebox_appliance/add_vnic.png',func);
+   res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/hal/add_vnic.png',func);
    Result:=res;
  end;
 
@@ -2756,9 +2756,9 @@ end;
  begin
    res:=TFRE_DB_MENU_DESC.create.Describe;
    func:=CSF(@IMI_Delete);
-   res.AddEntry.Describe(input.Field('delete_aggr').asstring,'images_apps/corebox_appliance/delete_aggr.png',func);
+   res.AddEntry.Describe(input.Field('delete_aggr').asstring,'images_apps/hal/delete_aggr.png',func);
    func:=CSF(@IMI_AddVNIC);
-   res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/corebox_appliance/add_vnic.png',func);
+   res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/hal/add_vnic.png',func);
    Result:=res;
  end;
 
@@ -2791,7 +2791,7 @@ end;
  begin
    res:=TFRE_DB_MENU_DESC.create.Describe;
    func:=CSF(@IMI_Delete);
-   res.AddEntry.Describe(input.Field('delete_vnic').asstring,'images_apps/corebox_appliance/delete_vnic.png',func);
+   res.AddEntry.Describe(input.Field('delete_vnic').asstring,'images_apps/hal/delete_vnic.png',func);
    Result:=res;
  end;
 
@@ -2821,7 +2821,7 @@ end;
      begin
        res:=TFRE_DB_MENU_DESC.create.Describe;
        func:=CSF(@IMI_AddVNIC);
-       res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/corebox_appliance/add_vnic.png',func);
+       res.AddEntry.Describe(input.Field('add_vnic').asstring,'images_apps/hal/add_vnic.png',func);
        Result:=res;
      end
    else
