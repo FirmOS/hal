@@ -193,7 +193,7 @@ begin
     end;
     to_thread := TTimeoutThread.Create(watchtimeout*1000,GetProcessID,pidlockfile);
     try
-      job_desc_dbo.Invoke('DO_THE_JOB',nil);
+      job_desc_dbo.Invoke('DO_THE_JOB',nil,nil,nil,nil);
       job_desc_dbo.SaveToFile(cFRE_JOB_RESULT_DIR+uppercase(GFRE_BT.Str2HexStr(job_key))+'.job');
 //      writeln (job_desc_dbo.DumpToString);
     except on e:exception do begin
