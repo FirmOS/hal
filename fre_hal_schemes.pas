@@ -932,7 +932,7 @@ var
 begin
   result:=inherited;
 
-  GetDBConnection.GetScheme(SchemeClass,scheme);
+  scheme := GetScheme;
   res:=result.Implementor_HC as TFRE_DB_FORM_PANEL_DESC;
   res.AddSchemeFormGroup(scheme.GetInputGroup('options'),GetSession(input));
   res.FillWithObjectValues(Self,GetSession(input));
@@ -1346,7 +1346,8 @@ var
   res   : TFRE_DB_FORM_PANEL_DESC;
   scheme: IFRE_DB_SchemeObject;
 begin
-  GetDBConnection.GetScheme(SchemeClass,scheme);
+  scheme := GetScheme;
+
   res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('CMS Page');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.FillWithObjectValues(Self,GetSession(input));
@@ -1640,7 +1641,7 @@ var
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
-  GetDBConnection.GetScheme('TFRE_DB_DHCP_SUBNET',scheme);
+  GFRE_DBI.GetSystemScheme(TFRE_DB_DHCP_SUBNET,scheme);
   res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Subnet');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.SetElementValue('dhcp',UID_String);
@@ -1656,7 +1657,7 @@ var
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
-  GetDBConnection.GetScheme('TFRE_DB_DHCP_FIXED',scheme);
+  GFRE_DBI.GetSystemScheme(TFRE_DB_DHCP_FIXED,scheme);
   res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Subnet');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.SetElementValue('dhcp',UID_String);
@@ -1740,7 +1741,7 @@ var
   res    :TFRE_DB_FORM_PANEL_DESC;
   scheme :IFRE_DB_SchemeObject;
 begin
-  GetDBConnection.GetScheme(SchemeClass,scheme);
+  scheme := GetScheme;
   res:=TFRE_DB_FORM_PANEL_DESC.create.Describe('Certificate Authority');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
   res.FillWithObjectValues(Self,GetSession(input));
@@ -1815,7 +1816,7 @@ var
   res   : TFRE_DB_FORM_PANEL_DESC;
   scheme: IFRE_DB_SchemeObject;
 begin
-  GetDBConnection.GetScheme(SchemeClass,scheme);
+  scheme := GetScheme;
   res:=TFRE_DB_FORM_PANEL_DESC.create.Describe('Certificate Authority');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.FillWithObjectValues(Self,GetSession(input));
@@ -1857,7 +1858,7 @@ var
   res       : TFRE_DB_DIALOG_DESC;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
-  GetDBConnection.GetScheme('TFRE_DB_Certificate',scheme);
+  GFRE_DBI.GetSystemScheme(TFRE_DB_Certificate,scheme);
   res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Certificate');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_create'),GetSession(input));
   res.SetElementValue('ca',UID_String);
@@ -2128,7 +2129,7 @@ var
   res    :TFRE_DB_FORM_PANEL_DESC;
   scheme :IFRE_DB_SchemeObject;
 begin
-  GetDBConnection.GetScheme(SchemeClass,scheme);
+  scheme := GetScheme;
   res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Network');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.FillWithObjectValues(Self,GetSession(input));
@@ -2228,7 +2229,7 @@ var
   res   : TFRE_DB_FORM_PANEL_DESC;
   scheme: IFRE_DB_SchemeObject;
 begin
-  GetDBConnection.GetScheme(SchemeClass,scheme);
+  scheme := Getscheme;
   res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Mobile Device');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.FillWithObjectValues(Self,GetSession(input));
@@ -2292,11 +2293,10 @@ var
   res   : TFRE_DB_FORM_PANEL_DESC;
   scheme: IFRE_DB_SchemeObject;
 begin
-  GetDBConnection.GetScheme(SchemeClass,scheme);
+  scheme := GetScheme;
   res:=TFRE_DB_FORM_PANEL_DESC.Create.Describe('Endpoint');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.FillWithObjectValues(Self,GetSession(input));
-
   res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
   Result:=res;
 end;
@@ -2415,7 +2415,7 @@ var
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
-  GetDBConnection.GetScheme('TFRE_DB_OPENWIFINETWORK',scheme);
+  GFRE_DBI.GetSystemScheme(TFRE_DB_OpenWifiNetwork,scheme);
   res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Open Wifi Network');
   res.SendChangedFieldsOnly(false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
@@ -2441,7 +2441,7 @@ var
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
-  GetDBConnection.GetScheme('TFRE_DB_WPA2NETWORK',scheme);
+  GFRE_DBI.GetSystemScheme(TFRE_DB_WPA2NETWORK,scheme);
   res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add WPA2 Network');
   res.SendChangedFieldsOnly(false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
