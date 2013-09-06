@@ -92,7 +92,7 @@ type
     function        GetPeriodic                 : TFRE_TestPeriodic;
   published
     function        IMI_Do_the_Job              (const input:IFRE_DB_Object):IFRE_DB_Object; virtual;
-    function        IMI_GetDisplayName          (const input:IFRE_DB_Object): IFRE_DB_Object;
+    procedure       CALC_GetDisplayName         (const setter : IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_TestcaseResult }
@@ -111,7 +111,7 @@ type
     function        IMI_ClearStatus             (const input:IFRE_DB_Object):IFRE_DB_Object;
     function        IMI_UpdateActualStatus      (const input:IFRE_DB_Object):IFRE_DB_Object;
     function        IMI_CheckActuality          (const input:IFRE_DB_Object):IFRE_DB_Object;
-    function        IMI_GetStatusIcon           (const input: IFRE_DB_Object): IFRE_DB_Object;
+    procedure       CALC_StatusIcon             (const setter: IFRE_DB_CALCFIELD_SETTER);
   end;
 
 
@@ -632,8 +632,7 @@ begin
   scheme.AddSchemeField('statussummary',fdbft_String);
   scheme.AddSchemeField('testcase',fdbft_Objlink).required:=true;
   scheme.AddSchemeField('actual',fdbft_Boolean);
-  scheme.AddCalculatedField('status_icon','GetStatusIcon',cft_OnStoreUpdate);
-//  scheme.AddSchemeField('actual_result'),fdbft_Object);
+  scheme.AddCalcSchemeField('status_icon',fdbft_String,@CALC_StatusIcon);
 end;
 
 function TFRE_DB_TestcaseStatus.IMI_ClearStatus(const input: IFRE_DB_Object): IFRE_DB_Object;
@@ -687,10 +686,9 @@ begin
  end;
 end;
 
-function TFRE_DB_TestcaseStatus.IMI_GetStatusIcon(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_TestcaseStatus.CALC_StatusIcon(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
- result := GFRE_DBI.NewObject;
- result.Field(CalcFieldResultKey(fdbft_String)).AsString:=GetStatusIconURI(Field('status').asstring);
+  setter.SetAsString(GetStatusIconURI(Field('status').asstring));
 end;
 
 { TFRE_DB_TestcaseResult }
@@ -1268,9 +1266,7 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
   scheme.AddSchemeField('machine',fdbft_ObjLink);
   scheme.AddSchemeField('troubleshooting',fdbft_String);
-  scheme.AddCalculatedField('displayname','GetDisplayName',cft_OnStoreUpdate);
-//  writeln('define testcase');
-//  abort;
+  scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
 end;
 
 procedure TFRE_DB_Testcase.SetStatus(const status: TFRE_SignalStatus; const statussummary: string);
@@ -1337,10 +1333,11 @@ begin
   report.Field('endtime').AsDateTimeUTC:=GFRE_DT.Now_UTC;
 end;
 
-function TFRE_DB_Testcase.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_Testcase.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:=FNamedObject.Description.Getshort;
+  setter.SetAsString(FNamedObject.Description.Getshort);
+  //result := GFRE_DBI.NewObject;
+  //result.Field(CalcFieldResultKey(fdbft_String)).AsString:=FNamedObject.Description.Getshort;
 //  writeln(result.DumpToString());
 end;
 

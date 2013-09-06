@@ -79,8 +79,8 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
    published
-     function        IMI_GetDisplayAddress  (const input:IFRE_DB_Object): IFRE_DB_Object;
-     function        IMI_GetDisplayName     (const input: IFRE_DB_Object): IFRE_DB_Object;
+     procedure       CALC_GetDisplayAddress  (const setter:IFRE_DB_CALCFIELD_SETTER);
+     procedure       CALC_GetDisplayName     (const setter:IFRE_DB_CALCFIELD_SETTER);
    end;
 
    { TFRE_DB_MACHINE_SETTING }
@@ -205,7 +205,7 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
    published
-     function        IMI_GetDisplayName     (const input:IFRE_DB_Object): IFRE_DB_Object;
+     procedure CALC_GetDisplayName     (const setter: IFRE_DB_CALCFIELD_SETTER);
    end;
 
    { TFRE_DB_ZONE }
@@ -215,7 +215,7 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION); override;
    published
-     function        IMI_GetDisplayName     (const input: IFRE_DB_Object): IFRE_DB_Object;
+     procedure CALC_GetDisplayName     (const setter: IFRE_DB_CALCFIELD_SETTER);
    end;
 
 
@@ -277,17 +277,17 @@ type
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
-    function IMI_Content         (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_Configuration   (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_Monitoring      (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_Monitoring_Con  (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_Monitoring_All  (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_Monitoring_Data (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_Provision       (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_addOpenWifiNetwork  (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_addWPA2Network  (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
-    function IMI_ChildrenData    (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_Content         (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_Configuration   (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_Monitoring      (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_Monitoring_Con  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_Monitoring_All  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_Monitoring_Data (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_Provision       (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_addOpenWifiNetwork  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_addWPA2Network  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    function  IMI_ChildrenData    (const input:IFRE_DB_Object): IFRE_DB_Object;
+    procedure CALC_GetDisplayName (const Setter : IFRE_DB_CALCFIELD_SETTER);virtual;
   end;
 
   { TFRE_DB_Accesspoint }
@@ -323,7 +323,7 @@ type
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
-   function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    procedure CALC_GetDisplayName  (const Setter : IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_AP_Linksys_E1200 }
@@ -333,7 +333,7 @@ type
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
-   function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    procedure CALC_GetDisplayName  (const Setter : IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_AP_Linksys_E1200V2 }
@@ -343,7 +343,7 @@ type
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
-   function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+     procedure CALC_GetDisplayName  (const Setter : IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_AP_Lancom }
@@ -361,7 +361,7 @@ type
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
-    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    procedure CALC_GetDisplayName  (const Setter : IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_AP_Lancom_OAP321 }
@@ -371,7 +371,7 @@ type
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
   published
-    function IMI_GetDisplayName  (const input:IFRE_DB_Object): IFRE_DB_Object;
+    procedure CALC_GetDisplayName  (const Setter : IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_Monitoring_Status }
@@ -380,7 +380,7 @@ type
   protected
     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
   published
-    function IMI_GetStatusIcon(const input: IFRE_DB_Object): IFRE_DB_Object;
+    procedure CALC_GetStatusIcon(const setter: IFRE_DB_CALCFIELD_SETTER);
   end;
 
 
@@ -786,13 +786,12 @@ begin
   scheme.AddSchemeField         ('status',fdbft_String).SetupFieldDef(true,false,'signal_status');
   scheme.AddSchemeField         ('provisioned_time',fdbft_DateTimeUTC);
   scheme.AddSchemeField         ('online_time',fdbft_DateTimeUTC);
-  scheme.AddCalculatedField     ('status_icon','GetStatusIcon',cft_OnStoreUpdate);
+  scheme.AddCalcSchemeField     ('status_icon',fdbft_String,@CALC_GetStatusIcon);
 end;
 
-function TFRE_DB_Monitoring_Status.IMI_GetStatusIcon(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_Monitoring_Status.CALC_GetStatusIcon(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:=GetStatusIconURI(Field('status').asstring);
+  setter.SetAsString(GetStatusIconURI(Field('status').asstring));
 end;
 
 { TFRE_DB_AP_Lancom_OAP321 }
@@ -807,10 +806,9 @@ class procedure TFRE_DB_AP_Lancom_OAP321.InstallDBObjects(const conn: IFRE_DB_SY
 begin
 end;
 
-function TFRE_DB_AP_Lancom_OAP321.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_AP_Lancom_OAP321.CALC_GetDisplayName(const Setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Lancom OAP321 ('+Field('provisioningmac').AsString+')';
+  setter.SetAsString('Accesspoint Lancom OAP321 ('+Field('provisioningmac').AsString+')');
 end;
 
 { TFRE_DB_AP_Lancom_IAP321 }
@@ -825,10 +823,9 @@ class procedure TFRE_DB_AP_Lancom_IAP321.InstallDBObjects(const conn: IFRE_DB_SY
 begin
 end;
 
-function TFRE_DB_AP_Lancom_IAP321.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_AP_Lancom_IAP321.CALC_GetDisplayName(const Setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Lancom IAP321 ('+Field('provisioningmac').AsString+')';
+  setter.SetAsString('Accesspoint Lancom IAP321 ('+Field('provisioningmac').AsString+')');
 end;
 
 { TFRE_DB_AP_Lancom }
@@ -856,10 +853,9 @@ class procedure TFRE_DB_AP_Linksys_E1200V2.InstallDBObjects(const conn: IFRE_DB_
 begin
 end;
 
-function TFRE_DB_AP_Linksys_E1200V2.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_AP_Linksys_E1200V2.CALC_GetDisplayName(const Setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Linksys E1200V2 ('+Field('provisioningmac').AsString+')';
+  setter.SetAsString('Accesspoint Linksys E1200V2 ('+Field('provisioningmac').AsString+')');
 end;
 
 { TFRE_DB_AP_Linksys_E1200 }
@@ -874,10 +870,9 @@ class procedure TFRE_DB_AP_Linksys_E1200.InstallDBObjects(const conn: IFRE_DB_SY
 begin
 end;
 
-function TFRE_DB_AP_Linksys_E1200.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_AP_Linksys_E1200.CALC_GetDisplayName(const Setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Linksys E1200 ('+Field('provisioningmac').AsString+')';
+  setter.SetAsString('Accesspoint Linksys E1200 ('+Field('provisioningmac').AsString+')');
 end;
 
 { TFRE_DB_AP_Linksys_E1000 }
@@ -894,10 +889,9 @@ end;
 
 
 
-function TFRE_DB_AP_Linksys_E1000.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+procedure TFRE_DB_AP_Linksys_E1000.CALC_GetDisplayName(const Setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Accesspoint Linksys E1000 ('+Field('reprovision').AsString+') ('+Field('provisioningmac').AsString+')';
+  setter.SetAsString('Accesspoint Linksys E1000 ('+Field('reprovision').AsString+') ('+Field('provisioningmac').AsString+')');
 end;
 
 { TFRE_DB_AP_Linksys }
@@ -956,7 +950,7 @@ begin
   scheme.AddSchemeField('serialnumber',fdbft_String);
   scheme.AddSchemeField('mountingdetail',fdbft_String);
 
-  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_ACCESSPOINT_main_group');
+  group:=scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_ACCESSPOINT_main_group');
   group.UseInputGroup('TFRE_DB_ENDPOINT','main');
   group.AddInput('serialnumber','Serialnumber');
   group.AddInput('external_ip','$scheme_TFRE_DB_ACCESSPOINT_exip');
@@ -1221,7 +1215,7 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.AddSchemeField('baseurl',fdbft_String).required:=true;
   scheme.AddSchemeField('urlexceptions',fdbft_String).multiValues:=true;
-  group := scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_CMS_main_group');
+  group := scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_CMS_main_group');
   group.UseInputGroup('TFRE_DB_SERVICE','main');
   group.AddInput('baseurl','$scheme_TFRE_DB_CMS_baseurl');
   group.AddInput('urlexceptions','$scheme_TFRE_DB_CMS_execeptions');
@@ -1268,7 +1262,7 @@ begin
   scheme.AddSchemeField('shown_inserts',fdbft_UInt32);
   scheme.AddSchemeField('networkgroups',fdbft_ObjLink).multiValues:=true;
 
-  group:=scheme.AddInputGroup('main').Setup('Page');
+  group:=scheme.ReplaceInputGroup('main').Setup('Page');
   group.UseInputGroup('TFRE_DB_CMS_PAGE','main');
   group.AddInput('start_time','$scheme_TFRE_DB_CMS_ADPAGE_starttime');
   group.AddInput('end_time','$scheme_TFRE_DB_CMS_ADPAGE_endtime');
@@ -1298,7 +1292,7 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName('TFRE_DB_WIFINETWORK');
   scheme.AddSchemeField('wpa2psk',fdbft_String).required:=true;
-  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_WPA2NETWORK_main_group');
+  group:=scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_WPA2NETWORK_main_group');
   group.UseInputGroup('TFRE_DB_WIFINETWORK','main');
   group.AddInput('wpa2psk','$scheme_TFRE_DB_WPA2NETWORK_wpa2psk');
 end;
@@ -1375,7 +1369,7 @@ begin
   scheme.AddSchemeField('default',fdbft_String).required:=true;
   scheme.AddSchemeFieldSubscheme('static','TFRE_DB_ROUTE').multiValues:=true;
 
-  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_ROUTING_main_group');
+  group:=scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_ROUTING_main_group');
   group.UseInputGroup('TFRE_DB_SERVICE','main');
   group.AddInput('default','$scheme_TFRE_DB_ROUTING_default');
 end;
@@ -1559,7 +1553,7 @@ begin
   scheme.AddSchemeField('fixed_end',fdbft_String).required:=true;
 
 
-  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_DHCP_main_group');
+  group:=scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_DHCP_main_group');
   group.UseInputGroup('TFRE_DB_SERVICE','main');
   group.AddInput('default_domainname','$scheme_TFRE_DB_DHCP_default_domainname');
   group.AddInput('default_dns','$scheme_TFRE_DB_DHCP_default_domainname');
@@ -1769,7 +1763,7 @@ begin
   scheme.AddSchemeField('pass',fdbft_String);
   scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
 
-  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_CA_main_group');
+  group:=scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_CA_main_group');
   group.AddInput('objname','$scheme_TFRE_DB_CA_objname');
   group.AddInput('cn','$scheme_TFRE_DB_CA_cn');
   group.AddInput('c','$scheme_TFRE_DB_CA_c');
@@ -1878,7 +1872,7 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_NETWORK');
   scheme.AddSchemeField('ssid',fdbft_String).required:=true;
   scheme.AddSchemeField('hidden',fdbft_Boolean);
-  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_WIFINETWORK_main_group');
+  group:=scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_WIFINETWORK_main_group');
   group.AddInput('ssid','$scheme_TFRE_DB_WIFINETWORK_ssid');
   group.AddInput('hidden','$scheme_TFRE_DB_WIFINETWORK_hidden');
   group.UseInputGroup('TFRE_DB_NETWORK','main');
@@ -1902,7 +1896,7 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName('TFRE_DB_WIFINETWORK');
   scheme.AddSchemeField('caid',fdbft_ObjLink).required:=false; //TODO FRANZ
-  group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_RADIUSNETWORK_main_group');
+  group:=scheme.ReplaceInputGroup('main').Setup('$scheme_TFRE_DB_RADIUSNETWORK_main_group');
   group.UseInputGroup('TFRE_DB_WIFINETWORK','main');
   group.AddInput('caid','$scheme_TFRE_DB_RADIUSNETWORK_caid');
 end;
@@ -2264,7 +2258,7 @@ begin
   scheme.AddSchemeField     ('site',fdbft_ObjLink).required:=true;
   scheme.AddSchemeField     ('status_uid',fdbft_ObjLink);
   scheme.AddSchemeField     ('reprovision',fdbft_Boolean);
-  scheme.AddCalculatedField ('displayname','GetDisplayName',cft_OnStoreUpdate);
+  scheme.AddCalcSchemeField ('displayname',fdbft_String,@CALC_GetDisplayName);
 
   group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_ENDPOINT_main_group');
   group.UseInputGroup('TFRE_DB_DEVICE','main');
@@ -2461,11 +2455,6 @@ begin
   Result:=res;
 end;
 
-function TFRE_DB_Endpoint.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
-begin
-  result := GFRE_DBI.NewObject;
-  result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Endpoint('+Field('provisioningmac').AsString+')';
-end;
 
 function TFRE_DB_Endpoint.IMI_ChildrenData(const input: IFRE_DB_Object): IFRE_DB_Object;
 var
@@ -2495,6 +2484,11 @@ begin
   Result:=res;
 end;
 
+procedure TFRE_DB_Endpoint.CALC_GetDisplayName(const Setter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  setter.SetAsString('Endpoint('+Field('provisioningmac').AsString+')');
+end;
+
 
 
  { TFRE_DB_ZONE }
@@ -2509,10 +2503,9 @@ end;
  begin
  end;
 
- function TFRE_DB_ZONE.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+ procedure TFRE_DB_ZONE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
-   result := GFRE_DBI.NewObject;
-   result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Zone '+Field('objname').AsString;
+   setter.SetAsString('Zone '+Field('objname').AsString);
  end;
 
  { TFRE_DB_MACHINE_SETTING_TIME }
@@ -2893,10 +2886,9 @@ end;
  begin
  end;
 
- function TFRE_DB_VMACHINE.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+ procedure TFRE_DB_VMACHINE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
-   result := GFRE_DBI.NewObject;
-   result.Field(CalcFieldResultKey(fdbft_String)).AsString:='VM '+Field('objname').AsString;
+   setter.SetAsString('VM '+Field('objname').AsString);
  end;
 
 
@@ -2910,9 +2902,9 @@ end;
    scheme.AddSchemeField('service',fdbft_ObjLink);
    scheme.AddSchemeFieldSubscheme('position','TFRE_DB_GEOPOSITION').required:=false;
    scheme.AddSchemeFieldSubscheme('address','TFRE_DB_ADDRESS').required:=false;
-   scheme.AddCalculatedField('displayaddress','GetDisplayAddress',cft_OnStoreUpdate);
+   scheme.AddCalcSchemeField('displayaddress',fdbft_String,@CALC_GetDisplayAddress);
    scheme.AddSchemeField('domainid',fdbft_GUID);
-   scheme.AddCalculatedField ('displayname','GetDisplayName',cft_OnStoreUpdate);
+   scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
 
    group:=scheme.AddInputGroup('address').Setup('$scheme_TFRE_DB_MACHINE_address_group');
    group.UseInputGroup('TFRE_DB_ADDRESS','main','address');
@@ -2926,10 +2918,9 @@ end;
    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_MACHINE_address_group','Site Address'));
  end;
 
- function TFRE_DB_MACHINE.IMI_GetDisplayAddress(const input: IFRE_DB_Object): IFRE_DB_Object;
- var s    :  string;
+ procedure TFRE_DB_MACHINE.CALC_GetDisplayAddress(const setter: IFRE_DB_CALCFIELD_SETTER);
+ var s : String;
  begin
-   result := GFRE_DBI.NewObject;
    s      := '';
    if FieldExists('address') then begin
      s := trim(Field('address').AsObject.Field('co').AsString);
@@ -2940,14 +2931,15 @@ end;
    end else begin
      s := '';
    end;
-   result.Field(CalcFieldResultKey(fdbft_String)).AsString:=s;
+   setter.SetAsString(s);
  end;
 
- function TFRE_DB_MACHINE.IMI_GetDisplayName(const input: IFRE_DB_Object): IFRE_DB_Object;
+ procedure TFRE_DB_MACHINE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
-   result := GFRE_DBI.NewObject;
-   result.Field(CalcFieldResultKey(fdbft_String)).AsString:='Machine '+Field('objname').AsString;
+   setter.SetAsString('Machine '+Field('objname').AsString);
  end;
+
+
 
  class procedure TFRE_DB_Service.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  var group : IFRE_DB_InputGroupSchemeDefinition;
