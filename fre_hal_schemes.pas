@@ -294,15 +294,15 @@ type
 
   TFRE_DB_Accesspoint = class(TFRE_DB_Endpoint)
   private
-    function  HasAnotherAP        (const site_id:TGUID)  : boolean;
+    function  HasAnotherAP        (const site_id:TGUID ; const conn : IFRE_DB_CONNECTION)  : boolean;
   protected
     class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION); override;
     class procedure AccessPointOnChange   (const conn: IFRE_DB_CONNECTION; const is_dhcp:boolean ; const dhcp_id : TGUID; const mac : TFRE_DB_String); virtual;
   published
-   class function  IMC_NewOperation       (const input: IFRE_DB_Object): IFRE_DB_Object; override;
-   function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
-   function        IMI_SaveOperation      (const input:IFRE_DB_Object):IFRE_DB_Object;virtual;
+   class function  WBC_NewOperation       (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object; override;
+   function        WEB_Menu               (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+   function        WEB_SaveOperation      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
   end;
 
   { TFRE_DB_AP_Linksys }
@@ -429,10 +429,10 @@ type
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION); override;
     class procedure NetworkOnChange      (const dbc : IFRE_DB_Connection; const is_dhcp:boolean; const subnet : string; const ep_id: TGUID; const dns:string; const range_start, range_end : integer ); virtual;
   published
-   class function  IMC_NewOperation      (const input:IFRE_DB_Object): IFRE_DB_Object; override;
+   class function  WBC_NewOperation      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
    function IMI_Content                  (const input:IFRE_DB_Object):IFRE_DB_Object;
    function IMI_Menu                     (const input:IFRE_DB_Object):IFRE_DB_Object;
-   function IMI_SaveOperation            (const input:IFRE_DB_Object):IFRE_DB_Object; override;
+   function WEB_SaveOperation            (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
   end;
 
   { TFRE_DB_WifiNetwork }
@@ -481,7 +481,7 @@ type
   published
    function IMI_Menu           (const input:IFRE_DB_Object):IFRE_DB_Object;
    function IMI_Content        (const input:IFRE_DB_Object):IFRE_DB_Object;
-   function IMI_ChildrenData   (const input:IFRE_DB_Object):IFRE_DB_Object;
+   function WEB_ChildrenData   (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
    function IMI_AddCertificate (const input:IFRE_DB_Object):IFRE_DB_Object;
   end;
 
@@ -505,7 +505,7 @@ type
   published
    function IMI_Content      (const input:IFRE_DB_Object) : IFRE_DB_Object;
    function IMI_Menu         (const input:IFRE_DB_Object) : IFRE_DB_Object;
-   function IMI_ChildrenData (const input:IFRE_DB_Object) : IFRE_DB_Object;
+   function WEB_ChildrenData (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
    function IMI_addSubnet    (const input:IFRE_DB_Object) : IFRE_DB_Object;
    function IMI_addFixedHost (const input:IFRE_DB_Object) : IFRE_DB_Object;
   end;
@@ -623,14 +623,17 @@ implementation
      childs              : TFRE_DB_GUIDArray;
 
  begin
-   writeln('HAS NETS');
-   has_open:=false; has_wpa2:=false;
-   childs:=ep_id.ReferencedByList('TFRE_DB_OPENWIFINETWORK');
-   has_open:=length(childs)>0;
-   writeln ('WIFI :',length(childs));
-   childs:=ep_id.ReferencedByList('TFRE_DB_WPA2NETWORK');
-   writeln ('WPA2 :',length(childs));
-   has_wpa2:=length(childs)>0;
+   abort;
+   //TODO FIX
+
+   //writeln('HAS NETS');
+   //has_open:=false; has_wpa2:=false;
+   //childs:=ep_id.ReferencedByList('TFRE_DB_OPENWIFINETWORK');
+   //has_open:=length(childs)>0;
+   //writeln ('WIFI :',length(childs));
+   //childs:=ep_id.ReferencedByList('TFRE_DB_WPA2NETWORK');
+   //writeln ('WPA2 :',length(childs));
+   //has_wpa2:=length(childs)>0;
  end;
 
 
@@ -971,7 +974,7 @@ end;
 
 
 
-class function TFRE_DB_Accesspoint.IMC_NewOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+class function TFRE_DB_Accesspoint.WBC_NewOperation(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var dbc        :   IFRE_DB_CONNECTION;
     raw_object :   IFRE_DB_Object;
     dhcp       :   boolean;
@@ -991,19 +994,19 @@ begin
   dhcp_id := GetService(dbc,'TFRE_DB_DHCP');
   raw_object.Field('reprovision').AsString:='true';
 
-  Result:=inherited IMC_NewOperation(input);
+  Result:=inherited WBC_NewOperation(input,ses,app,conn);
   writeln ('After new AP');
   AccesspointOnChange (dbc, dhcp, dhcp_id, mac);
 end;
 
-function TFRE_DB_Accesspoint.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
+function TFRE_DB_Accesspoint.WEB_Menu(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
   res       :   TFRE_DB_MENU_DESC;
   has_open  :   boolean;
   has_wpa2  :   boolean;
 begin
   res:=TFRE_DB_MENU_DESC.create.Describe();
-  if HasAnotherAP(Field('site').asguid)=false then begin
+  if HasAnotherAP(Field('site').asguid,conn)=false then begin
    HasNets(self, has_open,has_wpa2);
    if not has_open then res.AddEntry.Describe('Add Open Wifi Network','images_apps/cloudcontrol/add_open_wifi.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addopenwifinetwork'));
    if not has_wpa2 then res.AddEntry.Describe('Add WPA2 Wifi Network','images_apps/cloudcontrol/add_wpa2_wifi.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addwpa2network'));
@@ -1014,7 +1017,7 @@ begin
 end;
 
 
-function TFRE_DB_Accesspoint.HasAnotherAP(const site_id: TGUID): boolean;
+function TFRE_DB_Accesspoint.HasAnotherAP(const site_id: TGUID; const conn: IFRE_DB_CONNECTION): boolean;
 var site_object       : IFRE_DB_Object;
     site_fnd          : boolean;
     childs            : TFRE_DB_GUIDArray;
@@ -1024,13 +1027,15 @@ var site_object       : IFRE_DB_Object;
     ep_obj            : IFRE_DB_Object;
 begin
   result:=false;
-  site_fnd          :=GetDBConnection.Fetch(site_id,site_object);
+  site_fnd          :=conn.Fetch(site_id,site_object);
   if site_fnd        then begin
     writeln (site_object.DumpToString());
-    childs:=site_object.ReferencedByList('TFRE_DB_ACCESSPOINT');
+    //TODO Fix
+    abort;
+//    childs:=site_object.ReferencedByList('TFRE_DB_ACCESSPOINT');
     for i := 0 to Length(childs) - 1 do begin
       if FREDB_Guids_Same(UID,childs[i])=false then begin
-        GetDBConnection.Fetch(childs[i],ep_obj);
+        conn.Fetch(childs[i],ep_obj);
         HasNets(ep_obj,has_open,has_wpa2);
         if (has_open or has_wpa2) then begin
          result := true;
@@ -1061,7 +1066,9 @@ begin
     current_ip := dhcp_obj.Field('fixed_start').AsString;
     writeln(current_ip);
     highest    := StringtoIP4(current_ip)._bytes[3];                    // TODO implement for other classes than /24
-    childs     := dhcp_obj.ReferencedByList('TFRE_DB_DHCP_FIXED');
+    abort;
+    //TODO FIX
+    //childs     := dhcp_obj.ReferencedByList('TFRE_DB_DHCP_FIXED');
     for i := 0 to Length(childs) - 1 do begin
       writeln('FETCH ChiLDS');
       conn.Fetch(childs[i],dhcp_fixed_obj);
@@ -1080,7 +1087,7 @@ begin
     // create new dhcp_fixed
     writeln('NOW ADD DHCP');
     collf          := conn .Collection('dhcp_fixed');
-    dhcp_fixed_obj := conn .NewObject('TFRE_DB_DHCP_Fixed');
+    dhcp_fixed_obj := GFRE_DBI.NewObjectScheme(TFRE_DB_DHCP_Fixed);
     dhcp_fixed_obj.Field('ip').AsString      := GetIPDots(dhcp_obj.Field('fixed_start').AsString,3)+inttostr(highest);
     dhcp_fixed_obj.Field('mac').AsString     := lowercase (mac);
     dhcp_fixed_obj.Field('objname').AsString := 'Automatic'+StringReplace(lowercase(mac),':','',[rfReplaceAll]);
@@ -1092,11 +1099,10 @@ begin
 end;
 
 
-function TFRE_DB_Accesspoint.IMI_SaveOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+function TFRE_DB_Accesspoint.WEB_SaveOperation(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var scheme            : IFRE_DB_SCHEMEOBJECT;
     update_object_uid : TGUid;
     raw_object        : IFRE_DB_Object;
-    dbc               : IFRE_DB_CONNECTION;
     dhcp              : boolean;
     dhcp_id           : TGUID;
     mac               : TFRE_DB_String;
@@ -1107,23 +1113,22 @@ begin
     result := TFRE_DB_MESSAGE_DESC(result).Describe('SAVE','Error on saving! Saving of Subobject not supported!',fdbmt_error);
     exit;
   end;
-  dbc := GetDBConnection;
   result            := nil;
   scheme            := GetScheme;
   update_object_uid := UID;
   raw_object        := input.Field('data').AsObject;
 
-  scheme.SetObjectFieldsWithScheme(raw_object,self,false,GetDBConnection);
+  scheme.SetObjectFieldsWithScheme(raw_object,self,false,conn);
 
   dhcp    := Field('dhcp').asboolean;
   mac     := lowercase(Field('provisioningmac').AsString);
-  dhcp_id := GetService(dbc,'TFRE_DB_DHCP');
+  dhcp_id := GetService(conn,'TFRE_DB_DHCP');
   Field('reprovision').AsBoolean:=true;
 
-  CheckDbResult(dbc.Update(self),'failure on cloned/update');  // This instance is freed by now, so rely on the stackframe only (self) pointer is garbage(!!)
+  CheckDbResult(conn.Update(self),'failure on cloned/update');  // This instance is freed by now, so rely on the stackframe only (self) pointer is garbage(!!)
   result := GFRE_DB_NIL_DESC;
 
-  AccesspointOnChange (dbc, dhcp, dhcp_id, mac);
+  AccesspointOnChange (conn, dhcp, dhcp_id, mac);
 end;
 
 { TFRE_DB_Site_Captive_Extension }
@@ -1593,7 +1598,7 @@ begin
   Result:=res;
 end;
 
-function TFRE_DB_DHCP.IMI_ChildrenData(const input: IFRE_DB_Object): IFRE_DB_Object;
+function TFRE_DB_DHCP.WEB_ChildrenData(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
   res   : TFRE_DB_STORE_DATA_DESC;
   entry : IFRE_DB_Object;
@@ -1604,9 +1609,11 @@ var
 
 begin
   res := TFRE_DB_STORE_DATA_DESC.create;
-  childs:=ReferencedByList;
+  //FIXME
+  //childs:=ReferencedByList;
+  abort;
   for i := 0 to Length(childs) - 1 do begin
-    getDBConnection.Fetch(childs[i],dbo);
+    conn.Fetch(childs[i],dbo);
     if dbo.IsA('TFRE_DB_DHCP_SUBNET') or dbo.IsA('TFRE_DB_DHCP_FIXED') then begin
       if dbo.IsA('TFRE_DB_DHCP_SUBNET') then begin
         txt:=dbo.field('subnet').AsString;
@@ -1818,7 +1825,7 @@ begin
   Result:=res;
 end;
 
-function TFRE_DB_CA.IMI_ChildrenData(const input: IFRE_DB_Object): IFRE_DB_Object;
+function TFRE_DB_CA.WEB_ChildrenData(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
   res   : TFRE_DB_STORE_DATA_DESC;
   entry : IFRE_DB_Object;
@@ -1828,9 +1835,11 @@ var
 
 begin
   res := TFRE_DB_STORE_DATA_DESC.create;
-  childs:=ReferencedByList;
+  //fixme
+  abort;
+  //childs:=ReferencedByList;
   for i := 0 to Length(childs) - 1 do begin
-    GetDBConnection.Fetch(childs[i],dbo);
+    conn.Fetch(childs[i],dbo);
     if dbo.IsA('TFRE_DB_CERTIFICATE') then begin
       entry:=GFRE_DBI.NewObject;
       entry.Field('text').AsString:=dbo.field('cn').AsString;
@@ -2002,7 +2011,9 @@ begin
       writeln('DHCP');
       dhcp_id        := GetService(dbc,'TFRE_DB_DHCP');
       if       not dbc.Fetch(dhcp_id,dhcp_obj)          then raise EFRE_DB_Exception.Create(edb_ERROR,'NO DHCP SERVICE FOUND IN NETWORK ON CHANGE');
-      childs     := dhcp_obj.ReferencedByList('TFRE_DB_DHCP_SUBNET');
+      //fixme
+      //childs     := dhcp_obj.ReferencedByList('TFRE_DB_DHCP_SUBNET');
+      abort;
       writeln('ChiLDS');
 
       do_update  := false;
@@ -2021,7 +2032,7 @@ begin
         CheckDbResult(dbc.Update(dhcp_subnet_obj),'failure on cloned/update');
       end else begin
         colls          := dbc.Collection('dhcp_subnet');
-        dhcp_subnet_obj:= dbc.NewObject('TFRE_DB_DHCP_Subnet');
+        dhcp_subnet_obj:= GFRE_DBI.NewObjectScheme(TFRE_DB_DHCP_Subnet);
         _setfields;
         dhcp_subnet_obj.Field('dhcp').AsObjectLink:=dhcp_id;
         CheckDbResult(COLLS.Store(dhcp_subnet_obj),'Add DHCP Subnet');
@@ -2058,7 +2069,7 @@ begin
       if do_update then begin
        route_obj.Field('gateway').AsString := '1.1.1.1';
       end else begin
-       route_obj:=dbc.NewObject('TFRE_DB_Route');
+       route_obj:=GFRE_DBI.NewObjectScheme(TFRE_DB_Route);
        route_obj.Field('subnet').AsString:=subnet;
        route_obj.Field('gateway').AsString:='2.2.2.2';
        routing_obj.Field('static').AddObject(route_obj);
@@ -2071,7 +2082,8 @@ begin
     SetReprovision(dbc,dhcp_id);
 end;
 
-class function TFRE_DB_Network.IMC_NewOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+
+class function TFRE_DB_Network.WBC_NewOperation(const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
  var
       dbc        :   IFRE_DB_CONNECTION;
       raw_object :   IFRE_DB_Object;
@@ -2084,38 +2096,38 @@ class function TFRE_DB_Network.IMC_NewOperation(const input: IFRE_DB_Object): IF
       s          :   string;
 
 begin
-  writeln ('NETWORK NewOperation');
-  writeln(input.DumpToString());
-  dbc          := input.GetReference as IFRE_DB_CONNECTION;
-  raw_object   := input.Field('data').AsObject;
-  new_net      := raw_object.Field('ip_net').asstring;
-  dhcp         := raw_object.Field('dhcp').asboolean;
-  ep_id        := raw_object.Field('endpoint').AsGUID;
-
-  s            := raw_object.Field('dhcp_range_start').Asstring;
-  if s<>'' then range_start:=strtoint(s) else range_start:=20;
-  s            := raw_object.Field('dhcp_range_end').Asstring;
-  if s<>'' then range_start:=strtoint(s) else range_end:=20;
-  dns          := raw_object.Field('dns').Asstring;
-
-  if CheckClass(new_net)=false then begin
-    result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on creating! Only Class C networks are currently allowed !',fdbmt_error);
-    exit;
-  end;
-
-  if UniqueNet(dbc,GUID_NULL,new_net) then begin
-    writeln('UNIQUE');
-  end else begin
-    writeln('NOT UNIQUE');
-    result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on creating! The network is not unique !',fdbmt_error);
-    exit;
-  end;
-
-  Result:=inherited IMC_NewOperation(input);
-
-  // set reprovision on endpoint
-  SetReprovision(dbc,ep_id);
-  NetworkOnChange(dbc,dhcp,new_net,ep_id,dns,range_start,range_end);
+  //writeln ('NETWORK NewOperation');
+  //writeln(input.DumpToString());
+  //dbc          := input.GetReference as IFRE_DB_CONNECTION;
+  //raw_object   := input.Field('data').AsObject;
+  //new_net      := raw_object.Field('ip_net').asstring;
+  //dhcp         := raw_object.Field('dhcp').asboolean;
+  //ep_id        := raw_object.Field('endpoint').AsGUID;
+  //
+  //s            := raw_object.Field('dhcp_range_start').Asstring;
+  //if s<>'' then range_start:=strtoint(s) else range_start:=20;
+  //s            := raw_object.Field('dhcp_range_end').Asstring;
+  //if s<>'' then range_start:=strtoint(s) else range_end:=20;
+  //dns          := raw_object.Field('dns').Asstring;
+  //
+  //if CheckClass(new_net)=false then begin
+  //  result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on creating! Only Class C networks are currently allowed !',fdbmt_error);
+  //  exit;
+  //end;
+  //
+  //if UniqueNet(dbc,GUID_NULL,new_net) then begin
+  //  writeln('UNIQUE');
+  //end else begin
+  //  writeln('NOT UNIQUE');
+  //  result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on creating! The network is not unique !',fdbmt_error);
+  //  exit;
+  //end;
+  //
+  //Result:=inherited IMC_NewOperation(input);
+  //
+  //// set reprovision on endpoint
+  //SetReprovision(dbc,ep_id);
+  //NetworkOnChange(dbc,dhcp,new_net,ep_id,dns,range_start,range_end);
 end;
 
 function TFRE_DB_Network.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
@@ -2140,7 +2152,8 @@ begin
   Result:=res;
 end;
 
-function TFRE_DB_Network.IMI_SaveOperation(const input: IFRE_DB_Object): IFRE_DB_Object;
+
+function TFRE_DB_Network.WEB_SaveOperation(const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var scheme            : IFRE_DB_SCHEMEOBJECT;
     update_object_uid : TGUid;
     raw_object        : IFRE_DB_Object;
@@ -2158,7 +2171,6 @@ begin
     result := TFRE_DB_MESSAGE_DESC.Create.Describe('SAVE','Error on saving! Saving of Subobject not supported!',fdbmt_error);
     exit;
   end;
-  dbc := GetDBConnection;
   result            := nil;
   scheme            := GetScheme;
   update_object_uid := UID;
@@ -2174,7 +2186,7 @@ begin
    exit;
   end;
 
-  scheme.SetObjectFieldsWithScheme(raw_object,self,false,GetDBConnection);
+  scheme.SetObjectFieldsWithScheme(raw_object,self,false,conn);
 
   ep_id             := Field('endpoint').AsGUID;
   dhcp              := Field('dhcp').AsBoolean;
@@ -2385,22 +2397,22 @@ var pnr:integer;
     AProcess: TProcess;
     res: TFRE_DB_MESSAGE_DESC;
 begin
-  writeln('YEAH GUT PROVISION --- ');
-  if FieldExists('provisioning_serial') then begin
-   pnr:=Field('provisioning_serial').asint32;
-  end else begin
-   pnr:=0;
-  end;
-  inc(pnr);
-  writeln('new frehash:',pnr);
-  Field('provisioning_serial').asint32:=pnr;
-  writeln(DumpToString());
-  Field('reprovision').asboolean := false;
-
-  CheckDbResult(GetDBConnection.Update(self),'failure on cloned/update');  // This instance is freed by now, so rely on the stackframe only (self) pointer is garbage(!!)
-
-  res := TFRE_DB_MESSAGE_DESC.Create.Describe('PROVISIONING','Provisioning OK',fdbmt_info); //TODO - add nil message (nothing to do response)
-  Result:=res;
+  abort; //FIXME
+  //if FieldExists('provisioning_serial') then begin
+  // pnr:=Field('provisioning_serial').asint32;
+  //end else begin
+  // pnr:=0;
+  //end;
+  //inc(pnr);
+  //writeln('new frehash:',pnr);
+  //Field('provisioning_serial').asint32:=pnr;
+  //writeln(DumpToString());
+  //Field('reprovision').asboolean := false;
+  //
+  //CheckDbResult(conn.Update(self),'failure on cloned/update');  // This instance is freed by now, so rely on the stackframe only (self) pointer is garbage(!!)
+  //
+  //res := TFRE_DB_MESSAGE_DESC.Create.Describe('PROVISIONING','Provisioning OK',fdbmt_info); //TODO - add nil message (nothing to do response)
+  //Result:=res;
 end;
 
 function TFRE_DB_Endpoint.IMI_addOpenWifiNetwork(const input: IFRE_DB_Object): IFRE_DB_Object;
@@ -2409,24 +2421,25 @@ var
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
-  GFRE_DBI.GetSystemScheme(TFRE_DB_OpenWifiNetwork,scheme);
-  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Open Wifi Network');
-  res.SendChangedFieldsOnly(false);
-  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
-  res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
-  res.SetElementValue('hidden','false');
-  res.SetElementValue('ip_net',GetNextNet(GetDBConnection,UID));
-  res.SetElementValue('dns','172.17.0.1');
-  res.SetElementValue('dhcp','true');
-  res.SetElementValue('dhcp_range_start','10');
-  res.SetElementValue('dhcp_range_end','250');
-  res.SetElementValue('dhcp_leasetime','600');
-  res.SetElementValue('dhcp_leasetime','600');
-  res.SetElementValue('sessiontimeout','1800');
-  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_OPENWIFINETWORK','newOperation');
-  serverFunc.AddParam.Describe('collection','network');
-  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
-  Result:=res;
+  abort;//FIXME
+  //GFRE_DBI.GetSystemScheme(TFRE_DB_OpenWifiNetwork,scheme);
+  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Open Wifi Network');
+  //res.SendChangedFieldsOnly(false);
+  //res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  //res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
+  //res.SetElementValue('hidden','false');
+  //res.SetElementValue('ip_net',GetNextNet(GetDBConnection,UID));
+  //res.SetElementValue('dns','172.17.0.1');
+  //res.SetElementValue('dhcp','true');
+  //res.SetElementValue('dhcp_range_start','10');
+  //res.SetElementValue('dhcp_range_end','250');
+  //res.SetElementValue('dhcp_leasetime','600');
+  //res.SetElementValue('dhcp_leasetime','600');
+  //res.SetElementValue('sessiontimeout','1800');
+  //serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_OPENWIFINETWORK','newOperation');
+  //serverFunc.AddParam.Describe('collection','network');
+  //res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
+  //Result:=res;
 end;
 
 function TFRE_DB_Endpoint.IMI_addWPA2Network(const input: IFRE_DB_Object): IFRE_DB_Object;
@@ -2435,24 +2448,25 @@ var
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
-  GFRE_DBI.GetSystemScheme(TFRE_DB_WPA2NETWORK,scheme);
-  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add WPA2 Network');
-  res.SendChangedFieldsOnly(false);
-  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
-  res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
-  res.SetElementValue('hidden','true');
-  res.SetElementValue('ip_net',GetNextNet(GetDBConnection,UID));
-  res.SetElementValue('dns','172.17.0.1');
-  res.SetElementValue('dhcp','true');
-  res.SetElementValue('dhcp_range_start','10');
-  res.SetElementValue('dhcp_range_end','250');
-  res.SetElementValue('dhcp_leasetime','600');
-  res.SetElementValue('dhcp_leasetime','600');
-  res.SetElementValue('sessiontimeout','1800');
-  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_WPA2NETWORK','newOperation');
-  serverFunc.AddParam.Describe('collection','network');
-  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
-  Result:=res;
+  abort;//FIXME
+  //GFRE_DBI.GetSystemScheme(TFRE_DB_WPA2NETWORK,scheme);
+  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add WPA2 Network');
+  //res.SendChangedFieldsOnly(false);
+  //res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  //res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
+  //res.SetElementValue('hidden','true');
+  //res.SetElementValue('ip_net',GetNextNet(GetDBConnection,UID));
+  //res.SetElementValue('dns','172.17.0.1');
+  //res.SetElementValue('dhcp','true');
+  //res.SetElementValue('dhcp_range_start','10');
+  //res.SetElementValue('dhcp_range_end','250');
+  //res.SetElementValue('dhcp_leasetime','600');
+  //res.SetElementValue('dhcp_leasetime','600');
+  //res.SetElementValue('sessiontimeout','1800');
+  //serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_WPA2NETWORK','newOperation');
+  //serverFunc.AddParam.Describe('collection','network');
+  //res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
+  //Result:=res;
 end;
 
 
@@ -2466,21 +2480,23 @@ var
 
 begin
   res := TFRE_DB_STORE_DATA_DESC.create;
-  childs:=ReferencedByList;
-  for i := 0 to Length(childs) - 1 do begin
-    GetDBConnection.Fetch(childs[i],dbo);
-    if dbo.IsA('TFRE_DB_NETWORK') then begin
-      entry:=GFRE_DBI.NewObject;
-      entry.Field('text').AsString:=dbo.field('ssid').AsString;
-      entry.Field('uid').AsGUID:=dbo.UID;
-      entry.Field('uidpath').AsStringArr:=dbo.GetUIDPath;
-      entry.Field('_funcclassname_').AsString:=dbo.SchemeClass;
-      entry.Field('_childrenfunc_').AsString:='ChildrenData';
-      entry.Field('_menufunc_').AsString:='Menu';
-      entry.Field('_contentfunc_').AsString:='Content';
-      res.addEntry(entry);
-    end;
-  end;
+  //Fixme
+  //childs:=ReferencedByList;
+  abort;
+  //for i := 0 to Length(childs) - 1 do begin
+  //  GetDBConnection.Fetch(childs[i],dbo);
+  //  if dbo.IsA('TFRE_DB_NETWORK') then begin
+  //    entry:=GFRE_DBI.NewObject;
+  //    entry.Field('text').AsString:=dbo.field('ssid').AsString;
+  //    entry.Field('uid').AsGUID:=dbo.UID;
+  //    entry.Field('uidpath').AsStringArr:=dbo.GetUIDPath;
+  //    entry.Field('_funcclassname_').AsString:=dbo.SchemeClass;
+  //    entry.Field('_childrenfunc_').AsString:='ChildrenData';
+  //    entry.Field('_menufunc_').AsString:='Menu';
+  //    entry.Field('_contentfunc_').AsString:='Content';
+  //    res.addEntry(entry);
+  //  end;
+  //end;
   Result:=res;
 end;
 

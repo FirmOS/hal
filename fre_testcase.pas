@@ -109,7 +109,7 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   published
     function        IMI_ClearStatus             (const input:IFRE_DB_Object):IFRE_DB_Object;
-    function        IMI_UpdateActualStatus      (const input:IFRE_DB_Object):IFRE_DB_Object;
+    function        WEB_UpdateActualStatus      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
     function        IMI_CheckActuality          (const input:IFRE_DB_Object):IFRE_DB_Object;
     procedure       CALC_StatusIcon             (const setter: IFRE_DB_CALCFIELD_SETTER);
   end;
@@ -643,7 +643,7 @@ begin
  Field('statussummary').Clear;
 end;
 
-function TFRE_DB_TestcaseStatus.IMI_UpdateActualStatus(const input: IFRE_DB_Object): IFRE_DB_Object;
+function TFRE_DB_TestcaseStatus.WEB_UpdateActualStatus(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var curr_status : string;
 begin
 // writeln ('UPDATE NOW');
@@ -659,7 +659,7 @@ begin
    Field('statussummary').AsString         := input.Field('statussummary').asstring;
  end;
 // writeln(DumpToString);
-  CheckDbResult(GetDBConnection.Update(self),'failure on cloned/update');
+  CheckDbResult(conn.Update(self),'failure on cloned/update');
 end;
 
 function TFRE_DB_TestcaseStatus.IMI_CheckActuality(const input: IFRE_DB_Object): IFRE_DB_Object;

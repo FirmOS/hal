@@ -275,9 +275,9 @@ begin
         vmc.Update(uvm);
       end else begin
         if vm.Field('MType').AsString='OS' then begin
-          uvm := dbc.NewObject(zoneclass);
+          uvm := GFRE_DBI.NewObjectSchemeByName(zoneclass);
         end else begin
-          uvm := dbc.NewObject(vmachineclass);
+          uvm := GFRE_DBI.NewObjectSchemeByName(vmachineclass);
         end;
         Obj2Obj(vm,uvm);
         //uvm.field('UID').AsGUID:=vm.UID;
