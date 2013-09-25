@@ -1375,10 +1375,10 @@ function GetStatusIconURI(const status: string): string;
 var    lstatus_icon : TFRE_DB_String;
 begin
   case status of
-    'OK'      : lstatus_icon := getThemedResource('images_apps/test/signal_ok.png');
-    'WARNING' : lstatus_icon := getThemedResource('images_apps/test/signal_warning.png');
-    'FAILURE' : lstatus_icon := getThemedResource('images_apps/test/signal_failure.png');
-    'UNKNOWN' : lstatus_icon := getThemedResource('images_apps/test/signal_unknown.png');
+    'OK'      : lstatus_icon := FREDB_getThemedResource('images_apps/test/signal_ok.png');
+    'WARNING' : lstatus_icon := FREDB_getThemedResource('images_apps/test/signal_warning.png');
+    'FAILURE' : lstatus_icon := FREDB_getThemedResource('images_apps/test/signal_failure.png');
+    'UNKNOWN' : lstatus_icon := FREDB_getThemedResource('images_apps/test/signal_unknown.png');
    else raise EFRE_DB_Exception.Create(edb_ERROR,'UNKNOWN ENUM FIELD VALUE SIGNAL Status');
   end;
   result := lstatus_icon;

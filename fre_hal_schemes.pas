@@ -1320,7 +1320,7 @@ begin
   scheme.AddSchemeField('relativeurl',fdbft_Boolean).required:=true;
   scheme.AddSchemeField('url',fdbft_String).required:=true;
   scheme.AddSchemeField('urlexceptions',fdbft_String).multiValues:=true;
-  scheme.SetSysDisplayField(GFRE_DBI.ConstructStringArray(['url']),'%s');
+  scheme.SetSysDisplayField(TFRE_DB_NameTypeArray.create('url'),'%s');
 
   group:=scheme.AddInputGroup('main').Setup('$scheme_TFRE_DB_CMS_PAGE_main_group');
   group.AddInput('cms','',false,true);
@@ -1689,7 +1689,7 @@ begin
   scheme.AddSchemeField('revoked',fdbft_DateTimeUTC);
   scheme.AddSchemeField('valid',fdbft_DateTimeUTC);
   scheme.AddSchemeField('revoke',fdbft_Boolean);
-  scheme.SetSysDisplayField(GFRE_DBI.ConstructStringArray(['cn']),'%s');
+  scheme.SetSysDisplayField(TFRE_DB_NameTypeArray.Create('cn'),'%s');
 
   group:=scheme.AddInputGroup('main_create').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
   group.AddInput('ca','',false,true);
