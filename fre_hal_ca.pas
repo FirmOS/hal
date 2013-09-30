@@ -247,7 +247,7 @@ begin
   if caob.FieldExists('crt')=false then begin
    _CreateCA;
   end;
-  referenced:=caob.ReferencedByList;
+  referenced:=conn.GetReferences(caob.UID,false,'');
   writeln('REFERENCED ',length(referenced));
   for i:=0 to length(referenced)-1 do begin
    if conn.Fetch(referenced[i],cob)=false then begin

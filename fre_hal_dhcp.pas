@@ -151,16 +151,16 @@ begin
   result_obj.Field('DEFAULT_DNS').AsString:= serviceobj.Field('DEFAULT_DNS').AsString;
   result_obj.Field('DEFAULT_LEASETIME').AsInt16 := serviceobj.Field('DEFAULT_LEASETIME').AsInt16;
   result_obj.Field('DEFAULT_DOMAINNAME').AsString := serviceobj.Field('DEFAULT_DOMAINNAME').AsString;
-
-  referred := serviceobj.ReferencedByList;
+  referred := conn.GetReferences(serviceobj.UID,false,'');
+//  referred := serviceobj.ReferencedByList;
   for i:=0 to high(referred) do begin
    if conn.Fetch(referred[i],co) then begin
     if co.IsA('TFRE_DB_DHCP_FIXED') then begin
-     cop:=GFRE_DBI.CreateFromString(co.AsString,conn);
+     cop:=GFRE_DBI.CreateFromString(co.AsString);
      result_obj.Field('fixed').AddObject(cop);
     end;
     if co.IsA('TFRE_DB_DHCP_SUBNET') then begin
-     cop:=GFRE_DBI.CreateFromString(co.AsString,conn);
+     cop:=GFRE_DBI.CreateFromString(co.AsString);
      result_obj.Field('subnet').AddObject(cop);
     end;
    end else begin

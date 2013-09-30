@@ -113,7 +113,7 @@ var i:integer;
 begin
  result_obj.Field('default').AsString:=serviceobj.Field('Default').AsString;
  for i:=0 to serviceobj.Field('static').ValueCount-1 do begin
-  result_obj.Field('static').AddObject(GFRE_DBI.CreateFromString(serviceobj.Field('static').AsObjectItem[i].AsString,conn));
+  result_obj.Field('static').AddObject(GFRE_DBI.CreateFromString(serviceobj.Field('static').AsObjectItem[i].AsString));
  end;
 end;
 

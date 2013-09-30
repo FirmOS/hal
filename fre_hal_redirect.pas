@@ -125,7 +125,7 @@ var coll   :IFRE_DB_Collection;
      end;
 
  begin
-  referenced:=ep.ReferencedByList;
+  referenced:=conn.GetReferences(ep.UID,false,'');
   for i:=0 to high(referenced) do begin
    if conn.Fetch(referenced[i],nw)=false then begin
     LogError('Could not find Network '+GFRE_BT.GUID_2_HexString(nw_uid)+' for Endpoint '+ep.UID_String);
@@ -165,7 +165,7 @@ var coll   :IFRE_DB_Collection;
     LogError('Could not find Site for SiteExtension '+obj.UID_String);
     exit;
    end;
-   referenced:=site.ReferencedByList;
+   referenced:=conn.GetReferences(site.UID,false,'');
    for i:=0 to high(referenced) do begin
     if conn.Fetch(referenced[i],ep)=false then begin
      LogError('Could not find Endpoint for Site '+site.UID_String);

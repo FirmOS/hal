@@ -230,7 +230,7 @@ var ob    :IFRE_DB_Object;
       if FREDB_Guids_Same(crt.Field('ca').AsObjectLink,ca.UID) then begin     // endpoint uses the same ca as configured for vpn
        sub:=GFRE_DBI.NewObject;
        sub.Field('cn').AsString:=crt.Field('cn').asstring;
-       linksys   := eob.ReferencedByList('TFRE_DB_NETWORK');
+       linksys   := conn.GetReferences(eob.UID,false,'TFRE_DB_NETWORK');
        for j:=low(linksys) to high (linksys) do begin
         if Conn.Fetch(linksys[j],nw)=false then begin
          LogError('Network '+GFRE_BT.GUID_2_HexString(linksys[j])+' not found in endpoint '+eob.UID_String);
@@ -251,7 +251,7 @@ var ob    :IFRE_DB_Object;
  end;
 
 begin
- ob:=GFRE_DBI.CreateFromString(serviceobj.AsString,conn);
+ ob:=GFRE_DBI.CreateFromString(serviceobj.AsString);
  if conn.Fetch(ob.Field('CAID').AsObjectLink,ca)=false then begin
   LogError('CA '+GFRE_BT.GUID_2_HexString(ob.Field('CAID').AsObjectLink)+' invalid in VPN '+ob.UID_String);
   exit;
