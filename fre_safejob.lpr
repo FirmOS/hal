@@ -57,8 +57,8 @@ uses
 
 begin
   Initialize_Read_FRE_CFG_Parameter;
-  Init4Server;
-//  InitMinimal(false);
+  InitEmbedded;
+  InitMinimal(false);
 
   FRE_DBBASE.Register_DB_Extensions;
   FRE_DBBUSINESS.Register_DB_Extensions;
