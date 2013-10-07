@@ -49,12 +49,21 @@ uses
 const
   csslcnf    ='openssl.cnf';
 
-  procedure FRE_OpenSSL_PrepareCADirectory (const dir:string);
-  procedure FRE_OpenSSL_CreateCA           (const dir:string; const cn,c,st,l,o,ou,email:string; const ca_pass:string);
-  procedure FRE_OpenSSL_CreateCrt          (const dir:string; const cn,c,st,l,o,ou,email:string; const ca_pass:string; const server:boolean);
-  procedure FRE_OpenSSL_WriteConf          (const dir:string; const cn,c,st,l,o,ou,email:string);
-  procedure FRE_OpenSSL_RevokeCrt          (const dir:string; const cn:string;const ca_pass:string);
+type
 
+  { TFRE_SSL_OPENSSLCMD }
+
+  TFRE_SSL_OPENSSLCMD = class(TInterfacedObject,IFRE_SSL)
+    protected
+      procedure  ClearCABaseInformation       (var ca_base_information:RFRE_CA_BASEINFORMATION);
+      function   PrepareCADirectory           (const ca_base_information:RFRE_CA_BASEINFORMATION) : string;
+      procedure  WriteConf                    (const dir:string; const cn,c,st,l,o,ou,email:string);
+      procedure  ReadCABaseInformation        (const dir:string; var ca_base_information:RFRE_CA_BASEINFORMATION);
+    public
+      function   CreateCA                     (const cn,c,st,l,o,ou,email:string; const ca_pass:string; out ca_base_information:RFRE_CA_BASEINFORMATION) : TFRE_SSL_RESULT;
+      function   CreateCrt                    (const cn,c,st,l,o,ou,email:string; const ca_pass:string; var ca_base_information:RFRE_CA_BASEINFORMATION; const server:boolean;  out crt_base_information: RFRE_CRT_BASEINFORMATION) : TFRE_SSL_RESULT;
+      function   RevokeCrt                    (const cn:string;const ca_pass:string; const crt:string ; var ca_base_information:RFRE_CA_BASEINFORMATION) : TFRE_SSL_RESULT;
+  end;
 
 implementation
 
@@ -75,8 +84,23 @@ begin
   end;
 end;
 
-procedure FRE_OpenSSL_PrepareCADirectory(const dir: string);
+{ TFRE_SSL_OPENSSLCMD }
+
+procedure TFRE_SSL_OPENSSLCMD.ClearCABaseInformation(var ca_base_information: RFRE_CA_BASEINFORMATION);
+begin
+  ca_base_information.index:='';
+  ca_base_information.index_attr:='';
+  ca_base_information.serial:='';
+  ca_base_information.crlnumber:='';
+  ca_base_information.crl:='';
+  ca_base_information.crt:='';
+  ca_base_information.key:='';
+  ca_base_information.random:='';
+end;
+
+function TFRE_SSL_OPENSSLCMD.PrepareCADirectory(const ca_base_information: RFRE_CA_BASEINFORMATION): string;
 var
+  dir         : string;
   dir_signed  : string;
   dir_private : string;
 
@@ -88,164 +112,230 @@ var
      end;
   end;
 
+  procedure _WriteFile(const content:string; const filename: string; const create:boolean=false);
+  begin
+    if content<>'' then begin
+      GFRE_BT.StringToFile(dir+DirectorySeparator+filename,content);
+    end else begin
+      if create then begin
+        CheckError(FRE_ProcessCMD('touch '+dir+DirectorySeparator+filename));
+      end;
+    end;
+  end;
+
+  procedure _WriteExtensions;
+  var sl : TStringList;
+  begin
+    sl:=TStringList.Create;
+    try
+      sl.Add('[ xpclient_ext]');
+      sl.Add('extendedKeyUsage = 1.3.6.1.5.5.7.3.2');
+      sl.Add('[ xpserver_ext ]');
+      sl.Add('extendedKeyUsage = 1.3.6.1.5.5.7.3.1');
+      sl.SaveToFile(dir+'/xpxtensions');
+    finally
+      sl.Free;
+    end;
+  end;
+
 begin
+ dir:=GetTempFileName(GetTempDir,'CA');
  _CheckDir(dir);
- dir_signed :=dir+'/'+'signed_certs';
- dir_private:=dir+'/'+'private';
+ dir_signed :=dir+DirectorySeparator+'signed_certs';
+ dir_private:=dir+DirectorySeparator+'private';
  _CheckDir(dir_signed);
  _CheckDir(dir_private);
- _CheckDir(dir+'/crl');
- CheckError(FRE_ProcessCMD('touch '+dir+'/'+'index.txt'));
+ _CheckDir(dir+DirectorySeparator+'crl');
+ _WriteExtensions;
+ _WriteFile(ca_base_information.index,'index.txt',true);
+ _WriteFile(ca_base_information.index_attr,'index.txt.attr');
+ _WriteFile(ca_base_information.serial,'serial');
+ _WriteFile(ca_base_information.crlnumber,'crlnumber');
+ _WriteFile(ca_base_information.crt,'ca.crt');
+ _WriteFile(ca_base_information.key,'private/ca.key');
+ result := dir;
 end;
 
-procedure FRE_OpenSSL_CreateCA(const dir: string; const cn, c, st, l, o, ou, email: string; const ca_pass: string);
-var cadir : string;
-    sl    : TStringList;
+procedure TFRE_SSL_OPENSSLCMD.WriteConf(const dir: string; const cn, c, st, l, o, ou, email: string);
+var lsl:TStringList;
 begin
-  FRE_OpenSSL_WriteConf(dir,cn,c,st,l,o,ou,email);
-  CheckError(FRE_ProcessCMD('openssl req -passout pass:'+ca_pass+' -new -keyout '+dir+'/private/ca.key -out '+dir+'/careq.pem -config '+dir+'/'+csslcnf));
-  LogInfo('Sign CA Req ');
-  CheckError(FRE_ProcessCMD('openssl ca -batch -passin pass:'+ca_pass+' -create_serial -out '+dir+'/ca.crt -keyfile '+dir+'/private/ca.key -selfsign -extensions v3_ca -in '+dir+'/careq.pem -config '+dir+'/'+csslcnf));
-  CheckError(FRE_ProcessCMD('openssl x509 -inform PEM -outform DER -in '+dir+'/ca.crt -out '+dir+'/ca.der'));
-  LogInfo('Create DH ');
-  CheckError(FRE_ProcessCMD('openssl dhparam -out '+dir+'/dh1024.pem 1024'));
-  CheckError(FRE_ProcessCMD('dd if=/dev/urandom of='+dir+'/random count=2'));
-  GFRE_BT.StringToFile(dir+'/ca.pass',ca_pass);
-  //Create CRL
-  sl:=TStringList.Create;
+  lsl:=TStringList.Create;
   try
-   sl.Add('00');
-   sl.SaveToFile(dir+'/crlnumber');
+
+    lsl.Add('RANDFILE                = $ENV::HOME/.rnd');
+    lsl.Add('oid_section             = new_oids');
+    lsl.Add('[ new_oids ]');
+    lsl.Add('[ ca ]');
+    lsl.Add('default_ca      = CA_default            # The default ca section');
+    lsl.Add('[ CA_default ]');
+    lsl.Add('dir             = '+dir+'               # Where everything is kept');
+    lsl.Add('certs           = $dir/                 # Where the issued certs are kept');
+    lsl.Add('crl_dir         = $dir/crl              # Where the issued crl are kept');
+    lsl.Add('database        = $dir/index.txt        # database index file.');
+    lsl.Add('#unique_subject = no                    # Set to no to allow creation of');
+    lsl.Add('new_certs_dir   = $dir/signed_certs     # default place for new certs.');
+    lsl.Add('certificate     = $dir/ca.crt           # The CA certificate');
+    lsl.Add('serial          = $dir/serial           # The current serial number');
+    lsl.Add('crlnumber       = $dir/crlnumber        # the current crl number');
+    lsl.Add('crl             = $dir/crl.pem          # The current CRL');
+    lsl.Add('private_key     = $dir/private/ca.key   # The private key');
+    lsl.Add('RANDFILE        = $dir/private/.rand    # private random number file');
+    lsl.Add('x509_extensions = v3_ca                 # The extentions to add to the cert');
+    lsl.Add('name_opt        = ca_default            # Subject Name options');
+    lsl.Add('cert_opt        = ca_default            # Certificate field options');
+    lsl.Add('default_days    = 3650                  # how long to certify for');
+    lsl.Add('default_crl_days= 30                    # how long before next CRL');
+    lsl.Add('default_md      = sha1                  # which md to use.');
+    lsl.Add('preserve        = no                    # keep passed DN ordering');
+    lsl.Add('policy          = policy_match');
+    lsl.Add('[ policy_match ]');
+    lsl.Add('countryName             = match');
+    lsl.Add('stateOrProvinceName     = match');
+    lsl.Add('organizationName        = match');
+    lsl.Add('organizationalUnitName  = optional');
+    lsl.Add('commonName              = supplied');
+    lsl.Add('emailAddress            = optional');
+    lsl.Add('[ policy_anything ]');
+    lsl.Add('countryName             = optional');
+    lsl.Add('stateOrProvinceName     = optional');
+    lsl.Add('localityName            = optional');
+    lsl.Add('organizationName        = optional');
+    lsl.Add('organizationalUnitName  = optional');
+    lsl.Add('commonName              = supplied');
+    lsl.Add('emailAddress            = optional');
+    lsl.Add('[ req ]');
+    lsl.Add('default_bits            = 1024');
+    lsl.Add('default_keyfile         = privkey.pem');
+    lsl.Add('distinguished_name      = req_distinguished_name');
+    lsl.Add('attributes              = req_attributes');
+    lsl.Add('prompt = no');
+    lsl.Add('x509_extensions = v3_ca # The extentions to add to the self signed cert');
+    lsl.Add('string_mask = nombstr');
+    lsl.Add('# req_extensions = v3_req # The extensions to add to a certificate request');
+    lsl.Add('[ req_distinguished_name ]');
+    if c<>''  then lsl.Add('C  = '+c);
+    if st<>'' then lsl.Add('ST = '+st);
+    if l<>''  then lsl.Add('L  = '+l);
+    if o<>''  then lsl.Add('O  = '+o);
+    if ou<>'' then lsl.Add('OU = '+ou);
+    if cn<>'' then lsl.Add('CN = '+cn);
+    if email<>''  then lsl.Add('emailAddress = '+email);
+    lsl.Add('[ req_attributes ]');
+    lsl.Add('challengePassword               = A challenge password');
+    lsl.Add('[ usr_cert ]');
+    lsl.Add('basicConstraints=CA:FALSE');
+    lsl.Add('nsComment                       = "OpenSSL Generated Certificate"');
+    lsl.Add('subjectKeyIdentifier=hash');
+    lsl.Add('authorityKeyIdentifier=keyid,issuer');
+    lsl.Add('[ v3_req ]');
+    lsl.Add('basicConstraints = CA:FALSE');
+    lsl.Add('keyUsage = nonRepudiation, digitalSignature, keyEncipherment');
+    lsl.Add('[ v3_ca ]');
+    lsl.Add('subjectKeyIdentifier=hash');
+    lsl.Add('authorityKeyIdentifier=keyid:always,issuer:always');
+    lsl.Add('basicConstraints = CA:true');
+    lsl.Add('[ crl_ext ]');
+    lsl.Add('authorityKeyIdentifier=keyid:always,issuer:always');
+
+    lsl.SaveToFile(dir+'/'+csslcnf);
   finally
-   sl.Free;
-  end;
-  LogInfo('Create CA Done ');
-  LogInfo('Write XP Extensions ');
-  sl:=TStringList.Create;
-  try
-   sl.Add('[ xpclient_ext]');
-   sl.Add('extendedKeyUsage = 1.3.6.1.5.5.7.3.2');
-   sl.Add('[ xpserver_ext ]');
-   sl.Add('extendedKeyUsage = 1.3.6.1.5.5.7.3.1');
-   sl.SaveToFile(dir+'/xpxtensions');
-  finally
-   sl.Free;
+    lsl.Free;
   end;
 end;
 
-procedure FRE_OpenSSL_CreateCrt(const dir: string; const cn, c, st, l, o, ou, email: string; const ca_pass: string; const server: boolean);
+procedure TFRE_SSL_OPENSSLCMD.ReadCABaseInformation(const dir: string; var ca_base_information: RFRE_CA_BASEINFORMATION);
+
+  procedure _ReadFile(var content:string; const filename: string);
+  begin
+    if FileExists(dir+DirectorySeparator+filename) then begin
+      content := GFRE_BT.StringFromFile(dir+DirectorySeparator+filename);
+    end else begin
+      content := '';
+    end;
+  end;
+
+begin
+  _ReadFile(ca_base_information.index,'index.txt');
+  _ReadFile(ca_base_information.index_attr,'index.txt.attr');
+  _ReadFile(ca_base_information.serial,'serial');
+  _ReadFile(ca_base_information.crlnumber,'crlnumber');
+  _ReadFile(ca_base_information.crt,'ca.crt');
+  _ReadFile(ca_base_information.key,'private/ca.key');
+  _ReadFile(ca_base_information.crl,'crl'+DirectorySeparator+'ca.crl');
+end;
+
+function TFRE_SSL_OPENSSLCMD.CreateCA(const cn, c, st, l, o, ou, email: string; const ca_pass: string; out ca_base_information: RFRE_CA_BASEINFORMATION): TFRE_SSL_RESULT;
+var
+  dir   : string;
+  sl    : TStringList;
+
+begin
+  ClearCABaseInformation(ca_base_information);
+  dir      := PrepareCADirectory(ca_base_information);
+  try
+    WriteConf(dir,cn,c,st,l,o,ou,email);
+
+    FRE_ProcessCMDException('openssl req -passout pass:'+ca_pass+' -new -keyout '+dir+'/private/ca.key -out '+dir+'/careq.pem -config '+dir+'/'+csslcnf);
+    LogInfo('Sign CA Req ');
+    FRE_ProcessCMDException('openssl ca -batch -passin pass:'+ca_pass+' -create_serial -out '+dir+'/ca.crt -keyfile '+dir+'/private/ca.key -selfsign -extensions v3_ca -in '+dir+'/careq.pem -config '+dir+'/'+csslcnf);
+    FRE_ProcessCMDException('openssl x509 -inform PEM -outform DER -in '+dir+'/ca.crt -out '+dir+'/ca.der');
+    LogInfo('Create DH ');
+    FRE_ProcessCMDException('openssl dhparam -out '+dir+'/dh1024.pem 1024');
+    FRE_ProcessCMDException('dd if=/dev/urandom of='+dir+'/random count=2');
+    //Create CRL
+    sl:=TStringList.Create;
+    try
+      sl.Add('00');
+      sl.SaveToFile(dir+'/crlnumber');
+    finally
+      sl.Free;
+    end;
+    LogInfo('Create CA Done ');
+    ReadCABaseInformation(dir,ca_base_information);
+  finally
+    FRE_ProcessCMD('rm -rf '+dir);
+  end;
+end;
+
+function TFRE_SSL_OPENSSLCMD.CreateCrt(const cn, c, st, l, o, ou, email: string; const ca_pass: string; var ca_base_information: RFRE_CA_BASEINFORMATION; const server: boolean; out crt_base_information: RFRE_CRT_BASEINFORMATION): TFRE_SSL_RESULT;
+var
+  dir       : string;
 begin
   LogInfo('Creating Crt '+cn);
   LogInfo('Creating SSL Conf '+cn);
-  FRE_OpenSSL_WriteConf(dir,cn,c,st,l,o,ou,email);
+
+  dir      := PrepareCADirectory(ca_base_information);
+  WriteConf(dir,cn,c,st,l,o,ou,email);
   LogInfo('Creating Crt Req '+cn);
 
-  CheckError(FRE_ProcessCMD('openssl req -nodes -new -keyout '+dir+'/private/'+cn+'.key -out '+dir+'/'+cn+'_req.pem -config '+dir+'/'+csslcnf));
+  FRE_ProcessCMDException('openssl req -nodes -new -keyout '+dir+'/private/crt.key -out '+dir+'/crt_req.pem -config '+dir+'/'+csslcnf);
   LogInfo('Sign Crt Req '+cn);
   if server=true then begin
-   CheckError(FRE_ProcessCMD('openssl ca -verbose -batch -passin pass:'+ca_pass+' -out '+dir+'/signed_certs/'+cn+'.crt -extensions xpserver_ext -extfile '+dir+'/xpxtensions -in '+dir+'/'+cn+'_req.pem -config '+dir+'/'+csslcnf));
+    FRE_ProcessCMDException('openssl ca -verbose -batch -passin pass:'+ca_pass+' -out '+dir+'/signed_certs/crt.crt -extensions xpserver_ext -extfile '+dir+'/xpxtensions -in '+dir+'/crt_req.pem -config '+dir+'/'+csslcnf);
   end else begin
-   CheckError(FRE_ProcessCMD('openssl ca -verbose -batch -passin pass:'+ca_pass+' -out '+dir+'/signed_certs/'+cn+'.crt -extensions xpclient_ext -extfile '+dir+'/xpxtensions -in '+dir+'/'+cn+'_req.pem -config '+dir+'/'+csslcnf));
+    FRE_ProcessCMDException('openssl ca -verbose -batch -passin pass:'+ca_pass+' -out '+dir+'/signed_certs/crt.crt -extensions xpclient_ext -extfile '+dir+'/xpxtensions -in '+dir+'/crt_req.pem -config '+dir+'/'+csslcnf);
   end;
 //  CheckError(Command('openssl pkcs12 -export -passout pass:'+ob.Field('pass').AsString+' -clcerts -in '+cadir_signed+'/'+ob.Field('cn').asstring+'.crt -inkey '+cadir+'/private/'+ob.Field('cn').asstring+'.key -out '+cadir+'/private/'+ob.Field('cn').asstring+'.p12'));
+  ReadCABaseInformation(dir,ca_base_information);
+  crt_base_information.crt  := GFRE_BT.StringFromFile(dir+DirectorySeparator+'signed_certs'+DirectorySeparator+'crt.crt');
+  crt_base_information.key  := GFRE_BT.StringFromFile(dir+DirectorySeparator+'private'+DirectorySeparator+'crt.key');
   LogInfo('Create Crt Done '+cn);
 end;
 
-procedure FRE_OpenSSL_WriteConf (const dir:string; const cn,c,st,l,o,ou,email:string);
-var lsl:TStringList;
+function TFRE_SSL_OPENSSLCMD.RevokeCrt(const cn: string; const ca_pass: string; const crt: string; var ca_base_information: RFRE_CA_BASEINFORMATION): TFRE_SSL_RESULT;
+var
+  dir : string;
 begin
- lsl:=TStringList.Create;
- try
+  LogInfo('Revoke Crt '+cn);
+  LogInfo('Creating SSL Conf '+cn);
 
-  lsl.Add('RANDFILE                = $ENV::HOME/.rnd');
-  lsl.Add('oid_section             = new_oids');
-  lsl.Add('[ new_oids ]');
-  lsl.Add('[ ca ]');
-  lsl.Add('default_ca      = CA_default            # The default ca section');
-  lsl.Add('[ CA_default ]');
-  lsl.Add('dir             = '+dir+'               # Where everything is kept');
-  lsl.Add('certs           = $dir/                 # Where the issued certs are kept');
-  lsl.Add('crl_dir         = $dir/crl              # Where the issued crl are kept');
-  lsl.Add('database        = $dir/index.txt        # database index file.');
-  lsl.Add('#unique_subject = no                    # Set to no to allow creation of');
-  lsl.Add('new_certs_dir   = $dir/signed_certs     # default place for new certs.');
-  lsl.Add('certificate     = $dir/ca.crt           # The CA certificate');
-  lsl.Add('serial          = $dir/serial           # The current serial number');
-  lsl.Add('crlnumber       = $dir/crlnumber        # the current crl number');
-  lsl.Add('crl             = $dir/crl.pem          # The current CRL');
-  lsl.Add('private_key     = $dir/private/ca.key   # The private key');
-  lsl.Add('RANDFILE        = $dir/private/.rand    # private random number file');
-  lsl.Add('x509_extensions = v3_ca                 # The extentions to add to the cert');
-  lsl.Add('name_opt        = ca_default            # Subject Name options');
-  lsl.Add('cert_opt        = ca_default            # Certificate field options');
-  lsl.Add('default_days    = 3650                  # how long to certify for');
-  lsl.Add('default_crl_days= 30                    # how long before next CRL');
-  lsl.Add('default_md      = sha1                  # which md to use.');
-  lsl.Add('preserve        = no                    # keep passed DN ordering');
-  lsl.Add('policy          = policy_match');
-  lsl.Add('[ policy_match ]');
-  lsl.Add('countryName             = match');
-  lsl.Add('stateOrProvinceName     = match');
-  lsl.Add('organizationName        = match');
-  lsl.Add('organizationalUnitName  = optional');
-  lsl.Add('commonName              = supplied');
-  lsl.Add('emailAddress            = optional');
-  lsl.Add('[ policy_anything ]');
-  lsl.Add('countryName             = optional');
-  lsl.Add('stateOrProvinceName     = optional');
-  lsl.Add('localityName            = optional');
-  lsl.Add('organizationName        = optional');
-  lsl.Add('organizationalUnitName  = optional');
-  lsl.Add('commonName              = supplied');
-  lsl.Add('emailAddress            = optional');
-  lsl.Add('[ req ]');
-  lsl.Add('default_bits            = 1024');
-  lsl.Add('default_keyfile         = privkey.pem');
-  lsl.Add('distinguished_name      = req_distinguished_name');
-  lsl.Add('attributes              = req_attributes');
-  lsl.Add('prompt = no');
-  lsl.Add('x509_extensions = v3_ca # The extentions to add to the self signed cert');
-  lsl.Add('string_mask = nombstr');
-  lsl.Add('# req_extensions = v3_req # The extensions to add to a certificate request');
-  lsl.Add('[ req_distinguished_name ]');
-  if c<>''  then lsl.Add('C  = '+c);
-  if st<>'' then lsl.Add('ST = '+st);
-  if l<>''  then lsl.Add('L  = '+l);
-  if o<>''  then lsl.Add('O  = '+o);
-  if ou<>'' then lsl.Add('OU = '+ou);
-  if cn<>'' then lsl.Add('CN = '+cn);
-  if email<>''  then lsl.Add('emailAddress = '+email);
-  lsl.Add('[ req_attributes ]');
-  lsl.Add('challengePassword               = A challenge password');
-  lsl.Add('[ usr_cert ]');
-  lsl.Add('basicConstraints=CA:FALSE');
-  lsl.Add('nsComment                       = "OpenSSL Generated Certificate"');
-  lsl.Add('subjectKeyIdentifier=hash');
-  lsl.Add('authorityKeyIdentifier=keyid,issuer');
-  lsl.Add('[ v3_req ]');
-  lsl.Add('basicConstraints = CA:FALSE');
-  lsl.Add('keyUsage = nonRepudiation, digitalSignature, keyEncipherment');
-  lsl.Add('[ v3_ca ]');
-  lsl.Add('subjectKeyIdentifier=hash');
-  lsl.Add('authorityKeyIdentifier=keyid:always,issuer:always');
-  lsl.Add('basicConstraints = CA:true');
-  lsl.Add('[ crl_ext ]');
-  lsl.Add('authorityKeyIdentifier=keyid:always,issuer:always');
-
-  lsl.SaveToFile(dir+'/'+csslcnf);
- finally
-  lsl.Free;
- end;
-end;
-
-procedure FRE_OpenSSL_RevokeCrt(const dir: string; const cn: string; const ca_pass: string);
-begin
- LogInfo('Revoke Crt '+cn);
- LogInfo('Creating SSL Conf '+cn);
- FRE_OpenSSL_WriteConf(dir,cn,'','','','','','');
- CheckError(FRE_ProcessCMD('openssl ca -passin pass:'+ca_pass+' -revoke '+dir+'/signed_certs/'+cn+'.crt -config '+dir+'/'+csslcnf));
- CheckError(FRE_ProcessCMD('openssl ca -passin pass:'+ca_pass+' -config '+dir+'/'+csslcnf+' -gencrl -crldays 365 -out '+dir+'/crl/ca.crl'));
- LogInfo('Revoke Crt Done '+cn);
+  dir      := PrepareCADirectory(ca_base_information);
+  WriteConf(dir,cn,'','','','','','');
+  GFRE_BT.StringToFile(dir+DirectorySeparator+'signed_certs'+DirectorySeparator+'crt.crt',crt);
+  FRE_ProcessCMDException('openssl ca -passin pass:'+ca_pass+' -revoke '+dir+'/signed_certs/crt.crt -config '+dir+'/'+csslcnf);
+  FRE_ProcessCMDException('openssl ca -passin pass:'+ca_pass+' -config '+dir+'/'+csslcnf+' -gencrl -crldays 365 -out '+dir+'/crl/ca.crl');
+  ReadCABaseInformation(dir,ca_base_information);
+  LogInfo('Revoke Crt Done '+cn);
 end;
 
 

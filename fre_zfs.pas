@@ -1598,7 +1598,7 @@ end;
 
 procedure TFRE_DB_ZFSJob.SetReplicate(const sourcedataset: string; const destinationdataset: string; const snapshotkey: string; const destinationhost: string; const destinationuser: string; const destinationkeyfilename: string; const replicationkeyfilename: string; const destinationport: integer; const replicationport: integer);
 begin
-  Field('MAX_ALLOWED_TIME').AsInt32 := maxint;
+  Field('MAX_ALLOWED_TIME').AsInt32 := 86400*14;
   config.Field('cmd').AsString                    :='replicate';
   config.Field('sourcedataset').AsString          :=sourcedataset;
   config.Field('destinationdataset').AsString     :=destinationdataset;

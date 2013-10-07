@@ -466,26 +466,23 @@ type
 
   { TFRE_DB_CA }
 
-  TFRE_DB_CA = class(TFRE_DB_Service)
+  TFRE_DB_CA = class(TFRE_DB_ObjectEx)
   protected
-    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure RegisterSystemScheme    (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; out newVersionId: TFRE_DB_NameType); override;
   published
-    function IMI_Menu                    (const input:IFRE_DB_Object):IFRE_DB_Object;
-    function IMI_Content                 (const input:IFRE_DB_Object):IFRE_DB_Object;
-    function WEB_ChildrenData            (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-    function IMI_AddCertificate          (const input:IFRE_DB_Object):IFRE_DB_Object;
+    class function  WBC_NewOperation        (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_Certificate }
 
   TFRE_DB_Certificate = class(TFRE_DB_ObjectEx)
   protected
-    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; out newVersionId: TFRE_DB_NameType); override;
   published
-    function IMI_Menu                    (const input:IFRE_DB_Object):IFRE_DB_Object;
-    function IMI_Content                 (const input:IFRE_DB_Object):IFRE_DB_Object;
+    function        WEB_Revoke            (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+    class function  WBC_NewOperation      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_DHCP }
@@ -566,7 +563,31 @@ procedure Register_DB_Extensions;
 
 implementation
 
+ procedure CA_BaseInformationtoDBO(const cao:IFRE_DB_OBJECT; const ca_base_information:RFRE_CA_BASEINFORMATION;const update:boolean=false);
+ begin
+   cao.Field('index').AsString       := ca_base_information.index;
+   cao.Field('index_attr').AsString  := ca_base_information.index_attr;
+   cao.Field('serial').AsString      := ca_base_information.serial;
+   cao.Field('crlnumber').AsString   := ca_base_information.crlnumber;
+   cao.Field('crl').AsString         := ca_base_information.crl;
+   if update=false then begin
+     cao.Field('crt').AsString         := ca_base_information.crt;
+     cao.Field('key').AsString         := ca_base_information.key;
+     cao.Field('issued').AsDateTimeUTC := GFRE_DT.Now_UTC;
+   end;
+   writeln(cao.DumpToString());
+ end;
 
+ procedure DBOtoCA_BaseInformation(const cao:IFRE_DB_OBJECT; out ca_base_information:RFRE_CA_BASEINFORMATION);
+ begin
+   ca_base_information.index         := cao.Field('index').AsString;
+   ca_base_information.index_attr    := cao.Field('index_attr').AsString;
+   ca_base_information.serial        := cao.Field('serial').AsString;
+   ca_base_information.crlnumber     := cao.Field('crlnumber').AsString;
+   ca_base_information.crl           := cao.Field('crl').AsString;
+   ca_base_information.crt           := cao.Field('crt').AsString;
+   ca_base_information.key           := cao.Field('key').AsString;
+ end;
 
  procedure SetReprovision (const dbc: IFRE_DB_Connection; const id:TGUID);
  var
@@ -1661,7 +1682,7 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.AddSchemeField('ca',fdbft_ObjLink).required:=true;
-  scheme.AddSchemeField('cn',fdbft_String).required:=true;
+  scheme.GetSchemeField('objname').required:=true;
   scheme.AddSchemeField('c',fdbft_String);
   scheme.AddSchemeField('email',fdbft_String);
   scheme.AddSchemeField('st',fdbft_String);
@@ -1672,67 +1693,119 @@ begin
   scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
   scheme.AddSchemeField('revoked',fdbft_DateTimeUTC);
   scheme.AddSchemeField('valid',fdbft_DateTimeUTC);
-  scheme.AddSchemeField('revoke',fdbft_Boolean);
   scheme.SetSysDisplayField(TFRE_DB_NameTypeArray.Create('cn'),'%s');
 
   group:=scheme.AddInputGroup('main_create').Setup(GetTranslateableTextKey('scheme_main_group'));
   group.AddInput('ca','',false,true);
-  group.AddInput('cn',GetTranslateableTextKey('scheme_cn'));
-  group.AddInput('c',GetTranslateableTextKey('scheme_c'));
-  group.AddInput('email',GetTranslateableTextKey('scheme_email'));
-  group.AddInput('st',GetTranslateableTextKey('scheme_st'));
-  group.AddInput('l',GetTranslateableTextKey('scheme_l'));
-  group.AddInput('ou',GetTranslateableTextKey('scheme_ou'));
+  group.AddInput('objname','$scheme_TFRE_DB_CERTIFICATE_cn');
+  group.AddInput('email','$scheme_TFRE_DB_CERTIFICATE_email');
+  group.AddInput('l','$scheme_TFRE_DB_CERTIFICATE_l');
+  group.AddInput('ou','$scheme_TFRE_DB_CERTIFICATE_ou');
 
-  group:=scheme.AddInputGroup('main_edit').Setup(GetTranslateableTextKey('scheme_main_group'));
-  group.UseInputGroup(scheme.DefinedSchemeName,'main_create');
-  group.AddInput('revoke',GetTranslateableTextKey('scheme_revoke'),true);
-  group.AddInput('issued',GetTranslateableTextKey('scheme_issued'),true);
-  group.AddInput('revoked',GetTranslateableTextKey('scheme_revoked'),true);
-  group.AddInput('valid',GetTranslateableTextKey('scheme_valid'),true);
-  group.AddInput('crt',GetTranslateableTextKey('scheme_crt'));
-  group.AddInput('key',GetTranslateableTextKey('scheme_key'));
+  group:=scheme.AddInputGroup('main_edit').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
+//  group.UseInputGroup(scheme.DefinedSchemeName,'main_create');
+  group.AddInput('ca','',false,true);
+  group.AddInput('objname','$scheme_TFRE_DB_CERTIFICATE_cn',true);
+  group.AddInput('c','$scheme_TFRE_DB_CERTIFICATE_c',true);
+  group.AddInput('email','$scheme_TFRE_DB_CERTIFICATE_email',true);
+  group.AddInput('st','$scheme_TFRE_DB_CERTIFICATE_st',true);
+  group.AddInput('l','$scheme_TFRE_DB_CERTIFICATE_l',true);
+  group.AddInput('ou','$scheme_TFRE_DB_CERTIFICATE_ou',true);
+  group.AddInput('issued','$scheme_TFRE_DB_CERTIFICATE_issued',true);
+  group.AddInput('revoked','$scheme_TFRE_DB_CERTIFICATE_revoked',true);
+  group.AddInput('valid','$scheme_TFRE_DB_CERTIFICATE_valid',true);
+  group.AddInput('crt','$scheme_TFRE_DB_CERTIFICATE_crt',true);
+  group.AddInput('key','$scheme_TFRE_DB_CERTIFICATE_key',true);
 end;
 
 class procedure TFRE_DB_Certificate.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; out newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
-  StoreTranslateableText(conn,'scheme_main_group','Certificate');
-  StoreTranslateableText(conn,'scheme_cn','Common Name');
-  StoreTranslateableText(conn,'scheme_c','Country');
-  StoreTranslateableText(conn,'scheme_email','EMail');
-  StoreTranslateableText(conn,'scheme_st','State');
-  StoreTranslateableText(conn,'scheme_l','Location');
-  StoreTranslateableText(conn,'scheme_ou','Organization Unit');
-  StoreTranslateableText(conn,'scheme_revoke','Revoke');
-  StoreTranslateableText(conn,'scheme_issued','Issued');
-  StoreTranslateableText(conn,'scheme_revoked','Revoked');
-  StoreTranslateableText(conn,'scheme_valid','Valid');
-  StoreTranslateableText(conn,'scheme_crt','Certificate');
-  StoreTranslateableText(conn,'scheme_key','Key');
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_main_group','Certificate'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_cn','Common Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_c','Country'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_email','EMail'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_st','State'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_l','Location'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_ou','Organization Unit'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_revoke','Revoke'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_issued','Issued'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_revoked','Revoked'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_valid','Valid'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_crt','Certificate'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_key','Key'));
 end;
 
-function TFRE_DB_Certificate.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
-var
-  res: TFRE_DB_MENU_DESC;
+class function TFRE_DB_Certificate.WBC_NewOperation(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var cao       : IFRE_DB_Object;
+    cao_id    : TGUID;
+    ca_base   : RFRE_CA_BASEINFORMATION;
+
+    crt_id    : TGUID;
+    crt       : IFRE_DB_Object;
+    crt_base  : RFRE_CRT_BASEINFORMATION;
+
 begin
-  res:=TFRE_DB_MENU_DESC.create.Describe();
-  res.AddEntry.Describe('Revoke Certificate','images_apps/cloudcontrol/revoke_certificate.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'revoke'));
-  Result:=res;
+  try
+    crt_id  := NewOperation(input,ses,app,conn);
+
+    if not conn.Fetch(crt_id,crt) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch crt object from database!');
+    if not conn.Fetch(crt.Field('ca').AsGUID,cao) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch ca object from database!');
+    DBOtoCA_BaseInformation(cao,ca_base);
+    if GFRE_SSL.CreateCrt(crt.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,crt.Field('l').asstring,cao.Field('o').asstring,cao.Field('ou').asstring,crt.Field('email').asstring, cao.Field('pass').asstring,ca_base,false,crt_base)=sslOK then begin
+      CA_BaseInformationtoDBO(cao,ca_base,true);
+      crt.Field('c').asstring           := cao.Field('c').asstring;
+      crt.Field('st').asstring          := cao.Field('st').asstring;
+      if conn.Update(cao)<>edb_OK then begin
+        raise EFRE_Exception.Create('Error on updating CA object');
+      end;
+      crt.Field('crt').asstring         := crt_base.crt;
+      crt.Field('key').asstring         := crt_base.key;
+      crt.Field('issued').AsDateTimeUTC := GFRE_DT.Now_UTC;
+      writeln(crt.DumpToString());
+      if conn.Update(crt)<>edb_OK then begin
+        raise EFRE_Exception.Create('Error on updating crt object');
+      end;
+    end else begin
+      raise EFRE_Exception.Create('Error on creating crt');
+    end;
+//    cao.Field('
+    result  := TFRE_DB_CLOSE_DIALOG_DESC.Create.Describe();
+  except
+   on E:Exception do begin
+     conn.Delete(crt_id);
+     result := TFRE_DB_MESSAGE_DESC.Create.Describe('NEW','Error on creating object ['+e.Message+']',fdbmt_error);
+   end;
+  end;
 end;
 
-function TFRE_DB_Certificate.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
-var
-  res    :TFRE_DB_FORM_PANEL_DESC;
-  scheme :IFRE_DB_SchemeObject;
+function TFRE_DB_Certificate.WEB_Revoke(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var cao       : IFRE_DB_Object;
+    ca_base   : RFRE_CA_BASEINFORMATION;
+    crt_id    : TGUID;
+
 begin
-  scheme := GetScheme;
-  res:=TFRE_DB_FORM_PANEL_DESC.create.Describe('Certificate Authority');
-  res.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
-  res.FillWithObjectValues(Self,GetSession(input));
-  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
-  Result:=res;
+  try
+    if not conn.Fetch(Field('ca').AsGUID,cao) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch ca object from database!');
+    DBOtoCA_BaseInformation(cao,ca_base);
+    if GFRE_SSL.RevokeCrt(Field('objname').asstring, cao.Field('pass').asstring,Field('crt').asstring,ca_base)=sslOK then begin
+      CA_BaseInformationtoDBO(cao,ca_base,true);
+      if conn.Update(cao)<>edb_OK then begin
+        raise EFRE_Exception.Create('Error on updating CA object');
+      end;
+      Field('revoked').AsDateTimeUTC := GFRE_DT.Now_UTC;
+      writeln(self.DumpToString());
+    end else begin
+      raise EFRE_Exception.Create('Error on revoking crt');
+    end;
+    result  := GFRE_DB_NIL_DESC;
+  except
+   on E:Exception do begin
+     result := TFRE_DB_MESSAGE_DESC.Create.Describe('NEW','Error on revoking crt ['+e.Message+']',fdbmt_error);
+   end;
+  end;
 end;
+
 
 { TFRE_DB_CA }
 
@@ -1740,121 +1813,90 @@ class procedure TFRE_DB_CA.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJE
 var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
   scheme.GetSchemeField('objname').required:=true;
-  scheme.AddSchemeField('cn',fdbft_String).required:=true;
-  scheme.AddSchemeField('c',fdbft_String);
-  scheme.AddSchemeField('email',fdbft_String);
-  scheme.AddSchemeField('st',fdbft_String);
-  scheme.AddSchemeField('l',fdbft_String);
-  scheme.AddSchemeField('o',fdbft_String);
-  scheme.AddSchemeField('ou',fdbft_String);
+  scheme.AddSchemeField('c',fdbft_String).required:=true;
+  scheme.AddSchemeField('email',fdbft_String).required:=true;
+  scheme.AddSchemeField('st',fdbft_String).required:=true;
+  scheme.AddSchemeField('l',fdbft_String).required:=true;
+  scheme.AddSchemeField('o',fdbft_String).required:=true;
+  scheme.AddSchemeField('ou',fdbft_String).required:=true;
   scheme.AddSchemeField('crt',fdbft_String);
   scheme.AddSchemeField('key',fdbft_String);
-  scheme.AddSchemeField('pass',fdbft_String);
+  scheme.AddSchemeField('pass',fdbft_String).SetupFieldDef(true,false,'','',true,false);
   scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
 
-  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
-  group.AddInput('cn',GetTranslateableTextKey('scheme_cn'));
-  group.AddInput('c',GetTranslateableTextKey('scheme_c'));
-  group.AddInput('email',GetTranslateableTextKey('scheme_email'));
-  group.AddInput('st',GetTranslateableTextKey('scheme_st'));
-  group.AddInput('l',GetTranslateableTextKey('scheme_l'));
-  group.AddInput('o',GetTranslateableTextKey('scheme_o'));
-  group.AddInput('ou',GetTranslateableTextKey('scheme_ou'));
-  group.AddInput('crt',GetTranslateableTextKey('scheme_crt'));
-  group.AddInput('key',GetTranslateableTextKey('scheme_key'));
-  group.AddInput('pass',GetTranslateableTextKey('scheme_pass'));
-  group.AddInput('issued',GetTranslateableTextKey('scheme_issued'),true);
+  group:=scheme.AddInputGroup('main_create').Setup('$scheme_TFRE_DB_CA_main_group');
+  group.AddInput('objname','$scheme_TFRE_DB_CA_cn');
+  group.AddInput('c','$scheme_TFRE_DB_CA_c');
+  group.AddInput('email','$scheme_TFRE_DB_CA_email');
+  group.AddInput('st','$scheme_TFRE_DB_CA_st');
+  group.AddInput('l','$scheme_TFRE_DB_CA_l');
+  group.AddInput('o','$scheme_TFRE_DB_CA_o');
+  group.AddInput('ou','$scheme_TFRE_DB_CA_ou');
+  group.AddInput('pass','$scheme_TFRE_DB_CA_pass');
+
+  group:=scheme.AddInputGroup('main_edit').Setup('$scheme_TFRE_DB_CA_main_group');
+  group.AddInput('objname','$scheme_TFRE_DB_CA_cn',true);
+  group.AddInput('c','$scheme_TFRE_DB_CA_c',true);
+  group.AddInput('email','$scheme_TFRE_DB_CA_email',true);
+  group.AddInput('st','$scheme_TFRE_DB_CA_st',true);
+  group.AddInput('l','$scheme_TFRE_DB_CA_l',true);
+  group.AddInput('o','$scheme_TFRE_DB_CA_o',true);
+  group.AddInput('ou','$scheme_TFRE_DB_CA_ou',true);
+  group.AddInput('crt','$scheme_TFRE_DB_CA_crt',true);
+  group.AddInput('key','$scheme_TFRE_DB_CA_key',true);
+  group.AddInput('issued','$scheme_TFRE_DB_CA_issued',true);
 end;
 
 class procedure TFRE_DB_CA.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; out newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
-  StoreTranslateableText(conn,'scheme_main_group','Certificate Authority');
-  StoreTranslateableText(conn,'scheme_objname','Name');
-  StoreTranslateableText(conn,'scheme_cn','Common Name');
-  StoreTranslateableText(conn,'scheme_c','Country');
-  StoreTranslateableText(conn,'scheme_email','EMail');
-  StoreTranslateableText(conn,'scheme_st','State');
-  StoreTranslateableText(conn,'scheme_l','Location');
-  StoreTranslateableText(conn,'scheme_o','Organization Unit');
-  StoreTranslateableText(conn,'scheme_ou','Organization Unit');
-  StoreTranslateableText(conn,'scheme_crt','Certificate');
-  StoreTranslateableText(conn,'scheme_key','Key');
-  StoreTranslateableText(conn,'scheme_pass','Password');
-  StoreTranslateableText(conn,'scheme_issued','Issued');
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_main_group','Certificate Authority'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_cn','Common Name'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_c','Country'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_email','EMail'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_st','State'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_l','Location'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_o','Organization'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_ou','Organization Unit'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_crt','Certificate'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_key','Key'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_pass','Password'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_issued','Issued'));
 end;
 
-function TFRE_DB_CA.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
-var
-  res: TFRE_DB_MENU_DESC;
+class function TFRE_DB_CA.WBC_NewOperation(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var cao     : IFRE_DB_Object;
+    cao_id  : TGUID;
+    ca_base : RFRE_CA_BASEINFORMATION;
 begin
-  res:=TFRE_DB_MENU_DESC.create.Describe();
-  res.AddEntry.Describe('Add Certificate','images_apps/cloudcontrol/add_certificate.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(Self,'addCertificate'));
-  res.AddEntry.Describe('Delete','images_apps/cloudcontrol/delete_ca.png',TFRE_DB_SERVER_FUNC_DESC.Create.Describe(self,'deleteOperation'));
-  Result:=res;
-end;
+  try
+    cao_id  := NewOperation(input,ses,app,conn);
 
-function TFRE_DB_CA.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
-var
-  res   : TFRE_DB_FORM_PANEL_DESC;
-  scheme: IFRE_DB_SchemeObject;
-begin
-  scheme := GetScheme;
-  res:=TFRE_DB_FORM_PANEL_DESC.create.Describe('Certificate Authority');
-  res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
-  res.FillWithObjectValues(Self,GetSession(input));
-  res.AddButton.Describe('Save',TFRE_DB_SERVER_FUNC_DESC.create.Describe(Self,'saveOperation'),fdbbt_submit);
-  Result:=res;
-end;
+    if not conn.Fetch(cao_id,cao) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch ca object from database!');
 
-function TFRE_DB_CA.WEB_ChildrenData(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var
-  res   : TFRE_DB_STORE_DATA_DESC;
-  entry : IFRE_DB_Object;
-  childs: TFRE_DB_GUIDArray;
-  i     : Integer;
-  dbo   : IFRE_DB_Object;
-
-begin
-  res := TFRE_DB_STORE_DATA_DESC.create;
-  //fixme
-  abort;
-  //childs:=ReferencedByList;
-  for i := 0 to Length(childs) - 1 do begin
-    conn.Fetch(childs[i],dbo);
-    if dbo.IsA('TFRE_DB_CERTIFICATE') then begin
-      entry:=GFRE_DBI.NewObject;
-      entry.Field('text').AsString:=dbo.field('cn').AsString;
-      entry.Field('uid').AsGUID:=dbo.UID;
-      entry.Field('uidpath').AsStringArr:=dbo.GetUIDPath;
-      entry.Field('_funcclassname_').AsString:=dbo.SchemeClass;
-      entry.Field('_childrenfunc_').AsString:='ChildrenData';
-      entry.Field('_menufunc_').AsString:='Menu';
-      entry.Field('_contentfunc_').AsString:='Content';
-      res.addEntry(entry);
+    if GFRE_SSL.CreateCA(cao.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,cao.Field('l').asstring,cao.Field('ou').asstring,cao.Field('ou').asstring,cao.Field('email').asstring, cao.Field('pass').asstring,ca_base)=sslOK then begin
+      CA_BaseInformationtoDBO(cao,ca_base);
+      if conn.Update(cao)<>edb_OK then begin
+        raise EFRE_Exception.Create('Error on updating CA object');
+      end;
+    end else begin
+      raise EFRE_Exception.Create('Error on creating CA');
     end;
+//    cao.Field('
+    result  := TFRE_DB_CLOSE_DIALOG_DESC.Create.Describe();
+  except
+   on E:Exception do begin
+     conn.Delete(cao_id);
+     result := TFRE_DB_MESSAGE_DESC.Create.Describe('NEW','Error on creating object ['+e.Message+']',fdbmt_error);
+   end;
   end;
-  Result:=res;
+
 end;
 
-function TFRE_DB_CA.IMI_AddCertificate(const input: IFRE_DB_Object): IFRE_DB_Object;
-var
-  scheme    : IFRE_DB_SchemeObject;
-  res       : TFRE_DB_DIALOG_DESC;
-  serverFunc: TFRE_DB_SERVER_FUNC_DESC;
-begin
-  GFRE_DBI.GetSystemScheme(TFRE_DB_Certificate,scheme);
-  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Certificate');
-  res.AddSchemeFormGroup(scheme.GetInputGroup('main_create'),GetSession(input));
-  res.SetElementValue('ca',UID_String);
-  serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_Certificate','newOperation');
-  serverFunc.AddParam.Describe('collection','certificate');
-  res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
-  Result:=res;
-end;
+
+
 
 
 { TFRE_DB_WifiNetwork }
