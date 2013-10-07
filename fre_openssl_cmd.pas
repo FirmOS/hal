@@ -1,4 +1,4 @@
-unit fre_openssl;
+unit fre_openssl_cmd;
 
 {
 (§LIC)
@@ -43,7 +43,7 @@ interface
 
 
 uses
-  Classes, SysUtils,fre_process,fos_tool_interfaces;
+  Classes, SysUtils,fre_process,fos_tool_interfaces,fre_openssl_interface;
 
 
 const
@@ -65,7 +65,11 @@ type
       function   RevokeCrt                    (const cn:string;const ca_pass:string; const crt:string ; var ca_base_information:RFRE_CA_BASEINFORMATION) : TFRE_SSL_RESULT;
   end;
 
+
+
 implementation
+
+var   FSSL: TFRE_SSL_OPENSSLCMD;
 
 procedure LogError(const msg:string);
 begin
@@ -83,6 +87,7 @@ begin
     raise Exception.Create('Exception raised: Resultcode:'+inttostr(resultcode)+' '+msg);
   end;
 end;
+
 
 { TFRE_SSL_OPENSSLCMD }
 
@@ -338,6 +343,17 @@ begin
   LogInfo('Revoke Crt Done '+cn);
 end;
 
+procedure Register_Default_Implementations;
+begin
+  if not assigned(GFRE_SSL)  then begin
+    FSSL     := TFRE_SSL_OPENSSLCMD.Create;
+    GFRE_SSL := FSSL;
+  end;
+end;
 
+initialization
+  Register_Default_Implementations;
+finalization
+  FSSL.Free;
 end.
 

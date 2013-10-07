@@ -14,7 +14,9 @@ uses
   FRE_DB_COMMON,
   FRE_DBBASE,
   fre_hal_schemes,
-  fre_testcase
+  fre_testcase,
+  fre_openssl_interface,
+  fre_openssl_cmd
   ;
 
 type

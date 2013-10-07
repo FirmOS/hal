@@ -56,7 +56,8 @@ uses
   fre_system,
   fre_testcase,
   fre_alert,
-  fre_zfs;
+  fre_zfs,
+  fre_openssl_interface;
 
 type
 
