@@ -44,7 +44,7 @@ interface
 
 uses
   Classes, SysUtils,FOS_TOOL_INTERFACES,Sockets,math,FRE_HAL_UTILS,FRE_DB_INTERFACE,
-  FRE_HAL_DHCP,FRE_HAL_ROUTING,FRE_HAL_RADIUS,FRE_HAL_CA,FRE_HAL_VPN,FRE_HAL_REDIRECT,
+  FRE_HAL_DHCP,FRE_HAL_ROUTING,FRE_HAL_RADIUS,FRE_HAL_VPN,FRE_HAL_REDIRECT,
   fpjson;
 
 type
@@ -111,9 +111,6 @@ procedure TFRE_HAL_Control.DirectHal(const conn: IFRE_DB_Connection; const servi
  var hal: TFRE_HAL_DirectService;
  begin
   hal:=nil;
-  case servicename of
-   cfre_hal_service_ca      :  hal:=TFRE_HAL_CA.Create;
-  end;
   if assigned(hal) then begin
    writeln('assigned hal '+servicename);
    hal.ConfigureServiceDirect(conn,servicegroup_guid);
