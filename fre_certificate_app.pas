@@ -26,7 +26,8 @@ type
   private
     procedure       SetupApplicationStructure     ; override;
     function        InstallAppDefaults            (const conn : IFRE_DB_SYS_CONNECTION):TFRE_DB_Errortype; override;
-    function        InstallSystemGroupsandRoles   (const conn : IFRE_DB_SYS_CONNECTION; const domain : TFRE_DB_NameType):TFRE_DB_Errortype; override;
+    function        InstallRoles                  (const conn : IFRE_DB_SYS_CONNECTION):TFRE_DB_Errortype;
+    function        InstallDomainGroupsandRoles   (const conn : IFRE_DB_SYS_CONNECTION; const domain : TFRE_DB_NameType):TFRE_DB_Errortype; override;
     procedure       _UpdateSitemap                (const session: TFRE_DB_UserSession);
   protected
     procedure       MySessionInitialize           (const session: TFRE_DB_UserSession); override;
@@ -338,14 +339,14 @@ var
 
   procedure _InstallAllDomains(const obj:IFRE_DB_Object);
   begin
-    InstallSystemGroupsandRoles(conn,obj.Field('objname').asstring);
+    InstallDomainGroupsandRoles(conn,obj.Field('objname').asstring);
   end;
 
 begin
   case _CheckVersion(conn,old_version) of
     NotInstalled : begin
                       _SetAppdataVersion(conn,_ActualVersion);
-
+                      InstallRoles(conn);
                       conn.ForAllDomains(@_InstallAllDomains);
 
                       CreateAppText(conn,'$description','Certificate','Certificate','Certificate');
@@ -385,29 +386,33 @@ begin
   end;
 end;
 
-function TFRE_CERTIFICATE_APP.InstallSystemGroupsandRoles(const conn: IFRE_DB_SYS_CONNECTION; const domain: TFRE_DB_NameType): TFRE_DB_Errortype;
-var role         : IFRE_DB_ROLE;
+function TFRE_CERTIFICATE_APP.InstallRoles(const conn: IFRE_DB_SYS_CONNECTION): TFRE_DB_Errortype;
+var
+  role         : IFRE_DB_ROLE;
 begin
   role := _CreateAppRole('view_ca','View CA','Allowed to see the CA.');
   _AddAppRight(role,'view_ca','View CA','Allowed to see the CA.');
   _AddAppRightModules(role,GFRE_DBI.ConstructStringArray(['certificate_ca']));
-  conn.StoreRole(role,ObjectName,domain);
+  CheckDbResult(conn.StoreRole(role,ObjectName),'InstallRoles');
 
   role := _CreateAppRole('edit_ca','Edit CA','Allowed to edit the CA.');
   _AddAppRight(role,'view_ca','View CA','Allowed to see the CA.');
   _AddAppRight(role,'edit_ca','Edit CA','Allowed to edit the CA.');
   _AddAppRightModules(role,GFRE_DBI.ConstructStringArray(['certificate_ca']));
-  conn.StoreRole(role,ObjectName,domain);
+  CheckDbResult(conn.StoreRole(role,ObjectName),'InstallRoles');
 
   role := _CreateAppRole('delete_ca','Edit CA','Allowed to delete the CA.');
   _AddAppRight(role,'delete_ca','Edit CA','Allowed to delete the CA.');
   _AddAppRightModules(role,GFRE_DBI.ConstructStringArray(['certificate_ca']));
-  conn.StoreRole(role,ObjectName,domain);
+  CheckDbResult(conn.StoreRole(role,ObjectName),'InstallRoles');
+end;
 
+function TFRE_CERTIFICATE_APP.InstallDomainGroupsandRoles(const conn: IFRE_DB_SYS_CONNECTION; const domain: TFRE_DB_NameType): TFRE_DB_Errortype;
+begin
   _AddSystemGroups(conn,domain);
 
-  conn.ModifyGroupRoles(Get_Groupname_App_Group_Subgroup(ObjectName,'USER'+'@'+domain),GFRE_DBI.ConstructStringArray([Get_Rightname_App_Role_SubRole(ObjectName,'view_ca'+'@'+domain)]));
-  conn.ModifyGroupRoles(Get_Groupname_App_Group_Subgroup(ObjectName,'ADMIN'+'@'+domain),GFRE_DBI.ConstructStringArray([Get_Rightname_App_Role_SubRole(ObjectName,'edit_ca'+'@'+domain),Get_Rightname_App_Role_SubRole(ObjectName,'delete_ca'+'@'+domain)]));
+  CheckDbResult(conn.ModifyGroupRoles(Get_Groupname_App_Group_Subgroup(ObjectName,'USER'+'@'+domain),GFRE_DBI.ConstructStringArray([Get_Rightname_App_Role_SubRole(ObjectName,'view_ca')])),'InstallDomainGroupsandRoles');
+  CheckDbResult(conn.ModifyGroupRoles(Get_Groupname_App_Group_Subgroup(ObjectName,'ADMIN'+'@'+domain),GFRE_DBI.ConstructStringArray([Get_Rightname_App_Role_SubRole(ObjectName,'edit_ca'),Get_Rightname_App_Role_SubRole(ObjectName,'delete_ca')])),'InstallDomainGroupsandRoles');
 end;
 
 procedure TFRE_CERTIFICATE_APP._UpdateSitemap(const session: TFRE_DB_UserSession);
