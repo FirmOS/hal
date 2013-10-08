@@ -53,7 +53,7 @@ type
 
   { TFRE_SSL_OPENSSLCMD }
 
-  TFRE_SSL_OPENSSLCMD = class(TInterfacedObject,IFRE_SSL)
+  TFRE_SSL_OPENSSLCMD = class(TObject,IFRE_SSL)
     protected
       procedure  ClearCABaseInformation       (var ca_base_information:RFRE_CA_BASEINFORMATION);
       function   PrepareCADirectory           (const ca_base_information:RFRE_CA_BASEINFORMATION) : string;
@@ -65,7 +65,8 @@ type
       function   RevokeCrt                    (const cn:string;const ca_pass:string; const crt:string ; var ca_base_information:RFRE_CA_BASEINFORMATION) : TFRE_SSL_RESULT;
   end;
 
-
+  procedure Setup_SSL_Interface;
+  procedure Cleanup_SSL_Interface;
 
 implementation
 
@@ -86,6 +87,25 @@ begin
   if resultcode<>0 then begin
     raise Exception.Create('Exception raised: Resultcode:'+inttostr(resultcode)+' '+msg);
   end;
+end;
+
+procedure Setup_SSL_Interface;
+begin
+  if not assigned(FSSL)  then
+    begin
+      FSSL     := TFRE_SSL_OPENSSLCMD.Create;
+      Setup_SSL_IF(FSSL);
+    end;
+end;
+
+procedure Cleanup_SSL_Interface;
+begin
+ if Assigned(FSSL) then
+   begin
+     FSSL.Free;
+     FSSL:=nil;
+     Setup_SSL_IF(FSSL);
+   end;
 end;
 
 
@@ -343,17 +363,7 @@ begin
   LogInfo('Revoke Crt Done '+cn);
 end;
 
-procedure Register_Default_Implementations;
-begin
-  if not assigned(GFRE_SSL)  then begin
-    FSSL     := TFRE_SSL_OPENSSLCMD.Create;
-    GFRE_SSL := FSSL;
-  end;
-end;
 
-initialization
-  Register_Default_Implementations;
-finalization
-  FSSL.Free;
+
 end.
 

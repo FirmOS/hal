@@ -1753,7 +1753,7 @@ begin
     if not conn.Fetch(crt_id,crt) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch crt object from database!');
     if not conn.Fetch(crt.Field('ca').AsGUID,cao) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch ca object from database!');
     DBOtoCA_BaseInformation(cao,ca_base);
-    if GFRE_SSL.CreateCrt(crt.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,crt.Field('l').asstring,cao.Field('o').asstring,cao.Field('ou').asstring,crt.Field('email').asstring, cao.Field('pass').asstring,ca_base,false,crt_base)=sslOK then begin
+    if GET_SSL_IF.CreateCrt(crt.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,crt.Field('l').asstring,cao.Field('o').asstring,cao.Field('ou').asstring,crt.Field('email').asstring, cao.Field('pass').asstring,ca_base,false,crt_base)=sslOK then begin
       CA_BaseInformationtoDBO(cao,ca_base,true);
       crt.Field('c').asstring           := cao.Field('c').asstring;
       crt.Field('st').asstring          := cao.Field('st').asstring;
@@ -1789,7 +1789,7 @@ begin
   try
     if not conn.Fetch(Field('ca').AsGUID,cao) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch ca object from database!');
     DBOtoCA_BaseInformation(cao,ca_base);
-    if GFRE_SSL.RevokeCrt(Field('objname').asstring, cao.Field('pass').asstring,Field('crt').asstring,ca_base)=sslOK then begin
+    if GET_SSL_IF.RevokeCrt(Field('objname').asstring, cao.Field('pass').asstring,Field('crt').asstring,ca_base)=sslOK then begin
       CA_BaseInformationtoDBO(cao,ca_base,true);
       if conn.Update(cao)<>edb_OK then begin
         raise EFRE_Exception.Create('Error on updating CA object');
@@ -1877,7 +1877,7 @@ begin
 
     if not conn.Fetch(cao_id,cao) then raise EFRE_DB_Exception.Create(edb_ERROR,'can not fetch ca object from database!');
 
-    if GFRE_SSL.CreateCA(cao.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,cao.Field('l').asstring,cao.Field('ou').asstring,cao.Field('ou').asstring,cao.Field('email').asstring, cao.Field('pass').asstring,ca_base)=sslOK then begin
+    if GET_SSL_IF.CreateCA(cao.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,cao.Field('l').asstring,cao.Field('ou').asstring,cao.Field('ou').asstring,cao.Field('email').asstring, cao.Field('pass').asstring,ca_base)=sslOK then begin
       CA_BaseInformationtoDBO(cao,ca_base);
       if conn.Update(cao)<>edb_OK then begin
         raise EFRE_Exception.Create('Error on updating CA object');

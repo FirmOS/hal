@@ -102,8 +102,6 @@ type
   { TFOS_CPU_PARSER }
 
   TFOS_CPU_PARSER=class(TFOS_PARSER_PROC)
-  private
-     helpline : TStringlist;
   protected
      procedure   MySetup ; override;
      procedure   MyOutStreamCallBack (const stream:TStream); override;
@@ -113,8 +111,6 @@ type
   { TFOS_RAM_PARSER }
 
   TFOS_RAM_PARSER=class(TFOS_PARSER_PROC)
-  private
-     helpline : TStringlist;
   protected
      procedure   MySetup ; override;
      procedure   MyOutStreamCallBack (const stream:TStream); override;
@@ -124,8 +120,6 @@ type
   { TFOS_NETWORK_PARSER }
 
   TFOS_NETWORK_PARSER=class(TFOS_PARSER_PROC)
-  private
-     helpline : TStringlist;
   protected
      procedure   MySetup ; override;
      procedure   MyOutStreamCallBack (const stream:TStream); override;
@@ -135,8 +129,6 @@ type
   { TFOS_CACHE_PARSER }
 
   TFOS_CACHE_PARSER=class(TFOS_PARSER_PROC)
-  private
-     helpline : TStringlist;
   protected
      procedure   MySetup ; override;
      procedure   MyOutStreamCallBack (const stream:TStream); override;
@@ -156,7 +148,6 @@ type
 
   TFOS_ZFS_PARSER=class(TFOS_PARSER_PROC)
   private
-     helpline : TStringlist;
   protected
      procedure   MySetup ; override;
      procedure   MyOutStreamCallBack (const stream:TStream); override;
@@ -166,8 +157,6 @@ type
   { TFOS_ZPOOL_IOSTAT_PARSER }
 
   TFOS_ZPOOL_IOSTAT_PARSER=class(TFOS_PARSER_PROC)
-  private
-     helpline : TStringlist;
   protected
      procedure   MySetup ; override;
      procedure   MyOutStreamCallBack (const stream:TStream); override;
@@ -224,7 +213,6 @@ end;
 procedure TFOS_ZPOOL_IOSTAT_PARSER.MySetup;
 begin
   FLine.Delimiter:=' ';
-  helpline:=TStringList.Create;
 end;
 
 procedure TFOS_ZPOOL_IOSTAT_PARSER.MyOutStreamCallBack(const stream: TStream);
@@ -311,7 +299,6 @@ end;
 procedure TFOS_ZFS_PARSER.MySetup;
 begin
   FLine.Delimiter:=' ';
-  helpline:=TStringList.Create;
 end;
 
 procedure TFOS_ZFS_PARSER.MyOutStreamCallBack(const stream: TStream);
@@ -380,8 +367,8 @@ end;
 procedure TFOS_CACHE_PARSER.MySetup;
 begin
   FLine.Delimiter:=' ';
-  helpline:=TStringList.Create;
 end;
+
 
 procedure TFOS_CACHE_PARSER.MyOutStreamCallBack(const stream: TStream);
 var
@@ -467,8 +454,8 @@ end;
 procedure TFOS_NETWORK_PARSER.MySetup;
 begin
   FLine.Delimiter:=' ';
-  helpline:=TStringList.Create;
 end;
+
 
 procedure TFOS_NETWORK_PARSER.MyOutStreamCallBack(const stream: TStream);
 var
@@ -544,8 +531,8 @@ end;
 procedure TFOS_RAM_PARSER.MySetup;
 begin
   FLine.Delimiter:=' ';
-  helpline:=TStringList.Create;
 end;
+
 
 procedure TFOS_RAM_PARSER.MyOutStreamCallBack(const stream: TStream);
 var
@@ -707,8 +694,8 @@ end;
 procedure TFOS_CPU_PARSER.MySetup;
 begin
   FLine.Delimiter:=' ';
-  helpline:=TStringList.Create;
 end;
+
 
 procedure TFOS_CPU_PARSER.MyOutStreamCallBack(const stream: TStream);
 var st  : TStringStream;
@@ -825,6 +812,16 @@ end;
 
 destructor TFOS_STATS_CONTROL.Destroy;
 begin
+  FNetworkMon.Disable;
+  FNetworkMon.Free;
+  FCacheMon.Disable;
+  FCacheMon.Free;
+  FZpoolIoMon.Disable;
+  FZpoolIoMon.Free;
+  FRAMMon.Disable;
+  FRAMMon.FRee;
+  FCPUMon.Disable;
+  FCPUMon.Free;
   FDiskMon.Disable;
   FDiskMon.Free;
   inherited Destroy;
@@ -968,9 +965,12 @@ var
   dimon : TFOS_ZFS_PARSER;
 begin
   dimon  := TFOS_ZFS_PARSER.Create(cremoteuser,cremotekeyfilename,cremotehost,c_GET_ZFS_DATA_ONCE);
-  dimon.Once;
-  result := dimon.Get_Data_Object;
-  dimon.Free;
+  try
+    dimon.Once;
+    result := dimon.Get_Data_Object;
+  finally
+    dimon.Free;
+  end;
 end;
 
 function TFOS_STATS_CONTROL.Get_Network_Data: IFRE_DB_Object;

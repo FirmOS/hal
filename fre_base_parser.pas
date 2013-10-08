@@ -21,6 +21,7 @@ type
      FMemoutstream       : TMemoryStream;
      FMemerrstream       : TMemoryStream;
   protected
+     helpline            : TStringlist;
      FData               : IFRE_DB_Object;
      FLine               : TStringlist;
      FLines              : TStringlist;
@@ -28,6 +29,7 @@ type
      procedure   MyOutStreamCallBack (const stream:TStream); virtual;
      procedure   MyErrStreamCallBack (const stream:TStream); virtual;
      procedure   MySetup;virtual;
+     procedure   MyFinalize;virtual;
      procedure   MyParseOnOnceFinished; virtual;
   public
      constructor Create (const remoteuser,remotekeyfile,remotehost,cmd : string);
@@ -71,6 +73,11 @@ begin
 
 end;
 
+procedure TFOS_PARSER_PROC.MyFinalize;
+begin
+
+end;
+
 procedure TFOS_PARSER_PROC.MyParseOnOnceFinished;
 begin
 
@@ -91,11 +98,14 @@ begin
   Fcremoteuser        := remoteuser;
   Fcremotekeyfilename := remotekeyfile;
   FShellCmd           := cmd;
+  helpline            := TStringlist.Create;
   MySetup;
 end;
 
 destructor TFOS_PARSER_PROC.Destroy;
 begin
+  helpline.free;
+  MyFinalize;
   FLine.Free;
   FLines.Free;
   FData.Finalize;
@@ -131,13 +141,19 @@ end;
 procedure TFOS_PARSER_PROC.Once;
 begin
   FProcess      := TFRE_Process.Create(nil);
-  Fmemoutstream := TMemoryStream.Create;
-  Fmemerrstream := TMemoryStream.Create;
-  FProcess.RegisterCallBacks(@MyOutStreamCallBack,@MyErrStreamCallBack);
-  if (Fcremoteuser<>'') then
-    FProcess.ConfigureRemote_SSH_Mode(Fcremoteuser,Fcremotehost,Fcremotekeyfilename);
-  FProcess.ExecutePipedStream(FShellCmd,nil,nil, Fmemoutstream, Fmemerrstream);
-  MyParseOnOnceFinished;
+  try
+    Fmemoutstream := TMemoryStream.Create;
+    Fmemerrstream := TMemoryStream.Create;
+    FProcess.RegisterCallBacks(@MyOutStreamCallBack,@MyErrStreamCallBack);
+    if (Fcremoteuser<>'') then
+      FProcess.ConfigureRemote_SSH_Mode(Fcremoteuser,Fcremotehost,Fcremotekeyfilename);
+    FProcess.ExecutePipedStream(FShellCmd,nil,nil, Fmemoutstream, Fmemerrstream);
+    MyParseOnOnceFinished;
+  finally
+    FMemerrstream.Free;
+    FMemoutstream.FRee;
+    FProcess.Free;
+  end;
 end;
 
 function TFOS_PARSER_PROC.Get_Data_Object: IFRE_DB_Object;

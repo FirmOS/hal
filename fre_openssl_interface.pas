@@ -37,9 +37,10 @@ unit fre_openssl_interface;
 interface
 
 {$MODE objfpc} {$H+}
+{$interfaces corba}
 {$modeswitch nestedprocvars}
 
-uses Classes,Sysutils;
+uses Classes,Sysutils,fre_db_interface;
 
 type
 
@@ -70,10 +71,29 @@ type
       function  RevokeCrt          (const cn:string;const ca_pass:string;  const crt:string; var ca_base_information:RFRE_CA_BASEINFORMATION) : TFRE_SSL_RESULT;
   end;
 
-var
-  GFRE_SSL : IFRE_SSL;
+  function GET_SSL_IF : IFRE_SSL;
+
+  procedure Setup_SSL_IF(const sslif : IFRE_SSL);
 
 implementation
+
+var
+  PRIVATE_FRE_SSL : IFRE_SSL;
+
+function GET_SSL_IF: IFRE_SSL;
+begin
+  abort; // => DISCUSS global interfaces, refcounts and how to handle them, $interfaces corba, finalization, initialization
+  if not assigned(PRIVATE_FRE_SSL) then
+    raise  EFRE_DB_Exception.Create(edb_ERROR,'no assigned SSL interface');
+  result := PRIVATE_FRE_SSL;
+end;
+
+procedure Setup_SSL_IF(const sslif: IFRE_SSL);
+begin
+  if assigned(sslif) and assigned(PRIVATE_FRE_SSL) then
+    raise  EFRE_DB_Exception.Create(edb_ERROR,'double assigned SSL interface');
+  PRIVATE_FRE_SSL := sslif;
+end;
 
 end.
 
