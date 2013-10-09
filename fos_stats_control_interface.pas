@@ -64,7 +64,7 @@ const   cIOSTATFILEHACKMIST     = '/zones/firmos/myiostat.sh';
         c_GET_CACHE_DATA     = 'kstat -p zfs:0:arcstats:size zfs:0:arcstats:misses zfs:0:arcstats:hits zfs:0:arcstats:c zfs:0:arcstats:c_min zfs:0:arcstats:c_max 1';
         c_GET_CACHE_DATA_LOC = 'kstat -p zfs:0:arcstats:size zfs:0:arcstats:misses zfs:0:arcstats:hits zfs:0:arcstats:c zfs:0:arcstats:c_min zfs:0:arcstats:c_max 1';
 
-        c_GET_ZFS_DATA_ONCE      = 'zfs list -Hp -o name,referenced,available,used zones';
+        c_GET_ZFS_DATA_ONCE      = 'zfs list -Hp -o name,referenced,available,used jbod';
 
         c_GET_ZPOOL_IOSTAT     = 'zpool iostat -v 1';
         c_GET_ZPOOL_IOSTAT_LOC = 'zpool iostat -v 1';
