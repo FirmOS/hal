@@ -21,8 +21,6 @@ program fpmake_packages;
        Dependencies.Add('FRE_BLKCOM');
        Dependencies.Add('fcl-process');
        with Targets do begin
-         AddUnit('fre_openssl_interface.pas');
-         AddUnit('fre_openssl_cmd.pas');
          AddUnit('fre_hal_schemes.pas');
          AddUnit('fre_hal_transport.pas');
          AddUnit('fre_hal_utils.pas');
@@ -43,7 +41,6 @@ program fpmake_packages;
          AddUnit('fos_captiveportalhal.pas');
          AddUnit('fos_urlredirectunit.pas');
          AddUnit('fre_base_parser.pas');
-         AddUnit('fre_certificate_app.pas');
        end;
     end;
     Run;

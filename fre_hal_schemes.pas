@@ -42,7 +42,6 @@ unit fre_hal_schemes;
 {$codepage utf-8}
 
 interface
-
 uses
   Classes, SysUtils,FOS_TOOL_INTERFACES,
   Process,
