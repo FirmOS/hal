@@ -3038,20 +3038,9 @@ end;
  end;
 
  procedure Register_DB_Extensions;
- var validator : IFRE_DB_ClientFieldValidator;
-     enum      : IFRE_DB_Enum;
+ var
+   enum      : IFRE_DB_Enum;
  begin
-   validator:=GFRE_DBI.NewClientFieldValidator('ip').Setup('^([1-9][0-9]{0,1}|1[013-9][0-9]|12[0-689]|2[01][0-9]|22[0-3])([.]([1-9]{0,1}[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){2}[.]([1-9][0-9]{0,1}|[1-9]{0,1}[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-4])(\/([89]|[12][0-9]|3[0-2])|$)$',
-                                                     GFRE_DBI.CreateText('$validator_ip','IP Validator'),
-                                                     GFRE_DBI.CreateText('$validator_help_ip','1.0.0.1 - 223.255.255.254 excluding 127.x.x.x'),
-                                                     '\d\.\/');
-   GFRE_DBI.RegisterSysClientFieldValidator(validator);
-   validator:=GFRE_DBI.NewClientFieldValidator('mac').Setup('^([0-9a-fA-F]{2}(:|$)){6}$',
-                                                      GFRE_DBI.CreateText('$validator_help_mac','MAC Validator'),
-                                                      GFRE_DBI.CreateText('$validator_mac','00:01:02:03:04:05'),
-                                                      '\da-fA-F:');
-   GFRE_DBI.RegisterSysClientFieldValidator(validator);
-
    enum:=GFRE_DBI.NewEnum('routing').Setup(GFRE_DBI.CreateText('$enum_routing','Routing Enum'));
    enum.addEntry('enabled',GFRE_DBI.CreateText('$enum_routing_enabled','Enabled'));
    enum.addEntry('disabled',GFRE_DBI.CreateText('$enum_routing_disabled','Disabled'));
