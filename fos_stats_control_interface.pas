@@ -48,6 +48,11 @@ interface
 uses
   Classes, SysUtils,FRE_DB_INTERFACE,FOS_TOOL_INTERFACES,FRE_PROCESS,FRE_SYSTEM,fre_base_parser;
 
+const    cDEBUG_ZPOOL_NAME = 'zones';
+
+var     c_GET_ZFS_DATA_ONCE : string = 'zfs list -Hp -o name,referenced,available,used '+cDEBUG_ZPOOL_NAME;
+
+
 const   cIOSTATFILEHACKMIST     = '/zones/firmos/myiostat.sh';
         cIOSTATFILEHACKMIST_LOC = 'sh -c /zones/firmos/myiostat.sh';
         cIOSTATFILEONCE         = 'sh -c /zones/firmos/onceiostat.sh';
@@ -64,7 +69,6 @@ const   cIOSTATFILEHACKMIST     = '/zones/firmos/myiostat.sh';
         c_GET_CACHE_DATA     = 'kstat -p zfs:0:arcstats:size zfs:0:arcstats:misses zfs:0:arcstats:hits zfs:0:arcstats:c zfs:0:arcstats:c_min zfs:0:arcstats:c_max 1';
         c_GET_CACHE_DATA_LOC = 'kstat -p zfs:0:arcstats:size zfs:0:arcstats:misses zfs:0:arcstats:hits zfs:0:arcstats:c zfs:0:arcstats:c_min zfs:0:arcstats:c_max 1';
 
-        c_GET_ZFS_DATA_ONCE      = 'zfs list -Hp -o name,referenced,available,used jbod';
 
         c_GET_ZPOOL_IOSTAT     = 'zpool iostat -v 1';
         c_GET_ZPOOL_IOSTAT_LOC = 'zpool iostat -v 1';
