@@ -76,7 +76,7 @@ uses
     function Get_VM_Host_Control(const user,host:string): IFOS_VM_HOST_CONTROL;
     procedure VM_UpdateCollection(const dbc: IFRE_DB_CONNECTION; const vmc: IFRE_DB_COLLECTION; const vmo: IFRE_DB_Object; const vmachineclass: string; const zoneclass:string);
 
-   const cVNCPorts : Array [0..64] of VNC_Rec = (
+   const cVNCPorts : Array [0..61] of VNC_Rec = (
       (guid: '06dec646-802f-4d99-8eb3-4b50db030224'; vnc_port :'5900'; vnc_host :'10.220.251.10'; vm_alias :'firmbsd82leg' ; domain : 'firmos'),
       (guid: '183934d6-8475-44a7-a6df-e93ea4b1320f'; vnc_port :'5901'; vnc_host :'10.220.251.10'; vm_alias :'ebay_sniper' ; domain : 'firmos'),
       (guid: '2bceffb3-5b9d-4851-8ecc-3f82a8684da8'; vnc_port :'5902'; vnc_host :'10.220.251.10'; vm_alias :'testubuntu2' ; domain : 'demo'),
@@ -137,13 +137,11 @@ uses
       (guid: 'd70f8736-fd00-458a-9279-32778b62c0f8'; vnc_port :'5901'; vnc_host :'10.1.0.116'; vm_alias: 'openindiana'; domain : 'firmos'), // local 10.1.0.102
       (guid: 'bc588508-d911-47a6-92b7-5800d50254b8'; vnc_port :'5902'; vnc_host :'10.1.0.116'; vm_alias: 'win2008vsphere'; domain : 'firmos'), // local 10.1.0.102
 
-      (guid: '2244c15b-20d1-4e8f-ba64-5faf8fb3dc43'; vnc_port :'5900'; vnc_host :'10.1.0.232'; vm_alias: 'ubuntu1'; domain : 'firmos'), // happyware server
-      (guid: 'd2c7132a-7173-4a71-aed3-0d848fb36fee'; vnc_port :'5901'; vnc_host :'10.1.0.232'; vm_alias: 'ubuntu2'; domain : 'firmos'),
-      (guid: '01b3e71d-333d-4c29-8a07-d87bd0449703'; vnc_port :'5902'; vnc_host :'10.1.0.232'; vm_alias: 'win1'; domain : 'firmos'),    // administrator, FirmOS123
-      (guid: 'c7541d4e-5d77-47ed-a0e9-bdaab04c393f'; vnc_port :'5903'; vnc_host :'10.1.0.232'; vm_alias: 'win2'; domain : 'firmos'),
-      (guid: '58fba246-680b-47d8-9ff6-1fe6ae33eac4'; vnc_port :'5904'; vnc_host :'10.1.0.232'; vm_alias: 'freebsd'; domain : 'firmos'),
-      (guid: '9f7b8341-b84d-435c-9a16-2a972768504a'; vnc_port :'http://10.1.0.146:4200/vnas1/'; vnc_host :''; vm_alias :'vnas1'; domain : 'firmos'),
-      (guid: 'b44f5291-d49f-4391-8cf8-bb993c308431'; vnc_port :'http://10.1.0.146:4200/vnas2/'; vnc_host :''; vm_alias :'vnas2'; domain : 'demo')
+      (guid: 'artemes'; vnc_port :''; vnc_host :''; vm_alias: 'Artemes Cloud Data'; domain : 'system'),
+      (guid: 'infra_test'; vnc_port :''; vnc_host :''; vm_alias: 'Infrastructure Testsystem'; domain : 'system'),
+      (guid: '9559fec9-bc0f-4fba-860b-247a21f748c9'; vnc_port :'5901'; vnc_host :'10.220.249.10'; vm_alias: 'debian'; domain : 'system'),
+      (guid: 'infra_live'; vnc_port :''; vnc_host :''; vm_alias: 'Infrastructure Livesystem'; domain : 'system')
+
    );
 
 implementation
@@ -229,7 +227,7 @@ var i       : integer;
     uvm.Field('Objname').AsString  := vm.Field('MName').AsString;
     uvm.Field('MType').AsString    := vm.Field('MType').AsString;
     uvm.Field('MState').AsString   := vm.Field('MState').AsString;
-    uvm.Field('domainid').AsGUID   := dbc.DomainId(vm.Field('domain').AsString);
+    uvm.Field('domainid').AsGUID   := dbc.sys.DomainId('SYSTEM');
 
     if vm.Field('MState').AsString='running' then begin
       uvm.Field('MStateIcon').AsString   := 'images_apps/hal/vm_running.png';
