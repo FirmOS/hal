@@ -224,7 +224,7 @@ var ob    :IFRE_DB_Object;
   begin
    if eob.FieldExists('vpn_crtid') then begin
     if eob.Field('vpn_crtid').ValueCount=1 then begin
-     if conn.Fetch(eob.Field('vpn_crtid').AsObjectLink,crt)=false then begin
+     if conn.Fetch(eob.Field('vpn_crtid').AsObjectLink,crt)<>edb_OK then begin
       LogError('Crt '+GFRE_BT.GUID_2_HexString(eob.Field('vpn_crtid').AsObjectLink)+' not found in endpoint '+eob.UID_String);
      end else begin
       if FREDB_Guids_Same(crt.Field('ca').AsObjectLink,ca.UID) then begin     // endpoint uses the same ca as configured for vpn
@@ -232,7 +232,7 @@ var ob    :IFRE_DB_Object;
        sub.Field('cn').AsString:=crt.Field('cn').asstring;
        linksys   := conn.GetReferences(eob.UID,false,'TFRE_DB_NETWORK');
        for j:=low(linksys) to high (linksys) do begin
-        if Conn.Fetch(linksys[j],nw)=false then begin
+        if Conn.Fetch(linksys[j],nw)<>edb_OK then begin
          LogError('Network '+GFRE_BT.GUID_2_HexString(linksys[j])+' not found in endpoint '+eob.UID_String);
         end else begin
          sub.Field('ip_net').AddString(nw.Field('ip_net').AsString);
@@ -252,11 +252,11 @@ var ob    :IFRE_DB_Object;
 
 begin
  ob:=GFRE_DBI.CreateFromString(serviceobj.AsString);
- if conn.Fetch(ob.Field('CAID').AsObjectLink,ca)=false then begin
+ if conn.Fetch(ob.Field('CAID').AsObjectLink,ca)<>edb_OK then begin
   LogError('CA '+GFRE_BT.GUID_2_HexString(ob.Field('CAID').AsObjectLink)+' invalid in VPN '+ob.UID_String);
   exit;
  end;
- if conn.Fetch(ob.Field('CRTID').AsObjectLink,crt)=false then begin
+ if conn.Fetch(ob.Field('CRTID').AsObjectLink,crt)<>edb_OK then begin
   LogError('CRT '+GFRE_BT.GUID_2_HexString(ob.Field('CRTID').AsObjectLink)+' invalid in VPN '+ob.UID_String);
   exit;
  end;

@@ -154,7 +154,7 @@ begin
   referred := conn.GetReferences(serviceobj.UID,false,'');
 //  referred := serviceobj.ReferencedByList;
   for i:=0 to high(referred) do begin
-   if conn.Fetch(referred[i],co) then begin
+   if conn.Fetch(referred[i],co)=edb_OK then begin
     if co.IsA('TFRE_DB_DHCP_FIXED') then begin
      cop:=GFRE_DBI.CreateFromString(co.AsString);
      result_obj.Field('fixed').AddObject(cop);

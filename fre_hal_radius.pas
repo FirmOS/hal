@@ -228,11 +228,11 @@ begin
    result_obj.FIeld('clients').AddObject(obj);
   end;
 
-  if conn.Fetch(serviceobj.Field('CAID').AsObjectLink,ca)=false then begin
+  if conn.Fetch(serviceobj.Field('CAID').AsObjectLink,ca)<>edb_OK then begin
    LogError('CA '+GFRE_BT.GUID_2_HexString(serviceobj.Field('CAID').AsObjectLink)+' invalid in RADIUS '+serviceobj.UID_String);
    exit;
   end;
-  if conn.Fetch(serviceobj.Field('CRTID').AsObjectLink,crt)=false then begin
+  if conn.Fetch(serviceobj.Field('CRTID').AsObjectLink,crt)<>edb_OK then begin
    LogError('CRT '+GFRE_BT.GUID_2_HexString(serviceobj.Field('CRTID').AsObjectLink)+' invalid in RADIUS '+serviceobj.UID_String);
    exit;
   end;

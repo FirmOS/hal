@@ -41,6 +41,7 @@ program fpmake_packages;
          AddUnit('fos_captiveportalhal.pas');
          AddUnit('fos_urlredirectunit.pas');
          AddUnit('fre_base_parser.pas');
+         AddUnit('fre_certificate_app.pas');
        end;
     end;
     Run;

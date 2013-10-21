@@ -109,7 +109,7 @@ var coll   :IFRE_DB_Collection;
      begin
       if nw.FieldExists(fname)=false then exit;
       rd_uid:=nw.Field(fname).AsObjectLink;
-      if conn.Fetch(rd_uid,rd)=false then begin
+      if conn.Fetch(rd_uid,rd)<>edb_OK then begin
        LogError('Could not find RedirectionPage '+GFRE_BT.GUID_2_HexString(rd_uid)+' for Network '+nw.UID_String);
        exit;
       end;
@@ -127,7 +127,7 @@ var coll   :IFRE_DB_Collection;
  begin
   referenced:=conn.GetReferences(ep.UID,false,'');
   for i:=0 to high(referenced) do begin
-   if conn.Fetch(referenced[i],nw)=false then begin
+   if conn.Fetch(referenced[i],nw)<>edb_OK then begin
     LogError('Could not find Network '+GFRE_BT.GUID_2_HexString(nw_uid)+' for Endpoint '+ep.UID_String);
     continue;
    end;
@@ -161,13 +161,13 @@ var coll   :IFRE_DB_Collection;
  begin
   if FREDB_Guids_Same(obj.Field('captiveportal').AsObjectLink,serviceobj.UID) then begin
 //   writeln(obj.DumpToString());
-   if conn.Fetch(obj.Field('site').AsObjectLink,site)=false then begin
+   if conn.Fetch(obj.Field('site').AsObjectLink,site)<>edb_OK then begin
     LogError('Could not find Site for SiteExtension '+obj.UID_String);
     exit;
    end;
    referenced:=conn.GetReferences(site.UID,false,'');
    for i:=0 to high(referenced) do begin
-    if conn.Fetch(referenced[i],ep)=false then begin
+    if conn.Fetch(referenced[i],ep)<>edb_OK then begin
      LogError('Could not find Endpoint for Site '+site.UID_String);
      exit;
     end;
@@ -236,7 +236,7 @@ begin
      // add to networks
      for i:=0 to obj.Field('networkgroups').ValueCount-1 do begin
       nwg_uid:=obj.Field('networkgroups').AsObjectLinkItem[i];
-      if conn.Fetch(nwg_uid,nwg)=false then begin
+      if conn.Fetch(nwg_uid,nwg)<>edb_OK then begin
        LogError('Could not find Network Group'+GFRE_BT.GUID_2_HexString(nwg_uid)+' for Ad '+obj.UID_String);
        continue;
       end;
@@ -244,7 +244,7 @@ begin
       writeln(nwg.DumpToString());
       for j:=0 to nwg.Field('networks').ValueCount-1 do begin
        nw_uid:=nwg.Field('networks').AsObjectLinkItem[j];
-       if conn.Fetch(nw_uid,nw)=false then begin
+       if conn.Fetch(nw_uid,nw)<>edb_OK then begin
         LogError('Could not find Network '+GFRE_BT.GUID_2_HexString(nw_uid)+' for Networkgroup '+nwg.UID_String);
         continue;
        end;

@@ -51,7 +51,6 @@ uses
   FRE_DBBUSINESS,
   FRE_DB_INTERFACE,
   FRE_HAL_TRANSPORT,
-  FRE_DB_SYSRIGHT_CONSTANTS,
   fre_system,
   fre_testcase,
   fre_alert,
@@ -59,6 +58,14 @@ uses
   fre_openssl_interface;
 
 type
+
+    { TFRE_DB_HALCONFIG }
+
+    TFRE_DB_HALCONFIG=class(TFRE_DB_ObjectEx)
+    protected
+      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    end;
 
    { TFRE_DB_ServiceGroup }
 
@@ -468,21 +475,24 @@ type
 
   TFRE_DB_CA = class(TFRE_DB_ObjectEx)
   protected
-    class procedure RegisterSystemScheme    (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure RegisterSystemScheme     (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
-    class function  WBC_NewOperation        (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object; override;
+    function        Create_SSL_CA            : boolean;
+    function        Import_SSL_CA            (const ca_crt_file,serial_file,ca_key_file,random_file,index_file,crl_number_file:TFRE_DB_String;out import_error: TFRE_DB_String) : boolean;
+    function        Import_SSL_Certificates  (const conn: IFRE_DB_CONNECTION; const crt_dir,key_dir:TFRE_DB_String;out import_error: TFRE_DB_String) : boolean;
   end;
 
   { TFRE_DB_Certificate }
 
-  TFRE_DB_Certificate = class(TFRE_DB_ObjectEx)
+  TFRE_DB_CERTIFICATE = class(TFRE_DB_ObjectEx)
   protected
-    class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure RegisterSystemScheme     (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
-    function        WEB_Revoke            (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-    class function  WBC_NewOperation      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object; override;
+    function        WEB_Revoke               (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+    function        Create_SSL_Certificate   (const conn:IFRE_DB_CONNECTION): boolean;
+    function        Import_SSL_Certificate   (const crt_file,key_file:string;out import_error: TFRE_DB_String): boolean;
   end;
 
   { TFRE_DB_DHCP }
@@ -773,6 +783,19 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_HALCONFIG }
+
+class procedure TFRE_DB_HALCONFIG.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+end;
+
+class procedure TFRE_DB_HALCONFIG.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
 
 
 { TFRE_DB_OpenWifiNetwork }
@@ -1735,48 +1758,6 @@ begin
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_key','Key'));
 end;
 
-class function TFRE_DB_Certificate.WBC_NewOperation(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var cao       : IFRE_DB_Object;
-    cao_id    : TGUID;
-    ca_base   : RFRE_CA_BASEINFORMATION;
-
-    crt_id    : TGUID;
-    crt       : IFRE_DB_Object;
-    crt_base  : RFRE_CRT_BASEINFORMATION;
-
-begin
-  try
-    crt_id  := NewOperation(input,ses,app,conn);
-
-    CheckDbResult(conn.Fetch(crt_id,crt),'can not fetch crt object from database!');
-    CheckDbResult(conn.Fetch(crt.Field('ca').AsGUID,cao),'can not fetch ca object from database!');
-    DBOtoCA_BaseInformation(cao,ca_base);
-    if GET_SSL_IF.CreateCrt(crt.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,crt.Field('l').asstring,cao.Field('o').asstring,cao.Field('ou').asstring,crt.Field('email').asstring, cao.Field('pass').asstring,ca_base,false,crt_base)=sslOK then begin
-      CA_BaseInformationtoDBO(cao,ca_base,true);
-      crt.Field('c').asstring           := cao.Field('c').asstring;
-      crt.Field('st').asstring          := cao.Field('st').asstring;
-      if conn.Update(cao)<>edb_OK then begin
-        raise EFRE_Exception.Create('Error on updating CA object');
-      end;
-      crt.Field('crt').asstring         := crt_base.crt;
-      crt.Field('key').asstring         := crt_base.key;
-      crt.Field('issued').AsDateTimeUTC := GFRE_DT.Now_UTC;
-      writeln(crt.DumpToString());
-      if conn.Update(crt)<>edb_OK then begin
-        raise EFRE_Exception.Create('Error on updating crt object');
-      end;
-    end else begin
-      raise EFRE_Exception.Create('Error on creating crt');
-    end;
-//    cao.Field('
-    result  := TFRE_DB_CLOSE_DIALOG_DESC.Create.Describe();
-  except
-   on E:Exception do begin
-     conn.Delete(crt_id);
-     result := TFRE_DB_MESSAGE_DESC.Create.Describe('NEW','Error on creating object ['+e.Message+']',fdbmt_error);
-   end;
-  end;
-end;
 
 function TFRE_DB_Certificate.WEB_Revoke(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var cao       : IFRE_DB_Object;
@@ -1805,6 +1786,63 @@ begin
   end;
 end;
 
+function TFRE_DB_CERTIFICATE.Create_SSL_Certificate(const conn: IFRE_DB_CONNECTION): boolean;
+var cao       : IFRE_DB_Object;
+    cao_id    : TGUID;
+    ca_base   : RFRE_CA_BASEINFORMATION;
+    crt_base  : RFRE_CRT_BASEINFORMATION;
+
+begin
+  CheckDbResult(conn.Fetch(Field('ca').AsGUID,cao),'can not fetch ca object from database!');
+
+  DBOtoCA_BaseInformation(cao,ca_base);
+  if GET_SSL_IF.CreateCrt(Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,Field('l').asstring,cao.Field('o').asstring,cao.Field('ou').asstring,Field('email').asstring, cao.Field('pass').asstring,ca_base,false,crt_base)=sslOK then begin
+    CA_BaseInformationtoDBO(cao,ca_base,true);
+    Field('c').asstring           := cao.Field('c').asstring;
+    Field('st').asstring          := cao.Field('st').asstring;
+    if conn.Update(cao)<>edb_OK then begin
+      raise EFRE_Exception.Create('Error on updating CA object');
+    end;
+    Field('crt').asstring         := crt_base.crt;
+    Field('key').asstring         := crt_base.key;
+    Field('issued').AsDateTimeUTC := GFRE_DT.Now_UTC;
+    exit(true);
+  end else begin
+    exit(false);
+  end;
+end;
+
+function TFRE_DB_CERTIFICATE.Import_SSL_Certificate(const crt_file, key_file: string; out import_error: TFRE_DB_String): boolean;
+var
+  crt,cn,c,st,l,o,ou,email : string;
+  issued_date,end_date     : TFRE_DB_DateTime64;
+begin
+  try
+    Field('crt').asstring  := GFRE_BT.StringFromFile(crt_file);
+    Field('key').asstring  := GFRE_BT.StringFromFile(key_file);
+
+    if GET_SSL_IF.ReadCrtInformation(Field('crt').asstring,cn,c,st,l,o,ou,email,issued_date,end_date)=sslOK then
+      begin
+        Field('objname').asstring        := cn;
+        Field('c').asstring              := c;
+        Field('st').asstring             := st;
+        Field('l').asstring              := l;
+        Field('o').asstring              := o;
+        Field('ou').asstring             := ou;
+        Field('email').asstring          := email;
+        Field('issued').AsDateTimeUTC    := issued_date;
+        Field('valid').AsDateTimeUTC     := end_date;
+        exit(true);
+      end
+    else
+      begin
+        exit(false);
+      end;
+  except on E:Exception do begin
+    import_error      := E.Message;
+    exit(false);
+  end; end;
+end;
 
 { TFRE_DB_CA }
 
@@ -1824,6 +1862,8 @@ begin
   scheme.AddSchemeField('key',fdbft_String);
   scheme.AddSchemeField('pass',fdbft_String).SetupFieldDef(true,false,'','',true,false);
   scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
+  scheme.AddSchemeField('valid',fdbft_DateTimeUTC);
+  scheme.AddSchemeField('directory',fdbft_String);
 
   group:=scheme.AddInputGroup('main_create').Setup('$scheme_TFRE_DB_CA_main_group');
   group.AddInput('objname','$scheme_TFRE_DB_CA_cn');
@@ -1846,6 +1886,11 @@ begin
   group.AddInput('crt','$scheme_TFRE_DB_CA_crt',true);
   group.AddInput('key','$scheme_TFRE_DB_CA_key',true);
   group.AddInput('issued','$scheme_TFRE_DB_CA_issued',true);
+  group.AddInput('valid','$scheme_TFRE_DB_CA_valid',true);
+
+  group:=scheme.AddInputGroup('main_import').Setup('$scheme_TFRE_DB_CA_main_group');
+  group.AddInput('directory','$scheme_TFRE_DB_CA_directory');
+  group.AddInput('pass','$scheme_TFRE_DB_CA_pass');
 end;
 
 class procedure TFRE_DB_CA.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1863,39 +1908,86 @@ begin
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_key','Key'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_pass','Password'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_issued','Issued'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_valid','Valid'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_directory','Basisverzeichnis'));
 end;
 
-class function TFRE_DB_CA.WBC_NewOperation(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var cao     : IFRE_DB_Object;
-    cao_id  : TGUID;
-    ca_base : RFRE_CA_BASEINFORMATION;
+
+function TFRE_DB_CA.Create_SSL_CA : boolean;
+var ca_base : RFRE_CA_BASEINFORMATION;
+begin
+  if GET_SSL_IF.CreateCA(Field('objname').asstring,Field('c').asstring,Field('st').asstring,Field('l').asstring,Field('ou').asstring,Field('ou').asstring,Field('email').asstring, Field('pass').asstring,ca_base)=sslOK then
+    begin
+      CA_BaseInformationtoDBO(self,ca_base);
+      exit(true);
+    end
+  else
+    exit(false);
+end;
+
+function TFRE_DB_CA.Import_SSL_CA(const ca_crt_file, serial_file, ca_key_file, random_file, index_file, crl_number_file: TFRE_DB_String; out import_error: TFRE_DB_String): boolean;
+var ca_base                  : RFRE_CA_BASEINFORMATION;
+    crt,cn,c,st,l,o,ou,email : string;
+    issued_date,end_date     : TFRE_DB_DateTime64;
 begin
   try
-    cao_id  := NewOperation(input,ses,app,conn);
-
-    CheckDbResult(conn.Fetch(cao_id,cao),'can not fetch ca object from database!');
-
-    if GET_SSL_IF.CreateCA(cao.Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,cao.Field('l').asstring,cao.Field('ou').asstring,cao.Field('ou').asstring,cao.Field('email').asstring, cao.Field('pass').asstring,ca_base)=sslOK then begin
-      CA_BaseInformationtoDBO(cao,ca_base);
-      if conn.Update(cao)<>edb_OK then begin
-        raise EFRE_Exception.Create('Error on updating CA object');
+    ca_base.index     := GFRE_BT.StringFromFile(index_file);
+    ca_base.serial    := GFRE_BT.StringFromFile(serial_file);
+    ca_base.crlnumber := GFRE_BT.StringFromFile(crl_number_file);
+    ca_base.crt       := GFRE_BT.StringFromFile(ca_crt_file);
+    ca_base.key       := GFRE_BT.StringFromFile(ca_key_file);
+    ca_base.random    := GFRE_BT.StringFromFile(random_file);
+    CA_BaseInformationtoDBO(self,ca_base);
+    if GET_SSL_IF.ReadCrtInformation(ca_base.crt,cn,c,st,l,o,ou,email,issued_date,end_date)=sslOK then
+      begin
+        Field('objname').asstring        := cn;
+        Field('c').asstring              := c;
+        Field('st').asstring             := st;
+        Field('l').asstring              := l;
+        Field('o').asstring              := o;
+        Field('ou').asstring             := ou;
+        Field('email').asstring          := email;
+        Field('issued').AsDateTimeUTC    := issued_date;
+        Field('valid').AsDateTimeUTC     := end_date;
+        exit(true);
+      end
+    else
+      begin
+        exit(false);
       end;
-    end else begin
-      raise EFRE_Exception.Create('Error on creating CA');
-    end;
-//    cao.Field('
-    result  := TFRE_DB_CLOSE_DIALOG_DESC.Create.Describe();
-  except
-   on E:Exception do begin
-     conn.Delete(cao_id);
-     result := TFRE_DB_MESSAGE_DESC.Create.Describe('NEW','Error on creating object ['+e.Message+']',fdbmt_error);
-   end;
-  end;
-
+  except on E:Exception do begin
+    import_error      := E.Message;
+    exit(false);
+  end; end;
 end;
 
-
-
+function TFRE_DB_CA.Import_SSL_Certificates(const conn: IFRE_DB_CONNECTION; const crt_dir, key_dir: TFRE_DB_String; out import_error: TFRE_DB_String): boolean;
+var
+  info       : TSearchRec;
+  crt        : IFRE_DB_Object;
+  crt_error  : TFRE_DB_String;
+begin
+  result       :=true;
+  import_error :='';
+  try
+    If FindFirst (crt_dir + '/*.crt',faAnyFile,info)=0 then
+      repeat
+        if (info.Name='.') or (info.Name='..') then Continue;
+        crt := GFRE_DBI.NewObjectScheme(TFRE_DB_CERTIFICATE);
+        crt.Field('ca').AsObjectLink := UID;
+        if (crt.Implementor_HC as TFRE_DB_CERTIFICATE).Import_SSL_Certificate(crt_dir+DirectorySeparator+info.Name,key_dir+DirectorySeparator+ChangeFileExt(info.Name,'.key'),crt_error)=false then
+          begin
+            import_error := import_error+#13+#10+crt_error;
+            result       := false;
+          end;
+        CheckDbResult(conn.Collection('certificate').Store(crt),'could not store certificate');
+      until FindNext(info)<>0;
+    FindClose(info);
+  except on E:Exception do begin
+    import_error := E.Message;
+    result       := false;
+  end; end;
+end;
 
 
 { TFRE_DB_WifiNetwork }
@@ -3087,7 +3179,7 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_RadiusNetwork);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Monitoring_Status);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CA);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Certificate);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CERTIFICATE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DHCP);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DHCP_Subnet);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DHCP_Fixed);
@@ -3097,6 +3189,8 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CMS_PAGE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CMS_ADPAGE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_REDIRECTION_FLOW);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HALCONFIG);
+
 
    GFRE_DBI.Initialize_Extension_Objects;
  end;
