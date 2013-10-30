@@ -361,7 +361,7 @@ begin
         raise EFRE_DB_Exception.Create('could not store created ca object');
     end
   else
-    result := TFRE_DB_MESSAGE_DESC.create.Describe(app.FetchAppText(ses,'$ca_add_import_cap').Getshort,import_status,fdbmt_error,nil);
+    exit(TFRE_DB_MESSAGE_DESC.create.Describe(app.FetchAppText(ses,'$ca_add_import_cap').Getshort,import_status,fdbmt_error,nil));
 
   if (caob.Implementor_HC as TFRE_DB_CA).Import_SSL_Certificates(conn,crt_dir,key_dir,import_status) then
     Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
