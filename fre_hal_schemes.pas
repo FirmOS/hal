@@ -199,6 +199,15 @@ type
      function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
    end;
 
+   { TFRE_DB_ZIP_STATUS }
+
+   TFRE_ZIP_STATUS=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
+
    { TFRE_DB_TESTER }
 
    TFRE_DB_TESTER=class(TFRE_DB_MACHINE)
@@ -784,6 +793,20 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_ZIP_STATUS }
+
+class procedure TFRE_ZIP_STATUS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+  scheme.GetSchemeField('objname').required:=true;
+end;
+
+class procedure TFRE_ZIP_STATUS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
 { TFRE_DB_HALCONFIG }
 
 class procedure TFRE_DB_HALCONFIG.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -817,7 +840,7 @@ class procedure TFRE_DB_Monitoring_Status.RegisterSystemScheme(const scheme: IFR
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
-  scheme.AddSchemeField         ('status',fdbft_String).SetupFieldDef(true,false,'signal_status');
+//  scheme.AddSchemeField         ('status',fdbft_String).SetupFieldDef(true,false,'signal_status');
   scheme.AddSchemeField         ('provisioned_time',fdbft_DateTimeUTC);
   scheme.AddSchemeField         ('online_time',fdbft_DateTimeUTC);
   scheme.AddCalcSchemeField     ('status_icon',fdbft_String,@CALC_GetStatusIcon);
@@ -3190,6 +3213,7 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CMS_ADPAGE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_REDIRECTION_FLOW);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HALCONFIG);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_ZIP_STATUS);
 
 
    GFRE_DBI.Initialize_Extension_Objects;

@@ -38,6 +38,8 @@ type
      procedure   Disable;
      procedure   Once;
      function    Get_Data_Object : IFRE_DB_Object;
+     function    IsRunning:boolean;
+     function    ExitStatus:integer;
   end;
 
 implementation
@@ -54,18 +56,21 @@ var st : TStringStream;
     sl : TStringlist;
     i  : integer;
 begin
-  writeln('ERRSTREAMCALLBACK: ',ClassName);
-  writeln('------------------------------');
   stream.Position:=0;
   st := TStringStream.Create('');
   try
-    st.CopyFrom(stream,stream.Size);
-    stream.Size:=0;
-    writeln(st.DataString);
+    if stream.Size>0 then
+      begin
+        st.CopyFrom(stream,stream.Size);
+        stream.Size:=0;
+        writeln('ERRSTREAMCALLBACK: ',ClassName);
+        writeln('------------------------------');
+        writeln(st.DataString);
+        writeln('------------------------------');
+      end;
   finally
     st.Free;
   end;
-  writeln('------------------------------');
 end;
 
 procedure TFOS_PARSER_PROC.MySetup;
@@ -164,6 +169,28 @@ begin
   finally
     FLock.Release;
   end;
+end;
+
+function TFOS_PARSER_PROC.IsRunning: boolean;
+begin
+  if Assigned(FProcess) then
+    result := FProcess.IsRunning
+  else
+    result := false;
+end;
+
+function TFOS_PARSER_PROC.ExitStatus: integer;
+begin
+  if Assigned(FProcess) then
+    begin
+      result := FProcess.ExitStatus;
+      writeln('EXIT STATUS:',result);
+    end
+  else
+    begin
+      writeln('NO PROCESS ASSIGNED!');
+      result := -1;
+    end;
 end;
 
 end.
