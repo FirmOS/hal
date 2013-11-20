@@ -96,6 +96,15 @@ type
 
   { TFRE_DB_ZFS_BLOCKDEVICE }
 
+  { TFRE_DB_DISK_MPATH }
+
+  TFRE_DB_DISK_MPATH=class(TFRE_DB_ObjectEx)
+  private
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+  public
+  end;
+
   TFRE_DB_ZFS_BLOCKDEVICE=class(TFRE_DB_ZFS_OBJ)
   private
     function  getIsOffline    : Boolean;
@@ -244,6 +253,8 @@ type
     procedure       AnalyzeSnapshots            (const proc   : TFRE_DB_Process);
     procedure       AnalyzePoolStatus           (const proc   : TFRE_DB_Process);
     procedure       AnalyzeDataSetSpace         (const proc   : TFRE_DB_Process);
+    procedure       AnalyzePoolList             (const proc   : TFRE_DB_Process);
+    procedure       AnalyzePrtConfDisks         (const proc   : TFRE_DB_Process;const disks:IFRE_DB_Object);
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
@@ -262,6 +273,9 @@ type
     function        Scrub                       (const poolname: string; out error : string) : integer;
     function        GetPoolStatus               (const poolname: string; out error : string; out pool: IFRE_DB_Object) : integer;
     function        GetDataset                  (const dataset: string; out error : string; out datasetobject: IFRE_DB_Object) : integer;
+    function        GetPools                    (out error: string; out pools:IFRE_DB_Object) : integer;
+    function        GetDiskInformation          (out error: string; out disks:IFRE_DB_Object) : integer;
+    function        CreateDiskPool              (const pool_definition:IFRE_DB_Object; out error: string; out pool_result:IFRE_DB_Object) : integer;
   end;
 
   { TFRE_DB_ZFSJob }
@@ -294,6 +308,13 @@ procedure Register_DB_Extensions;
 function String2DBZFSRaidLevelType(const fts: string): TFRE_DB_ZFS_RAID_LEVEL;
 
 implementation
+
+{ TFRE_DB_DISK_MPATH }
+
+class procedure TFRE_DB_DISK_MPATH.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
 
 { TFRE_DB_ZFS_ROOTOBJ }
 
@@ -1254,8 +1275,15 @@ var  slist   : TStringList;
         end else begin
           devname                       := Copy(line,namep,statep-namep-2);
           devlvl                        := DevLevel(devname);
-          if (Pos('raid',trim(lowercase(devname)))=1) or (Pos('mirror',trim(lowercase(devname)))=1) then begin
-             dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).addVdev;
+          if (Pos('raid',trim(lowercase(devname)))=1) then begin
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).addVdev;
+            if (Pos('raidz1',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z1)
+              else if (Pos('raidz2',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z2)
+                else if (Pos('raidz3',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z3)
+                  else (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_undefined);
+          end else if (Pos('mirror',trim(lowercase(devname)))=1) then begin
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).addVdev;
+            (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_mirror);
           end else if Pos('spare',trim(lowercase(devname)))=1 then begin
             dev := pool.addSpare;
           end else if Pos('log',trim(lowercase(devname)))=1 then begin
@@ -1315,6 +1343,160 @@ begin
      proc.Field('datasetobject').asobject := datasetobject;
   finally
     llist.free;
+    slist.Free;
+  end;
+end;
+
+procedure TFRE_DB_ZFS.AnalyzePoolList(const proc: TFRE_DB_Process);
+var  slist         : TStringList;
+     llist         : TStringList;
+     pool          : IFRE_DB_Object;
+     i             : NativeInt;
+begin
+  slist := TStringList.Create;
+  llist := TStringList.Create;
+  try
+     slist.text                          := TFRE_DB_Process (proc.Implementor_HC).OutputToString;
+     for i:= 1 to slist.count-1 do
+       begin
+         llist.CommaText:= slist[i];
+         pool           := GFRE_DBI.NewObject;
+         pool.Field('name').AsString       := trim(llist[0]);
+         pool.Field('zpool_guid').AsString := trim(llist[1]);
+         proc.Field('pools').addobject(pool);
+       end;
+  finally
+    llist.free;
+    slist.Free;
+  end;
+end;
+
+procedure TFRE_DB_ZFS.AnalyzePrtConfDisks(const proc: TFRE_DB_Process;const disks:IFRE_DB_Object);
+type
+     TPrtConf_Parsestate = (psInvalid,psNoDisk,psDiskInfo,psDiskMPT,psDeviceName);
+
+var  slist         : TStringList;
+     disk          : IFRE_DB_Object;
+     mpath         : IFRE_DB_Object;
+     i             : NativeInt;
+     s             : TFRE_DB_String;
+     devicename    : TFRE_DB_String;
+     pstate        : TPrtConf_Parsestate;
+
+
+     procedure _newMpath;
+     begin
+        mpath  :=GFRE_DBI.NewObjectScheme(TFRE_DB_DISK_MPATH);
+        if Pos('online',s)>0 then
+          mpath.Field('online').asboolean:=true
+        else
+          mpath.Field('online').asboolean:=false
+     end;
+
+     function GetValueS(const valuestring: TFRE_DB_String): TFRE_DB_String;
+     begin
+       result := GFRE_BT.SepRight(valuestring,'''');
+       result := GFRE_BT.SepLeft(result,'''');
+     end;
+
+     function GetValueHexUInt32(const valuestring: TFRE_DB_String): UInt32;
+     begin
+       result := strtoint('$'+GFRE_BT.SepRight(valuestring,'='));
+     end;
+
+     function GetDirectS(const valuestring: TFRE_DB_String): TFRE_DB_String;
+     begin
+       result := GFRE_BT.SepRight(valuestring,'=');
+     end;
+
+begin
+  slist := TStringList.Create;
+  try
+     slist.text              := TFRE_DB_Process (proc.Implementor_HC).OutputToString;
+     pstate                  := psNoDisk;
+
+     for i:= 1 to slist.count-1 do
+       begin
+         s := slist[i];
+
+         case pstate of
+           psNoDisk:           begin
+                                 if Pos('disk, instance',s)>0 then
+                                   begin
+                                     pstate := psDiskInfo;
+//                                     writeln('{899838B2-08CF-97CE-4C85-67FEDCF05C16}','disk found',s);
+                                     disk   := GFRE_DBI.NewObjectScheme(TFRE_DB_ZFS_BLOCKDEVICE);
+                                   end;
+                               end;
+           psDiskInfo:        begin
+//                                writeln('DISKINFO:',s);
+                                 if Pos('name=''inquiry-serial-no''',s)>0 then
+                                   disk.Field('serial').AsString:=GetValueS(slist[i+1]);
+                                 if Pos('name=''inquiry-revision-id''',s)>0 then
+                                   disk.Field('revision').AsString:=GetValueS(slist[i+1]);
+                                 if Pos('name=''inquiry-product-id''',s)>0 then
+                                   disk.Field('product').AsString:=GetValueS(slist[i+1]);
+                                 if Pos('name=''inquiry-vendor-id''',s)>0 then
+                                   disk.Field('vendor').AsString:=GetValueS(slist[i+1]);
+
+                                 if Pos('mpt_sas',s)>0 then
+                                   begin
+                                     _newMpath;
+                                     pstate :=psDiskMPT;
+                                   end;
+
+                                 if Pos('Device Minor Nodes',s)>0 then
+                                   pstate :=psDeviceName;
+                               end;
+           psDiskMPT:          begin
+                                 if Pos('name=''wwn''',s)>0 then
+                                   mpath.Field('wwn').AsString:=GetValueS(slist[i+1]);
+                                 if Pos('name=''target-port''',s)>0 then
+                                   mpath.Field('target-port').AsString:=GetValueS(slist[i+1]);
+                                 if Pos('name=''attached-port''',s)>0 then
+                                   mpath.Field('attached-port').AsString:=GetValueS(slist[i+1]);
+                                 if Pos('name=''path-class''',s)>0 then
+                                   mpath.Field('path-class').AsString:=GetValueS(slist[i+1]);
+                                 if Pos('name=''phy-num''',s)>0 then
+                                   mpath.Field('phy-num').AsUInt32:=GetValueHexUInt32(slist[i+1]);
+
+
+                                 if Pos('mpt_sas',s)>0 then                                      // next mpath
+                                   begin
+                                     disk.Field('mpath').AddObject(mpath);
+                                     _newmpath;
+                                   end;
+
+                                 if Pos('Device Minor Nodes',s)>0 then                          // end of mpath
+                                   begin
+//                                     writeln('add mpath');
+                                     disk.Field('mpath').AddObject(mpath);
+                                     pstate :=psDeviceName;
+                                   end;
+
+                                 if Pos('disk, instance',s)>0 then                              // no devicename, ignore
+                                   begin
+                                     disk.Finalize;
+                                     pstate := psDiskInfo;
+                                     disk   := GFRE_DBI.NewObjectScheme(TFRE_DB_ZFS_BLOCKDEVICE);
+                                   end;
+
+                               end;
+           psDeviceName:       begin
+                                 if Pos('dev_link',s)>0 then
+                                   begin
+                                     devicename := GetDirectS(s);
+                                     devicename := Copy(devicename,1,length(devicename)-2);
+                                     disk.Field('device').AsString:=devicename;
+                                     disks.Field('disks').addobject(disk);
+                                     pstate := psNoDisk;
+                                   end;
+                               end
+         else
+           raise Exception.Create('INVALID PRTCONF PARSE STATE:'+inttostr(ord(pstate)));
+         end;
+       end;
+  finally
     slist.Free;
   end;
 end;
@@ -1574,6 +1756,141 @@ begin
   error         := proc.Field('errorstring').AsString;
 end;
 
+function TFRE_DB_ZFS.GetPools(out error: string; out pools: IFRE_DB_Object): integer;
+var
+  proc  : TFRE_DB_Process;
+begin
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+  proc.SetupInput('zpool',TFRE_DB_StringArray.Create ('list','-p','-o','name,guid'));
+  AddProcess(proc);
+  ExecuteMulti;
+  AnalyzePoolList(proc);
+  pools         := proc.Field('pools').AsObject.CloneToNewObject;
+  result        := proc.Field('exitstatus').AsInt32;
+  error         := proc.Field('errorstring').AsString;
+end;
+
+function TFRE_DB_ZFS.GetDiskInformation(out error: string; out disks: IFRE_DB_Object): integer;
+var
+  proc  : TFRE_DB_Process;
+begin
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+  proc.SetupInput('prtconf',TFRE_DB_StringArray.Create ('-v'));
+  AddProcess(proc);
+  ExecuteMulti;
+  disks         := GFRE_DBI.NewObject;
+  AnalyzePrtConfDisks(proc,disks);
+  result        := proc.Field('exitstatus').AsInt32;
+  error         := proc.Field('errorstring').AsString;
+end;
+
+function TFRE_DB_ZFS.CreateDiskPool(const pool_definition: IFRE_DB_Object; out error: string; out pool_result: IFRE_DB_Object): integer;
+var zfs_cmd   : TFRE_DB_String;
+    vdevcont  : IFRE_DB_Object;
+    vdev      : IFRE_DB_Object;
+    disk      : IFRE_DB_Object;
+    proc      : TFRE_DB_Process;
+
+    i         : NativeInt;
+    j         : NativeInt;
+
+
+
+    procedure _AddDisks(const vdev:IFRE_DB_Object);
+    var i     : NativeInt;
+    begin
+      for i:= 0 to vdev.Field('vdev').ValueCount-1 do
+        begin
+          disk := vdev.Field('vdev').AsObjectItem[i];
+          zfs_cmd := zfs_cmd+' '+disk.Field('name').asstring;
+        end;
+    end;
+
+    procedure _AddDisk(const disk:IFRE_DB_Object);
+    begin
+      zfs_cmd := zfs_cmd+' '+disk.Field('name').asstring;
+    end;
+
+begin
+  zfs_cmd  := 'xpool create '+pool_definition.Field('pool').asstring;
+  for i    := 0 to pool_definition.Field('vdev').ValueCount-1 do
+    begin
+      vdevcont := pool_definition.Field('vdev').AsObjectItem[i];
+      if vdevcont.SchemeClass='TFRE_DB_ZFS_DATASTORAGE' then
+        begin
+          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
+            begin
+              vdev := vdevcont.Field('vdev').AsObjectItem[j];
+              if vdev.SchemeClass='TFRE_DB_ZFS_VDEV' then
+                begin
+                  case (vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel of
+                    zfs_rl_mirror: zfs_cmd:=zfs_cmd+' mirror';
+                    zfs_rl_z1    : zfs_cmd:=zfs_cmd+' raidz1';
+                    zfs_rl_z2    : zfs_cmd:=zfs_cmd+' raidz2';
+                    zfs_rl_z3    : zfs_cmd:=zfs_cmd+' raidz3';
+                  else
+                    raise EFRE_DB_Exception.Create('unsupported raiadlevel in CreateDiskpool for datastorage'+CFRE_DB_ZFS_RAID_LEVEL[(vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel]);
+                  end;
+                  _AddDisks(vdev);
+                end else begin
+                  _AddDisk(vdev);
+                end;
+            end;
+        end;
+      if vdevcont.SchemeClass='TFRE_DB_ZFS_LOG' then
+        begin
+          zfs_cmd:=zfs_cmd+' log';
+          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
+            begin
+              vdev := vdevcont.Field('vdev').AsObjectItem[j];
+              if vdev.SchemeClass='TFRE_DB_ZFS_VDEV' then
+                begin
+                  case (vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel of
+                    zfs_rl_mirror: zfs_cmd:=zfs_cmd+' mirror';
+                  else
+                    raise EFRE_DB_Exception.Create('unsupported raiadlevel in CreateDiskpool for log'+CFRE_DB_ZFS_RAID_LEVEL[(vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel]);
+                  end;
+                  _AddDisks(vdev);
+                end else begin
+                  _AddDisk(vdev);
+                end;
+            end;
+        end;
+      if vdevcont.SchemeClass='TFRE_DB_ZFS_SPARE' then
+        begin
+          zfs_cmd:=zfs_cmd+' spare';
+          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
+            begin
+              vdev := vdevcont.Field('vdev').AsObjectItem[j];
+              _AddDisk(vdev);
+            end;
+        end;
+      if vdevcont.SchemeClass='TFRE_DB_ZFS_CACHE' then
+        begin
+          zfs_cmd:=zfs_cmd+' cache';
+          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
+            begin
+              vdev := vdevcont.Field('vdev').AsObjectItem[j];
+              _AddDisk(vdev);
+            end;
+        end;
+      writeln(vdev.SchemeClass);
+    end;
+
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+  proc.SetupInput(zfs_cmd,nil);
+  AddProcess(proc);
+  ExecuteMulti;
+  pool_result := GFRE_DBI.NewObject;
+  pool_result.Field('zfs_cmd').asstring := zfs_cmd;
+
+  result := proc.Field('exitstatus').AsInt32;
+  error  := proc.Field('errorstring').AsString;
+end;
+
 procedure TFRE_DB_ZFSJob.SetScrub(const poolname: string);
 begin
   config.Field('cmd').AsString      :='scrub';
@@ -1642,6 +1959,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_LOG);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_CACHE);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_PARSE_DATASET);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DISK_MPATH);
   GFRE_DBI.Initialize_Extension_Objects;
 end;
 
