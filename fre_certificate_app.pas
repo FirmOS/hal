@@ -60,6 +60,9 @@ type
     function        WEB_addCertificate                 (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function        WEB_newCertificate                 (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function        WEB_revokeCertificate              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function        WEB_backupCertificateAuthority     (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function        WEB_restoreCertificateAuthority    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+
   end;
 
 
@@ -102,7 +105,7 @@ begin
     with DC_CA do begin
       SetDeriveParent           (conn.Collection('ca'));
       SetDeriveTransformation   (ca_Grid);
-      SetDisplayType            (cdt_Listview,[],'',nil,'',CWSF(@WEB_CAMenu),nil,CWSF(@WEB_CAContent));
+      SetDisplayType            (cdt_Listview,[cdgf_Sortable],'',nil,'',CWSF(@WEB_CAMenu),nil,CWSF(@WEB_CAContent));
     end;
 
     GFRE_DBI.NewObjectIntf(IFRE_DB_SIMPLE_TRANSFORM,crt_Grid);
@@ -117,7 +120,7 @@ begin
       SetReferentialLinkMode('TFRE_DB_CERTIFICATE|CA',false);
 //            SetDeriveParent           (conn.Collection('certificate'));
       SetDeriveTransformation(crt_Grid);
-      SetDisplayType(cdt_Listview,[cdgf_ShowSearchbox],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
+      SetDisplayType(cdt_Listview,[cdgf_Sortable],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
     end;
   end;
 end;
@@ -154,6 +157,16 @@ begin
   if conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_CA) then begin
     txt:=app.FetchAppTextFull(ses,'$delete_ca');
     grid_ca.AddButton.Describe(CWSF(@WEB_DelCertificateAuthority),'images_apps/certificate/delete_ca.png',txt.Getshort,txt.GetHint);
+    txt.Finalize;
+  end;
+  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+    txt:=app.FetchAppTextFull(ses,'$backup_ca');
+    grid_ca.AddButton.Describe(CWSF(@WEB_backupCertificateAuthority),'images_apps/certificate/backup_ca.png',txt.Getshort,txt.GetHint);
+    txt.Finalize;
+  end;
+  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+    txt:=app.FetchAppTextFull(ses,'$restore_ca');
+    grid_ca.AddButton.Describe(CWSF(@WEB_restoreCertificateAuthority),'images_apps/certificate/restore_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
 
@@ -213,6 +226,8 @@ begin
       panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$ca_content_header'));
       panel.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
       panel.FillWithObjectValues(ca,GetSession(input));
+      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_stream',true,'application/octet-stream','ca.crt'),false);
+      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_stream',true,'application/octet-stream','ca.key'),false);
       panel.contentId:='CA_CONTENT';
       Result:=panel;
     end;
@@ -243,6 +258,8 @@ begin
       GFRE_DBI.GetSystemSchemeByName(crt.SchemeClass,scheme);
       panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$crt_content_header'));
       panel.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
+      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_Stream',true,'application/octet-stream','certificate.crt'),false);
+      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_Stream',true,'application/octet-stream','certificate.key'),false);
       panel.FillWithObjectValues(crt,GetSession(input));
       panel.contentId:='CRT_CONTENT';
       Result:=panel;
@@ -461,6 +478,46 @@ begin
 end;
 
 
+function TFRE_CERTIFICATE_CA_MOD.WEB_restoreCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  res        : TFRE_DB_DIALOG_DESC;
+begin
+
+  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_Certificate) then
+    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+
+  TFRE_DB_CA.RestoreCA(conn,'/fre/hal/ca_backup.cfg');
+  result := GFRE_DB_NIL_DESC;
+end;
+
+function TFRE_CERTIFICATE_CA_MOD.WEB_backupCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  scheme     : IFRE_DB_SchemeObject;
+  res        : TFRE_DB_DIALOG_DESC;
+  ca_uid     : TGUID;
+  caobj      : IFRE_DB_Object;
+
+begin
+
+  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then
+    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+
+  if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then
+    begin
+      ca_uid := input.Field('SELECTED').AsGUID;
+      if conn.Collection('ca').Fetch(ca_uid,caobj) then
+        begin
+          (caobj.Implementor_HC as TFRE_DB_CA).BackupCA(conn,'/fre/hal/ca_backup.cfg');
+          Result:=GFRE_DB_NIL_DESC;
+        end
+      else
+        raise EFRE_DB_Exception.Create('could not fetch ca');
+    end
+  else
+    result := GFRE_DB_NIL_DESC;
+end;
+
+
 { TFRE_CERTIFICATE_APP }
 
 procedure TFRE_CERTIFICATE_APP.SetupApplicationStructure;
@@ -525,6 +582,8 @@ begin
       CreateAppText(conn,'$create_ca','Create CA');
       CreateAppText(conn,'$import_ca','Import CA');
       CreateAppText(conn,'$delete_ca','Delete CA');
+      CreateAppText(conn,'$backup_ca','Backup CA');
+      CreateAppText(conn,'$restore_ca','Restore CA');
       CreateAppText(conn,'$ca_name','CA Commonname');
       CreateAppText(conn,'$ca_content_header','Properties');
       CreateAppText(conn,'$certificate_certificates','Certificates');
@@ -537,6 +596,8 @@ begin
       CreateAppText(conn,'$crt_revoked','Revoked');
       CreateAppText(conn,'$crt_content_header','Properties');
       CreateAppText(conn,'$crt_add_diag_cap','Create Certificate');
+      CreateAppText(conn,'$crt_download_crt','Download Certificate');
+      CreateAppText(conn,'$crt_download_key','Download Private Key');
       CreateAppText(conn,'$ca_add_diag_cap','Create CA');
       CreateAppText(conn,'$ca_add_no_ca_msg','Please select a Certificate Authority first.');
       CreateAppText(conn,'$ca_add_import_cap','Import CA');

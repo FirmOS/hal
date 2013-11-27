@@ -486,10 +486,13 @@ type
   protected
     class procedure RegisterSystemScheme     (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    class procedure RestoreCA                (const conn:IFRE_DB_CONNECTION; const filename:string);
   published
     function        Create_SSL_CA            : boolean;
     function        Import_SSL_CA            (const ca_crt_file,serial_file,ca_key_file,random_file,index_file,crl_number_file:TFRE_DB_String;out import_error: TFRE_DB_String) : boolean;
     function        Import_SSL_Certificates  (const conn: IFRE_DB_CONNECTION; const crt_dir,key_dir:TFRE_DB_String;out import_error: TFRE_DB_String) : boolean;
+    procedure       BackupCA                 (const conn: IFRE_DB_CONNECTION; const filename:string);
   end;
 
   { TFRE_DB_Certificate }
@@ -588,10 +591,10 @@ implementation
    cao.Field('index_attr').AsString  := ca_base_information.index_attr;
    cao.Field('serial').AsString      := ca_base_information.serial;
    cao.Field('crlnumber').AsString   := ca_base_information.crlnumber;
-   cao.Field('crl').AsString         := ca_base_information.crl;
+   cao.Field('crl_stream').AsStream.SetFromRawByteString(ca_base_information.crl);
    if update=false then begin
-     cao.Field('crt').AsString         := ca_base_information.crt;
-     cao.Field('key').AsString         := ca_base_information.key;
+     cao.Field('crt_stream').AsStream.SetFromRawByteString(ca_base_information.crt);
+     cao.Field('key_stream').AsStream.SetFromRawByteString(ca_base_information.key);
      cao.Field('issued').AsDateTimeUTC := GFRE_DT.Now_UTC;
    end;
    writeln(cao.DumpToString());
@@ -603,9 +606,9 @@ implementation
    ca_base_information.index_attr    := cao.Field('index_attr').AsString;
    ca_base_information.serial        := cao.Field('serial').AsString;
    ca_base_information.crlnumber     := cao.Field('crlnumber').AsString;
-   ca_base_information.crl           := cao.Field('crl').AsString;
-   ca_base_information.crt           := cao.Field('crt').AsString;
-   ca_base_information.key           := cao.Field('key').AsString;
+   cao.Field('crl_stream').asstream.AsRawByteString(ca_base_information.crl);
+   cao.Field('crt_stream').asstream.AsRawByteString(ca_base_information.crt);
+   cao.Field('key_stream').asstream.AsRawByteString(ca_base_information.key);
  end;
 
  procedure SetReprovision (const dbc: IFRE_DB_Connection; const id:TGUID);
@@ -1733,19 +1736,21 @@ begin
   scheme.AddSchemeField('st',fdbft_String);
   scheme.AddSchemeField('l',fdbft_String);
   scheme.AddSchemeField('ou',fdbft_String);
-  scheme.AddSchemeField('crt',fdbft_String);
-  scheme.AddSchemeField('key',fdbft_String);
+  scheme.AddSchemeField('crt_stream',fdbft_Stream);
+  scheme.AddSchemeField('key_stream',fdbft_Stream);
   scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
   scheme.AddSchemeField('revoked',fdbft_DateTimeUTC);
   scheme.AddSchemeField('valid',fdbft_DateTimeUTC);
+  scheme.AddSchemeField('server',fdbft_Boolean);
   scheme.SetSysDisplayField(TFRE_DB_NameTypeArray.Create('cn'),'%s');
 
-  group:=scheme.AddInputGroup('main_create').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group:=scheme.AddInputGroup('main_create').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
   group.AddInput('ca','',false,true);
   group.AddInput('objname','$scheme_TFRE_DB_CERTIFICATE_cn');
   group.AddInput('email','$scheme_TFRE_DB_CERTIFICATE_email');
   group.AddInput('l','$scheme_TFRE_DB_CERTIFICATE_l');
   group.AddInput('ou','$scheme_TFRE_DB_CERTIFICATE_ou');
+  group.AddInput('server','$scheme_TFRE_DB_CERTIFICATE_server');
 
   group:=scheme.AddInputGroup('main_edit').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
 //  group.UseInputGroup(scheme.DefinedSchemeName,'main_create');
@@ -1759,8 +1764,7 @@ begin
   group.AddInput('issued','$scheme_TFRE_DB_CERTIFICATE_issued',true);
   group.AddInput('revoked','$scheme_TFRE_DB_CERTIFICATE_revoked',true);
   group.AddInput('valid','$scheme_TFRE_DB_CERTIFICATE_valid',true);
-  group.AddInput('crt','$scheme_TFRE_DB_CERTIFICATE_crt',true);
-  group.AddInput('key','$scheme_TFRE_DB_CERTIFICATE_key',true);
+  group.AddInput('server','$scheme_TFRE_DB_CERTIFICATE_server',true);
 end;
 
 class procedure TFRE_DB_Certificate.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1777,8 +1781,7 @@ begin
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_issued','Issued'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_revoked','Revoked'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_valid','Valid'));
-  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_crt','Certificate'));
-  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_key','Key'));
+  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_server','Server Certificate'));
 end;
 
 
@@ -1819,15 +1822,16 @@ begin
   CheckDbResult(conn.Fetch(Field('ca').AsGUID,cao),'can not fetch ca object from database!');
 
   DBOtoCA_BaseInformation(cao,ca_base);
-  if GET_SSL_IF.CreateCrt(Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,Field('l').asstring,cao.Field('o').asstring,cao.Field('ou').asstring,Field('email').asstring, cao.Field('pass').asstring,ca_base,false,crt_base)=sslOK then begin
+  if GET_SSL_IF.CreateCrt(Field('objname').asstring,cao.Field('c').asstring,cao.Field('st').asstring,Field('l').asstring,cao.Field('o').asstring,cao.Field('ou').asstring,Field('email').asstring, cao.Field('pass').asstring,ca_base,Field('server').asboolean,crt_base)=sslOK then begin
     CA_BaseInformationtoDBO(cao,ca_base,true);
     Field('c').asstring           := cao.Field('c').asstring;
     Field('st').asstring          := cao.Field('st').asstring;
     if conn.Update(cao)<>edb_OK then begin
       raise EFRE_Exception.Create('Error on updating CA object');
     end;
-    Field('crt').asstring         := crt_base.crt;
-    Field('key').asstring         := crt_base.key;
+//    writeln(crt_base.crt);
+    Field('crt_stream').asStream.SetFromRawByteString(crt_base.crt);
+    Field('key_stream').asStream.SetFromRawByteString(crt_base.key);
     Field('issued').AsDateTimeUTC := GFRE_DT.Now_UTC;
     exit(true);
   end else begin
@@ -1881,8 +1885,8 @@ begin
   scheme.AddSchemeField('l',fdbft_String).required:=true;
   scheme.AddSchemeField('o',fdbft_String).required:=true;
   scheme.AddSchemeField('ou',fdbft_String).required:=true;
-  scheme.AddSchemeField('crt',fdbft_String);
-  scheme.AddSchemeField('key',fdbft_String);
+  scheme.AddSchemeField('crt_stream',fdbft_Stream);
+  scheme.AddSchemeField('key_stream',fdbft_Stream);
   scheme.AddSchemeField('pass',fdbft_String).SetupFieldDef(true,false,'','',true,false);
   scheme.AddSchemeField('issued',fdbft_DateTimeUTC);
   scheme.AddSchemeField('valid',fdbft_DateTimeUTC);
@@ -1906,8 +1910,6 @@ begin
   group.AddInput('l','$scheme_TFRE_DB_CA_l',true);
   group.AddInput('o','$scheme_TFRE_DB_CA_o',true);
   group.AddInput('ou','$scheme_TFRE_DB_CA_ou',true);
-  group.AddInput('crt','$scheme_TFRE_DB_CA_crt',true);
-  group.AddInput('key','$scheme_TFRE_DB_CA_key',true);
   group.AddInput('issued','$scheme_TFRE_DB_CA_issued',true);
   group.AddInput('valid','$scheme_TFRE_DB_CA_valid',true);
 
@@ -1927,19 +1929,76 @@ begin
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_l','Location'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_o','Organization'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_ou','Organization Unit'));
-  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_crt','Certificate'));
-  conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_key','Key'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_pass','Password'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_issued','Issued'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_valid','Valid'));
   conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CA_directory','Basisverzeichnis'));
 end;
 
+class procedure TFRE_DB_CA.RestoreCA(const conn: IFRE_DB_CONNECTION; const filename: string);
+var
+  coll  : IFRE_DB_COLLECTION;
+  collc : IFRE_DB_COLLECTION;
+  halo  : IFRE_DB_Object;
+  caobj : IFRE_DB_Object;
+  crtobj: IFRE_DB_Object;
+
+  procedure _allCA(const fld:IFRE_DB_Field);
+  var ca: IFRE_DB_Object;
+  begin
+    if (fld.FieldType=fdbft_Object) then
+      begin
+        ca := fld.AsObject.CloneToNewObject;
+        if ca.FieldExists('crt') then
+          begin
+            ca.Field('crt_stream').AsStream.SetFromRawByteString(ca.Field('crt').asstring);
+            ca.DeleteField('crt');
+          end;
+        if ca.FieldExists('key') then
+          begin
+            ca.Field('key_stream').AsStream.SetFromRawByteString(ca.Field('key').asstring);
+            ca.DeleteField('key');
+          end;
+        CheckDbResult(coll.Store(ca),'could not store ca');
+      end;
+  end;
+
+  procedure _allCrt(const fld:IFRE_DB_Field);
+  var crt      : IFRE_DB_Object;
+  begin
+    if (fld.FieldType=fdbft_Object) then
+      begin
+        crt := fld.AsObject.CloneToNewObject;
+        if crt.FieldExists('crt') then
+          begin
+            crt.Field('crt_stream').AsStream.SetFromRawByteString(crt.Field('crt').asstring);
+            crt.DeleteField('crt');
+          end;
+        if crt.FieldExists('key') then
+          begin
+            crt.Field('key_stream').AsStream.SetFromRawByteString(crt.Field('key').asstring);
+            crt.DeleteField('key');
+          end;
+        writeln(crt.DumpToString);
+        CheckDbResult(collc.Store(crt),'could not store crt');
+      end;
+  end;
+
+begin
+  COLL  := CONN.Collection('ca');
+  COLLC := CONN.Collection('certificate');
+  halo   := GFRE_DBI.CreateFromFile(filename);
+  caobj  := halo.Field('ca').AsObject;
+  caobj.ForAllFields(@_allCA);
+  crtobj := halo.Field('crt').AsObject;
+  crtobj.ForAllFields(@_allCrt);
+end;
+
 
 function TFRE_DB_CA.Create_SSL_CA : boolean;
 var ca_base : RFRE_CA_BASEINFORMATION;
 begin
-  if GET_SSL_IF.CreateCA(Field('objname').asstring,Field('c').asstring,Field('st').asstring,Field('l').asstring,Field('ou').asstring,Field('ou').asstring,Field('email').asstring, Field('pass').asstring,ca_base)=sslOK then
+  if GET_SSL_IF.CreateCA(Field('objname').asstring,Field('c').asstring,Field('st').asstring,Field('l').asstring,Field('o').asstring,Field('ou').asstring,Field('email').asstring, Field('pass').asstring,ca_base)=sslOK then
     begin
       CA_BaseInformationtoDBO(self,ca_base);
       exit(true);
@@ -2011,6 +2070,43 @@ begin
     result       := false;
   end; end;
 end;
+
+procedure TFRE_DB_CA.BackupCA(const conn: IFRE_DB_CONNECTION; const filename: string);
+var
+  crtobj     : IFRE_DB_Object;
+  hal_caobj  : IFRE_DB_Object;
+  hal_crtobj : IFRE_DB_Object;
+  cobj       : IFRE_DB_Object;
+  crt_array  : TFRE_DB_GUIDArray;
+  i          : NativeInt;
+  ref_count  : NativeInt;
+
+begin
+  cobj   := GFRE_DBI.NewObjectScheme(TFRE_DB_HALCONFIG);
+  try
+    hal_caobj  := GFRE_DBI.NewObject;
+    hal_crtobj := GFRE_DBI.NewObject;
+    cobj.Field('ca').asobject  := hal_caobj;
+    cobj.Field('crt').asobject := hal_crtobj;
+
+    hal_caobj.Field(Field('objname').asstring).asobject := CloneToNewObject();
+    crt_array      := conn.GetReferences(UID,false,'TFRE_DB_CERTIFICATE');
+    ref_count      := conn.GetReferencesCount(UID,false,'TFRE_DB_CERTIFICATE');
+    writeln(ref_count);
+    for i:= 0 to ref_count-1 do
+      begin
+        writeln(length(crt_array));
+        CheckDbResult(conn.Fetch(crt_array[i],crtobj),'could not fetch certificate');
+        writeln(crtobj.DumpToString());
+        hal_crtobj.Field(crtobj.UID_String).asobject := crtobj;
+      end;
+    writeln(cobj.DumpToString());
+    cobj.SaveToFile(filename);
+  finally
+    cobj.Finalize;
+  end;
+end;
+
 
 
 { TFRE_DB_WifiNetwork }
