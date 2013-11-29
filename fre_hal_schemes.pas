@@ -2079,7 +2079,6 @@ var
   cobj       : IFRE_DB_Object;
   crt_array  : TFRE_DB_GUIDArray;
   i          : NativeInt;
-  ref_count  : NativeInt;
 
 begin
   cobj   := GFRE_DBI.NewObjectScheme(TFRE_DB_HALCONFIG);
@@ -2091,16 +2090,11 @@ begin
 
     hal_caobj.Field(Field('objname').asstring).asobject := CloneToNewObject();
     crt_array      := conn.GetReferences(UID,false,'TFRE_DB_CERTIFICATE');
-    ref_count      := conn.GetReferencesCount(UID,false,'TFRE_DB_CERTIFICATE');
-    writeln(ref_count);
-    for i:= 0 to ref_count-1 do
+    for i:= 0 to High(crt_array) do
       begin
-        writeln(length(crt_array));
         CheckDbResult(conn.Fetch(crt_array[i],crtobj),'could not fetch certificate');
-        writeln(crtobj.DumpToString());
         hal_crtobj.Field(crtobj.UID_String).asobject := crtobj;
       end;
-    writeln(cobj.DumpToString());
     cobj.SaveToFile(filename);
   finally
     cobj.Finalize;
