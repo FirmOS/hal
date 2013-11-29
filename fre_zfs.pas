@@ -97,6 +97,7 @@ type
     function  getIsNew                : Boolean;
     procedure setIsModified           (const avalue:Boolean=true);
     procedure setIsNew                (const avalue:Boolean=true);
+    procedure setZFSGuid              (const avalue:String);
     property  caption                 : TFRE_DB_String read GetCaption       write SetCaption;
     property  iopsR                   : TFRE_DB_String read GetIopsRead      write SetIopsRead;
     property  iopsW                   : TFRE_DB_String read GetIopsWrite     write SetIopsWrite;
@@ -611,6 +612,11 @@ procedure TFRE_DB_ZFS_OBJ.setIsNew(const avalue:Boolean);
 begin
   Field('isNew').AsBoolean:=avalue;
   setIsModified;
+end;
+
+procedure TFRE_DB_ZFS_OBJ.setZFSGuid(const avalue: String);
+begin
+  Field('zfs_guid').AsString:=avalue;
 end;
 
 { TFRE_DB_ZFS_CACHE }
