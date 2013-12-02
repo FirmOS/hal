@@ -46,7 +46,7 @@ uses
   Classes, SysUtils,fpcunit,testregistry,testdecorator,FRE_DB_INTERFACE,
   FOS_TOOL_INTERFACES,FRE_DBBASE,FRE_PROCESS, fre_testmethod, FRE_ZFS,
   fre_testcase, fre_do_safejob,FRE_SYSTEM,  FRE_DBMONITORING,
-  FRE_OPENVPN,fre_alert,fre_diskshelf;
+  FRE_OPENVPN,fre_alert,fre_scsi;
 
 const
 

@@ -276,7 +276,8 @@ begin
             continue;
           end;
           if FLine.count<>7 then
-            raise EFRE_Exception.Create('zpool iostat parser error, unexpected val count ' + IntToStr(fline.Count));
+            continue;
+            //raise EFRE_Exception.Create('zpool iostat parser error, unexpected val count ' + IntToStr(fline.Count)+' '+fline.text);
           FLock.Acquire;
           try
             try

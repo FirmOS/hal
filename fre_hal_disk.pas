@@ -44,7 +44,7 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,FRE_ZFS;
+  FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi;
 
 
 type
@@ -55,7 +55,7 @@ type
 
   public
 
-    function  GetDiskInformation       (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
+    function  GetDiskInformation       (const remoteuser:string='';const remotehost:string='';const remotekey:string='';const sg3mode:boolean=false): IFRE_DB_OBJECT;
     function  GetPools                 (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
     function  GetPoolConfiguration     (const zfs_pool_name:string; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
     function  CreateDiskpool           (const input:IFRE_DB_Object; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
@@ -73,22 +73,25 @@ implementation
 
 { TFRE_HAL_DISK }
 
-function TFRE_HAL_DISK.GetDiskInformation(const remoteuser: string; const remotehost: string; const remotekey: string): IFRE_DB_OBJECT;
-var zo    : TFRE_DB_ZFS;
+function TFRE_HAL_DISK.GetDiskInformation(const remoteuser: string; const remotehost: string; const remotekey: string; const sg3mode: boolean): IFRE_DB_OBJECT;
+var so    : TFRE_DB_SCSI;
     obj   : IFRE_DB_Object;
     error : string;
     res   : integer;
 begin
-  zo     := TFRE_DB_ZFS.create;
+  so     := TFRE_DB_SCSI.create;
   try
-    zo.SetRemoteSSH(remoteuser, remotehost, remotekey);
-    res    := zo.GetDiskInformation(error,obj);
+    so.SetRemoteSSH(remoteuser, remotehost, remotekey);
+    if sg3mode then
+      res    := so.GetSG3DiskInformation(error,obj)
+    else
+      res    := so.GetDiskInformation(error,obj);
     result := GFRE_DBI.NewObject;
     result.Field('resultcode').AsInt32 := res;
     result.Field('error').asstring     := error;
     result.Field('data').AsObject      := obj;
   finally
-    zo.Free;
+    so.Free;
   end;
 end;
 
