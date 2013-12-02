@@ -52,18 +52,37 @@ type
   { TFRE_HAL_DISK }
 
   TFRE_HAL_DISK = class (TFRE_DB_Base)
+  private
+    disk_lock              : IFOS_LOCK;
+    pools_lock             : IFOS_LOCK;
+
+    disk_information       : IFRE_DB_Object;
+    pools_information      : IFRE_DB_Object;
 
   public
+    constructor Create                 ; override;
+    destructor Destroy                 ; override;
 
-    function  GetDiskInformation       (const remoteuser:string='';const remotehost:string='';const remotekey:string='';const sg3mode:boolean=false): IFRE_DB_OBJECT;
-    function  GetPools                 (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
-    function  GetPoolConfiguration     (const zfs_pool_name:string; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
-    function  CreateDiskpool           (const input:IFRE_DB_Object; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
+    procedure InitializeDiskInformation (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
+    procedure InitializePoolInformation (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
+
+    function  IsDiskInformationAvailable:boolean;
+    function  IsPoolInformationAvailable:boolean;
+
+    function  GetPoolsInformation       : IFRE_DB_Object;
+    function  GetDiskInformation        : IFRE_DB_Object;
+
+    function  FetchDiskInformation      (const remoteuser:string='';const remotehost:string='';const remotekey:string='';const sg3mode:boolean=false): IFRE_DB_OBJECT;
+    function  FetchPoolConfiguration    (const zfs_pool_name:string; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
+
+    function  GetPools                  (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
+    function  CreateDiskpool            (const input:IFRE_DB_Object; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
+
   published
-    procedure REM_GetDiskInformation   (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
-    procedure REM_GetPools             (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
-    procedure REM_GetPoolConfiguration (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
-    procedure REM_CreateDiskpool       (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
+    procedure REM_GetDiskInformation    (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
+    procedure REM_GetPools              (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
+    procedure REM_GetPoolConfiguration  (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
+    procedure REM_CreateDiskpool        (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
   end;
 
 implementation
@@ -73,7 +92,128 @@ implementation
 
 { TFRE_HAL_DISK }
 
-function TFRE_HAL_DISK.GetDiskInformation(const remoteuser: string; const remotehost: string; const remotekey: string; const sg3mode: boolean): IFRE_DB_OBJECT;
+constructor TFRE_HAL_DISK.Create;
+begin
+  inherited;
+  GFRE_TF.Get_Lock(disk_lock);
+  GFRE_TF.Get_Lock(pools_lock);
+end;
+
+destructor TFRE_HAL_DISK.Destroy;
+begin
+  pools_lock.Finalize;
+  disk_lock.Finalize;
+  disk_information.Finalize;
+  pools_information.Finalize;
+
+  inherited Destroy;
+end;
+
+procedure TFRE_HAL_DISK.InitializeDiskInformation(const remoteuser: string; const remotehost: string; const remotekey: string);
+var
+    disks    : IFRE_DB_Object;
+
+begin
+  disks := FetchDiskInformation(remoteuser,remotehost,remotekey,false);
+  if disks.Field('resultcode').AsInt32<>0 then
+    begin
+      GFRE_DBI.LogError(dblc_APPLICATION,'COULD NOT GET DISK INFORMATION %d %s',[disks.Field('resultcode').AsInt32,disks.Field('error').AsString]);
+      disks.Finalize;
+    end
+  else
+    begin
+      disk_lock.Acquire;
+      try
+        if Assigned(disk_information) then
+          disk_information.Finalize;
+        disk_information := disks;
+      finally
+        disk_lock.Release;
+      end;
+    end;
+end;
+
+procedure TFRE_HAL_DISK.InitializePoolInformation(const remoteuser: string; const remotehost: string; const remotekey: string);
+var
+    pools    : IFRE_DB_Object;
+    pool     : IFRE_DB_Object;
+    i        : NativeInt;
+    poolname : TFRE_DB_String;
+    pool_res : IFRE_DB_Object;
+
+begin
+  pool_res   := GFRE_DBI.NewObject;
+
+  // send all pool data once
+  pools := GetPools(remoteuser,remotehost,remotekey);
+  if pools.Field('resultcode').AsInt32<>0 then
+    begin
+      GFRE_DBI.LogError(dblc_APPLICATION,'COULD NOT GET POOL CONFIGURATION %d %s',[pools.Field('resultcode').AsInt32,pools.Field('error').AsString]);
+      pools.Finalize;
+    end
+  else
+    begin
+      for i := 0 to pools.Field('data').ValueCount-1 do
+        begin
+          poolname := pools.Field('data').AsObjectItem[i].Field('name').asstring;
+          pool     := FetchPoolConfiguration(poolname,remoteuser,remotehost,remotekey);
+          (pool.Field('data').asobject.Implementor_HC as TFRE_DB_ZFS_POOL).setZFSGuid(pools.Field('data').AsObjectItem[i].Field('zpool_guid').asstring);
+          pool_res.Field('data').AddObject(pool.Field('data').asobject);
+        end;
+      pools_lock.Acquire;
+      try
+        if Assigned(pools_information) then
+          pools_information.Finalize;
+        pools_information := pool_res;
+      finally
+        pools_lock.Release;
+      end;
+    end;
+
+end;
+
+function TFRE_HAL_DISK.IsDiskInformationAvailable: boolean;
+begin
+  result := Assigned(disk_information);
+end;
+
+function TFRE_HAL_DISK.IsPoolInformationAvailable: boolean;
+begin
+  result := Assigned(pools_information);
+end;
+
+function TFRE_HAL_DISK.GetPoolsInformation: IFRE_DB_Object;
+begin
+  if IsPoolInformationAvailable then
+    begin
+      pools_lock.Acquire;
+      try
+        result := pools_information.CloneToNewObject;
+      finally
+        pools_lock.Release;
+      end;
+    end
+  else
+    result := nil;
+end;
+
+function TFRE_HAL_DISK.GetDiskInformation: IFRE_DB_Object;
+begin
+  if IsDiskInformationAvailable then
+    begin
+      disk_lock.Acquire;
+      try
+        result := disk_information.CloneToNewObject;
+      finally
+        disk_lock.Release;
+      end;
+    end
+  else
+    result := nil;
+end;
+
+
+function TFRE_HAL_DISK.FetchDiskInformation(const remoteuser: string; const remotehost: string; const remotekey: string; const sg3mode: boolean): IFRE_DB_OBJECT;
 var so    : TFRE_DB_SCSI;
     obj   : IFRE_DB_Object;
     error : string;
@@ -114,7 +254,7 @@ begin
   end;
 end;
 
-function TFRE_HAL_DISK.GetPoolConfiguration(const zfs_pool_name: string; const remoteuser: string; const remotehost: string; const remotekey: string): IFRE_DB_OBJECT;
+function TFRE_HAL_DISK.FetchPoolConfiguration(const zfs_pool_name: string; const remoteuser: string; const remotehost: string; const remotekey: string): IFRE_DB_OBJECT;
 var zo    : TFRE_DB_ZFS;
     obj   : IFRE_DB_Object;
     error : string;
