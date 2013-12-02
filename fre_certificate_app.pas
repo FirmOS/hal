@@ -620,20 +620,20 @@ begin
   CheckDbResult(conn.AddGroup('CERTIFICATEADMIN','Group for Certificate Administrators','Certificate admin',domainUID),'could not create certificate admin group');
   CheckDbResult(conn.AddGroup('CERTIFICATEVIEWER','Group for Certificate Viewers','Certificate viewer',domainUID),'could not create certificate viewer group');
 
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID,GFRE_DBI.ConstructStringArray(
-    [TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
+  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID,TFRE_DB_StringArray.Create(
+    TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
      TFRE_CERTIFICATE_CA_MOD.GetClassRoleNameFetch
-    ])),'could not add roles for group CERTIFICATEADMIN');
+    )),'could not add roles for group CERTIFICATEADMIN');
 
   CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID, TFRE_DB_CA.GetClassStdRoles(true,true,true,true)),'could not add roles of TFRE_DB_CA to group CERTIFICATEADMIN');
   CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID, TFRE_DB_CERTIFICATE.GetClassStdRoles),'could not add roles of TFRE_DB_CERTIFICATE to group CERTIFICATEADMIN');
 
 
 
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID,GFRE_DBI.ConstructStringArray(
-    [TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
+  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID,TFRE_DB_StringArray.Create(
+    TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
      TFRE_CERTIFICATE_CA_MOD.GetClassRoleNameFetch
-    ])),'could not add roles for group CERTIFICATEVIEWER');
+    )),'could not add roles for group CERTIFICATEVIEWER');
 
   CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID, TFRE_DB_CA.GetClassStdRoles(false,false,false,true)),'could not add roles of TFRE_DB_CA to group CERTIFICATEVIEWER');
   CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID, TFRE_DB_CERTIFICATE.GetClassStdRoles(false,false,false,true)),'could not add roles of TFRE_DB_CERTIFICATE to group CERTIFICATEVIEWER');
