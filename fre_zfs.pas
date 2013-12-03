@@ -507,12 +507,12 @@ end;
 
 function TFRE_DB_ZFS_OBJ.getZFSGuid: string;
 begin
-  result := Field('zfs_guid').AsString;
+  Result:=Field('zfs_guid').AsString;
 end;
 
 function TFRE_DB_ZFS_OBJ.GetParentInZFS: TGuid;
 begin
-  Field('parent_in_zfs_uid').AsObjectLink;
+  Result:=Field('parent_in_zfs_uid').AsObjectLink;
 end;
 
 function TFRE_DB_ZFS_OBJ.GetPoolId: TGuid;
