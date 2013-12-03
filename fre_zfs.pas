@@ -101,6 +101,7 @@ type
     procedure setIsModified           (const avalue:Boolean=true);
     procedure setIsNew                (const avalue:Boolean=true);
     procedure setZFSGuid              (const avalue:String);
+    function  canIdentify             : Boolean; virtual;
     property  caption                 : TFRE_DB_String read GetCaption       write SetCaption;
     property  iopsR                   : TFRE_DB_String read GetIopsRead      write SetIopsRead;
     property  iopsW                   : TFRE_DB_String read GetIopsWrite     write SetIopsWrite;
@@ -134,6 +135,7 @@ type
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function  mayHaveChildren  : Boolean; override;
+    function  canIdentify      : Boolean; override;
     property  isOffline        : Boolean read getIsOffline write setIsOffline;
     property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DeviceName       : TFRE_DB_String read getDeviceName write setDeviceName;
@@ -661,6 +663,11 @@ begin
   Field('zfs_guid').AsString:=avalue;
 end;
 
+function TFRE_DB_ZFS_OBJ.canIdentify: Boolean;
+begin
+  Result:=false;
+end;
+
 { TFRE_DB_ZFS_CACHE }
 
 function TFRE_DB_ZFS_CACHE.GetRaidLevel: TFRE_DB_ZFS_RAID_LEVEL;
@@ -803,6 +810,11 @@ end;
 function TFRE_DB_ZFS_BLOCKDEVICE.mayHaveChildren: Boolean;
 begin
   Result:=false;
+end;
+
+function TFRE_DB_ZFS_BLOCKDEVICE.canIdentify: Boolean;
+begin
+  Result:=true;
 end;
 
 { TFRE_DB_ZFS_POOL }
