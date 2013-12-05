@@ -55,6 +55,10 @@ const
   CFRE_DB_ZFS_RAID_LEVEL      : array [TFRE_DB_ZFS_RAID_LEVEL] of string        = ('rl_stripe','rl_mirror','rl_z1','rl_z2','rl_z3','rl_undefined');
   CFRE_DB_ZFS_POOL_COLLECTION            = 'pool';
   CFRE_DB_ZFS_VDEV_COLLECTION            = 'vdev';
+  CFRE_DB_ENCLOSURE_COLLECTION       = 'enclosure';
+  CFRE_DB_SAS_EXPANDER_COLLECTION    = 'expander';
+  CFRE_DB_DRIVESLOT_COLLECTION       = 'driveslot';
+
   CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION     = 'blockdevice';
   CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX   = 'deviceId';
   CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX = 'deviceName';
@@ -131,6 +135,9 @@ type
     function  getDeviceName                     : TFRE_DB_String;
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure setDeviceName                     (AValue: TFRE_DB_String);
+
+    procedure MapClassToDragAndDropClass(const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
@@ -782,6 +789,11 @@ begin
   Field('devicename').AsString := AValue;
 end;
 
+procedure TFRE_DB_ZFS_BLOCKDEVICE.MapClassToDragAndDropClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString('TFRE_DB_ZFS_BLOCKDEVICE');
+end;
+
 function TFRE_DB_ZFS_BLOCKDEVICE.getDeviceIdentifier: TFRE_DB_String;
 begin
  result := Field('deviceIdentifier').AsString;
@@ -800,6 +812,7 @@ end;
 class procedure TFRE_DB_ZFS_BLOCKDEVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
+  scheme.AddCalcSchemeField('dndclass',fdbft_String,@MapClassToDragAndDropClass);
 end;
 
 class procedure TFRE_DB_ZFS_BLOCKDEVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
