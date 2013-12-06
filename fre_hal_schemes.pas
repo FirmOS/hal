@@ -1794,7 +1794,7 @@ begin
   try
    CheckDbResult(conn.Fetch(Field('ca').AsGUID,cao),'can not fetch ca object from database!');
     DBOtoCA_BaseInformation(cao,ca_base);
-    if GET_SSL_IF.RevokeCrt(Field('objname').asstring, cao.Field('pass').asstring,Field('crt').asstring,ca_base)=sslOK then begin
+    if GET_SSL_IF.RevokeCrt(Field('objname').asstring, cao.Field('pass').asstring,Field('crt_stream').asstream.AsRawByteString,ca_base)=sslOK then begin
       CA_BaseInformationtoDBO(cao,ca_base,true);
       if conn.Update(cao)<>edb_OK then begin
         raise EFRE_Exception.Create('Error on updating CA object');
