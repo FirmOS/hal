@@ -606,9 +606,9 @@ implementation
    ca_base_information.index_attr    := cao.Field('index_attr').AsString;
    ca_base_information.serial        := cao.Field('serial').AsString;
    ca_base_information.crlnumber     := cao.Field('crlnumber').AsString;
-   cao.Field('crl_stream').asstream.AsRawByteString(ca_base_information.crl);
-   cao.Field('crt_stream').asstream.AsRawByteString(ca_base_information.crt);
-   cao.Field('key_stream').asstream.AsRawByteString(ca_base_information.key);
+   ca_base_information.crl           := cao.Field('crl_stream').asstream.AsRawByteString;
+   ca_base_information.crt           := cao.Field('crt_stream').asstream.AsRawByteString;
+   ca_base_information.key           := cao.Field('key_stream').asstream.AsRawByteString;
  end;
 
  procedure SetReprovision (const dbc: IFRE_DB_Connection; const id:TGUID);

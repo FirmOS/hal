@@ -425,7 +425,7 @@ begin
 end;
 
 function TFRE_CERTIFICATE_CA_MOD.WEB_newCertificate(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var crtob            : IFRE_DB_Object;
+var crtob            : TFRE_DB_CERTIFICATE;
     data             : IFRE_DB_Object;
     lSchemeObject    : IFRE_DB_SchemeObject;
     res              : TFRE_DB_Errortype;
@@ -439,10 +439,10 @@ begin
   if not GFRE_DBI.GetSystemScheme(TFRE_DB_CERTIFICATE,lSchemeObject) then
     raise EFRE_DB_Exception.Create(edb_ERROR,'the scheme [%s] is unknown!',[TFRE_DB_CA]);
 
-  crtob             := GFRE_DBI.NewObjectScheme(TFRE_DB_CERTIFICATE);
+  crtob             := TFRE_DB_CERTIFICATE.CreateForDB;
   lSchemeObject.SetObjectFieldsWithScheme(data,crtob,true,conn);
 
-  if (crtob.Implementor_HC as TFRE_DB_CERTIFICATE).Create_SSL_Certificate(conn) then
+  if crtob.Create_SSL_Certificate(conn) then
     begin
       if conn.Collection('certificate').Store(crtob)=edb_OK then
         Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
