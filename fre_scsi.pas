@@ -242,6 +242,7 @@ type
     function Getfw_revision: string;
     function Getmanufacturer: string;
     function Getmodel_number: string;
+    function GetParentInEnclosureUID: TGUID;
     function GetWWN: string;
     function Getserial_number: string;
     function GetSize_MB: UInt32;
@@ -249,11 +250,13 @@ type
     procedure Setfw_revision(AValue: string);
     procedure Setmanufacturer(AValue: string);
     procedure Setmodel_number(AValue: string);
+    procedure SetParentInEnclosureUID(AValue: TGUID);
     procedure SetWWN(AValue: string);
     procedure Setserial_number(AValue: string);
     procedure SetSize_MB(AValue: UInt32);
     procedure SetSize_Sectors(AValue: UInt32);
   public
+    function GetTargetPorts: TFRE_DB_StringArray;
     property WWN: string read GetWWN write SetWWN;
     property Manufacturer: string read Getmanufacturer write Setmanufacturer;
     property Model_number: string read Getmodel_number write Setmodel_number;
@@ -261,12 +264,14 @@ type
     property Serial_number: string read Getserial_number write Setserial_number;
     property Size_MB: UInt32 read GetSize_MB write SetSize_MB;
     property Size_Sectors: UInt32 read GetSize_Sectors write SetSize_Sectors;
+    property ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
   end;
 
   { TFRE_DB_SATA_DISK }
 
   TFRE_DB_SATA_DISK=class(TFRE_DB_PHYS_DISK)
   public
+    procedure SetTargetPort                     (const targetport_1:string);
   end;
 
   { TFRE_DB_SAS_DISK }
@@ -283,29 +288,45 @@ type
     function  Getfw_revision: string;
     function  Getmanufacturer: string;
     function  Getmodel_number: string;
+    function  GetDeviceIdentifier: TFRE_DB_String;
+    function  GetParentInEnclosureUID: TGUID;
     procedure Setfw_revision(AValue: string);
     procedure Setmanufacturer(AValue: string);
     procedure Setmodel_number(AValue: string);
+    procedure SetDeviceIdentifier(AValue: TFRE_DB_String);
+    procedure SetParentInEnclosureUID(AValue: TGUID);
   public
-    property  Model_number : string read Getmodel_number write Setmodel_number;
-    property  Manufacturer : string read Getmanufacturer write Setmanufacturer;
-    property  Fw_revision  : string read Getfw_revision write Setfw_revision;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    property  Model_number         : string read Getmodel_number write Setmodel_number;
+    property  Manufacturer         : string read Getmanufacturer write Setmanufacturer;
+    property  Fw_revision          : string read Getfw_revision write Setfw_revision;
+    property  DeviceIdentifier     : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
+    property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
   end;
 
   { TFRE_DB_DRIVESLOT }
 
   TFRE_DB_DRIVESLOT=class(TFRE_DB_ObjectEx)
   private
+    function  GetDeviceIdentifier: TFRE_DB_String;
     function  GetPortType: string;
     function  GetSlotNr    : UInt16;
+    function  GetParentInEnclosureUID: TGUID;
+    procedure setDeviceIdentifier(AValue: TFRE_DB_String);
+    procedure SetParentInEnclosureUID(AValue: TGUID);
     procedure SetPortType(AValue: string);
     procedure SetSlotNr   (AValue: UInt16);
   public
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
     procedure SetAttachedTo  (const port_nr:Byte; const AValue: string);
     procedure SetTargetPort  (const port_nr:Byte; const AValue: string);
-
+    function  GetTargetPort  (const port_nr:Byte) : TFRE_DB_String;
     property  SlotNr: Uint16 read GetSlotNr write SetSlotNr;
-    property  PortType     : string read GetPortType write SetPortType;
+    property  PortType             : string read GetPortType write SetPortType;
+    property  DeviceIdentifier     : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
+    property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
   end;
 
 
@@ -317,9 +338,10 @@ type
     function  GetDriveSlots                     : UInt16;
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure SetDriveSlots                     (AValue: UInt16);
-
   public
-    procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander);
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string);
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
 
@@ -351,6 +373,13 @@ procedure Register_DB_Extensions;
 
 implementation
 
+{ TFRE_DB_SATA_DISK }
+
+procedure TFRE_DB_SATA_DISK.SetTargetPort(const targetport_1: string);
+begin
+  Field('target_port').AsString:=targetport_1;
+end;
+
 { TFRE_DB_ENCLOSURE }
 
 function TFRE_DB_ENCLOSURE.getDeviceIdentifier: TFRE_DB_String;
@@ -373,24 +402,40 @@ begin
   field('drive_slots').AsUInt16 := avalue;
 end;
 
-procedure TFRE_DB_ENCLOSURE.AddExpanderEmbedded(const expander: TFRE_DB_SAS_Expander);
+class procedure TFRE_DB_ENCLOSURE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  field('expander').AddObject(expander);
+  newVersionId:='1.0';
+end;
+
+procedure TFRE_DB_ENCLOSURE.AddExpanderEmbedded(const expander: TFRE_DB_SAS_Expander;const devicename:string);
+begin
+  expander.DeviceIdentifier:=DeviceIdentifier+'_'+devicename;
+  if not FieldExists('expanders') then
+    Field('expanders').AsObject:= GFRE_DBI.NewObject;
+  Field('expanders').asObject.Field(expander.DeviceIdentifier).AsObject:=expander;
 end;
 
 function TFRE_DB_ENCLOSURE.GetDriveSlotEmbedded(const slotnr: UInt16; out driveslot: TFRE_DB_DRIVESLOT): boolean;
 begin
-  result:=FieldExists('slot_'+inttostr(slotnr));
+  if not FieldExists('slots') then
+    begin
+      driveslot:=nil;
+      exit(false);
+    end;
+  result:=Field('slots').asObject.FieldExists('slot'+inttostr(slotnr));
   if result then
-    driveslot := Field('slot_'+inttostr(slotnr)).AsObject.Implementor_HC as TFRE_DB_DRIVESLOT
+    driveslot := Field('slots').AsObject.Field('slot'+inttostr(slotnr)).AsObject.Implementor_HC as TFRE_DB_DRIVESLOT
   else
     driveslot := nil;
 end;
 
 procedure TFRE_DB_ENCLOSURE.AddDriveSlotEmbedded(const slotnr: UInt16; const driveslot: TFRE_DB_DRIVESLOT);
 begin
+  driveslot.DeviceIdentifier:=DeviceIdentifier+'_slot'+inttostr(slotnr);
+  if not FieldExists('slots') then
+    Field('slots').AsObject:= GFRE_DBI.NewObject;
   driveslot.SlotNr := slotnr;
-  Field('slot_'+inttostr(slotnr)).AsObject:=driveslot;
+  Field('slots').AsObject.Field('slot'+inttostr(slotnr)).AsObject:=driveslot;
 end;
 
 function TFRE_DB_SCSI._SG3GetPage(const cmd: string; out output: string; out error: string; const params: TFRE_DB_StringArray): integer;
@@ -602,13 +647,16 @@ begin
 end;
 
 function TFRE_DB_SCSI.SG3DiskInquiry(const devicepath: TFRE_DB_String; out disk: IFRE_DB_Object): integer;
+
+type
+  TFRE_DB_SCSI_DEVICEIDENTIFICATION_PARSE = (di_none,di_address_loc,di_target);
 var
   sl          : TStringList;
   i           : NativeInt;
   s           : string;
   porti       : NativeInt;
   ports       : Array[1..2] of string;
-  address_loc : boolean;
+  di_parse    : TFRE_DB_SCSI_DEVICEIDENTIFICATION_PARSE;
   devicename  : string;
   res         : integer;
   outstring   : string;
@@ -666,7 +714,7 @@ begin
   res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create ('-p','di',devicepath));
   if res=0 then
     begin
-      address_loc := false;
+      di_parse:=di_none;
       sl := TStringList.Create;
       try
         sl.Text := outstring;
@@ -674,15 +722,27 @@ begin
          begin
            s:= sl[i];
            if Pos('associated with the addressed logical unit',s)>0 then
-             address_loc:=true;
+             di_parse:=di_address_loc;
+           if Pos('associated with the target port',s)>0 then
+             di_parse:=di_target;
            if Pos('Vendor Specific Identifier:',s)>0 then
              begin
-               if address_loc then
-                 begin
-                   s := sl[i+1];
-                   (disk.Implementor_HC as TFRE_DB_PHYS_DISK).SetWWN(GFRE_BT.SepLeft(GFRE_BT.SepRight(s,'['),']'));
-                   address_loc:= false;
-                 end;
+               case di_parse of
+                 di_address_loc:
+                   begin
+                     s := sl[i+1];
+                     (disk.Implementor_HC as TFRE_DB_PHYS_DISK).SetWWN(GFRE_BT.SepLeft(GFRE_BT.SepRight(s,'['),']'));
+                   end;
+                 di_target:
+                   begin
+                     if (disk.Implementor_HC is TFRE_DB_SATA_DISK) then
+                       begin
+                         s := sl[i+1];
+                         (disk.Implementor_HC as TFRE_DB_SATA_DISK).SetTargetPort(GFRE_BT.SepLeft(GFRE_BT.SepRight(s,'['),']'));
+                       end;
+                   end;
+               end;  //ignore others
+               di_parse:=di_none;
              end;
          end;
       finally
@@ -747,30 +807,32 @@ var
   enclosure_id   : string;
 
   function _getOrCreateEnclosure(const enclosure_id:string):TFRE_DB_ENCLOSURE;
-  var i          : NativeInt;
+  var enclosures : IFRE_DB_Object;
   begin
-    result :=nil;
-    if scsi_structure.FieldExists('enclosures') then
+    result     := nil;
+    enclosures := scsi_structure.Field('enclosures').AsObject;
+    if enclosures.FieldExists(enclosure_id) then
+      exit(enclosures.Field(enclosure_id).AsObject.Implementor_HC as TFRE_DB_ENCLOSURE)
+    else
       begin
-        for i:=0 to scsi_structure.Field('enclosures').ValueCount-1 do
-          if (scsi_structure.Field('enclosures').AsObjectItem[i].Implementor_HC as TFRE_DB_ENCLOSURE).DeviceIdentifier=enclosure_id then
-            exit (scsi_structure.Field('enclosures').AsObjectItem[i].Implementor_HC as TFRE_DB_ENCLOSURE);
+        result := TFRE_DB_ENCLOSURE.Create;
+        result.DeviceIdentifier:=enclosure_id;
+        enclosures.Field(enclosure_id).AsObject:=result;
       end;
-    // not found
-    result := TFRE_DB_ENCLOSURE.Create;
-    result.DeviceIdentifier:=enclosure_id;
-    scsi_structure.Field('enclosures').AddObject(result);
   end;
 
-  procedure _GetDriveSlotInformation(const slotnr:NativeInt);
+  procedure _AnalyzeDriveSlotInformation(const proc:TFRE_DB_Process);
   var i            : NativeInt;
       outstring    : string;
       errstring    : string;
       driveslot    : TFRE_DB_DRIVESLOT;
       port_nr      : integer;
+      slotnr       : integer;
   begin
-    writeln('slot ',slotnr,' ',devicepath);
-    res := _SG3GetPage(cSG3Ses,outstring,errstring,TFRE_DB_StringArray.Create ('-I','0,'+inttostr(slotnr),'-p','aes',devicepath));
+    outstring   := proc.OutputToString;
+    errstring   := proc.ErrorToString;
+    slotnr      := proc.Field('slotnr').AsUInt16;
+    res         := proc.Field('exitstatus').AsInt32;
     if res=0 then
       begin
         if enclosure.GetDriveSlotEmbedded(slotnr,driveslot) then
@@ -797,6 +859,7 @@ var
                  driveslot.SetTargetPort(port_nr,trim(GFRE_BT.SepRight(s,':')));
                end;
            end;
+//          writeln(driveslot.DumpToString());
         finally
           sl.Free;
         end;
@@ -807,6 +870,18 @@ var
         exit;
       end;
   end;
+
+  procedure _GetDriveSlotInformation(const slotnr:NativeInt);
+  var
+    proc         : TFRE_DB_Process;
+  begin
+    proc := TFRE_DB_Process.create;
+    proc.SetupInput(cSG3Ses,TFRE_DB_StringArray.Create ('-I','0,'+inttostr(slotnr),'-p','aes',devicepath));
+    proc.Field('slotnr').AsUInt16:=slotnr;
+    writeln('slot ',slotnr,' ',devicepath);
+    AddProcess(proc);
+  end;
+
 
 begin
 
@@ -825,9 +900,9 @@ begin
            s:= sl[i];
            if Pos('enclosure logical identifier',s)>0 then
              begin
-               enclosure_id := GFRE_BT.SepRight(s,':');
+               enclosure_id := trim(GFRE_BT.SepRight(s,':'));
                enclosure:=_getOrCreateEnclosure(enclosure_id);
-               enclosure.AddExpanderEmbedded(expander);
+               enclosure.AddExpanderEmbedded(expander,Copy(devicepath,Pos('ses',devicepath),maxint));
              end;
            if Pos('enclosure vendor',s)>0 then
              begin
@@ -853,11 +928,17 @@ begin
       GFRE_DBI.LogError(dblc_APPLICATION,'SG3 Ses for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
       exit;
     end;
-
+//  writeln('ENCLO',enclosure.DumpToString());
   if assigned(enclosure) then
+    ClearProcess;
     for i:=0 to enclosure.DriveSlots-1 do
       begin
         _GetDriveSlotInformation(i);
+      end;
+    ExecuteMulti;
+    for i:=0 to ProcessCount-1 do
+      begin
+        _AnalyzeDriveSlotInformation(GetProcess(i));
       end;
 end;
 
@@ -887,6 +968,8 @@ var devices : IFRE_DB_Object;
     i       : NativeInt;
 begin
   scsi_structure   := GFRE_DBI.NewObject;
+  scsi_structure.Field('enclosures').asObject := GFRE_DBI.NewObject;
+  scsi_structure.Field('disks').asObject      := GFRE_DBI.NewObject;
 
   devices := getexpanderDevices;
   for i := 0 to devices.Field('device').ValueCount-1 do
@@ -894,19 +977,16 @@ begin
       SG3SESInquiry(devices.Field('device').AsStringItem[i],scsi_structure);
     end;
 
-  writeln(scsi_structure.DumpToString);
-
   devices.Finalize;
   devices := getrdskDevices;
   for i := 0 to devices.Field('device').ValueCount-1 do
     begin
       if SG3DiskInquiry(devices.Field('device').AsStringItem[i],disk)=0 then
         begin
-          scsi_structure.Field('disks').addobject(disk);
-          writeln(disk.DumpToString);
+          scsi_structure.Field('disks').asObject.Field(disk.Field('DEVICEIDENTIFIER').asstring).asobject:=disk;
         end;
     end;
- // writeln(scsi_structure.DumpToString);
+   writeln(scsi_structure.DumpToString);
 end;
 
 { TFRE_DB_PHYS_DISK }
@@ -925,6 +1005,11 @@ end;
 function TFRE_DB_PHYS_DISK.Getmodel_number: string;
 begin
   result:=field('model_number').asstring;
+end;
+
+function TFRE_DB_PHYS_DISK.GetParentInEnclosureUID: TGUID;
+begin
+  Result:=Field('parent_in_enclosure_uid').AsObjectLink;
 end;
 
 function TFRE_DB_PHYS_DISK.GetWWN: string;
@@ -963,6 +1048,11 @@ begin
   field('model_number').asstring := avalue;
 end;
 
+procedure TFRE_DB_PHYS_DISK.SetParentInEnclosureUID(AValue: TGUID);
+begin
+  Field('parent_in_enclosure_uid').AsObjectLink:=Avalue;
+end;
+
 
 procedure TFRE_DB_PHYS_DISK.SetWWN(AValue: string);
 begin
@@ -984,6 +1074,14 @@ begin
   field('size_sectors').AsUInt32 := AValue;
 end;
 
+function TFRE_DB_PHYS_DISK.GetTargetPorts: TFRE_DB_StringArray;
+begin
+  if fieldExists('target_port') then
+    result := field('target_port').AsStringArr
+  else
+    result := TFRE_DB_StringArray.Create;
+end;
+
 
 { TFRE_DB_SAS_DISK }
 
@@ -995,6 +1093,11 @@ end;
 
 { TFRE_DB_DRIVESLOT }
 
+function TFRE_DB_DRIVESLOT.getDeviceIdentifier: TFRE_DB_String;
+begin
+  result := Field('deviceIdentifier').AsString;
+end;
+
 function TFRE_DB_DRIVESLOT.GetPortType: string;
 begin
   result:=Field('porttype').asstring;
@@ -1003,6 +1106,21 @@ end;
 function TFRE_DB_DRIVESLOT.GetSlotNr: UInt16;
 begin
   result := Field('slotnr').AsUInt16;
+end;
+
+function TFRE_DB_DRIVESLOT.GetParentInEnclosureUID: TGUID;
+begin
+  Result:=Field('parent_in_enclosure_uid').AsObjectLink;
+end;
+
+procedure TFRE_DB_DRIVESLOT.setDeviceIdentifier(AValue: TFRE_DB_String);
+begin
+  Field('deviceIdentifier').AsString:=AValue;
+end;
+
+procedure TFRE_DB_DRIVESLOT.SetParentInEnclosureUID(AValue: TGUID);
+begin
+  Field('parent_in_enclosure_uid').AsObjectLink:=AValue;
 end;
 
 procedure TFRE_DB_DRIVESLOT.SetPortType(AValue: string);
@@ -1015,6 +1133,11 @@ begin
   Field('slotnr').AsUInt16:=Avalue;
 end;
 
+class procedure TFRE_DB_DRIVESLOT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
 procedure TFRE_DB_DRIVESLOT.SetAttachedTo(const port_nr: Byte; const AValue: string);
 begin
   Field('attached_to_'+inttostr(port_nr)).AsString := AValue;
@@ -1025,6 +1148,10 @@ begin
   Field('targetport_'+inttostr(port_nr)).AsString := AValue;
 end;
 
+function TFRE_DB_DRIVESLOT.GetTargetPort(const port_nr: Byte): TFRE_DB_String;
+begin
+  result := Field('targetport_'+inttostr(port_nr)).AsString;
+end;
 
 { TFRE_DB_SAS_EXPANDER }
 
@@ -1043,6 +1170,16 @@ begin
   result:=field('model_number').asstring;
 end;
 
+function TFRE_DB_SAS_EXPANDER.GetDeviceIdentifier: TFRE_DB_String;
+begin
+  result:=Field('deviceIdentifier').AsString;
+end;
+
+function TFRE_DB_SAS_EXPANDER.GetParentInEnclosureUID: TGUID;
+begin
+  Result:=Field('parent_in_enclosure_uid').AsObjectLink;
+end;
+
 
 procedure TFRE_DB_SAS_EXPANDER.Setfw_revision(AValue: string);
 begin
@@ -1057,6 +1194,21 @@ end;
 procedure TFRE_DB_SAS_EXPANDER.Setmodel_number(AValue: string);
 begin
   field('model_number').asstring := avalue;
+end;
+
+procedure TFRE_DB_SAS_EXPANDER.SetDeviceIdentifier(AValue: TFRE_DB_String);
+begin
+  Field('deviceIdentifier').AsString:=AValue;
+end;
+
+procedure TFRE_DB_SAS_EXPANDER.SetParentInEnclosureUID(AValue: TGUID);
+begin
+  Field('parent_in_enclosure_uid').AsObjectLink:=AValue;
+end;
+
+class procedure TFRE_DB_SAS_EXPANDER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
 end;
 
 procedure Register_DB_Extensions;

@@ -53,8 +53,7 @@ const    cDEBUG_ZPOOL_NAME = 'zones';
 var     c_GET_ZFS_DATA_ONCE : string = 'zfs list -Hp -o name,referenced,available,used '+cDEBUG_ZPOOL_NAME;
 
 
-const   cIOSTATFILEHACKMIST     = '/zones/firmos/myiostat.sh';
-        cIOSTATFILEHACKMIST_LOC = 'sh -c /zones/firmos/myiostat.sh';
+const
         cIOSTATFILEONCE         = 'sh -c /zones/firmos/onceiostat.sh';
 
         c_GET_CPU_DATA     = 'mpstat -q 1';
@@ -78,20 +77,17 @@ type
   { IFOS_STATS_CONTROL }
 
   IFOS_STATS_CONTROL=interface
-    procedure StartDiskPersistentMonitorParser (const enable:boolean);
     procedure StartCPUParser                   (const enable:boolean);
     procedure StartRAMParser                   (const enable:boolean);
     procedure StartNetworkParser               (const enable:boolean);
     procedure StartCacheParser                 (const enable:boolean);
     procedure StartZFSParser                   (const enable:boolean);
     procedure StartZpoolIostatParser           (const enable:boolean);
-    function  Get_Disk_Data       : IFRE_DB_Object;
     function  Get_CPU_Data        : IFRE_DB_Object;
     function  Get_CacheData       : IFRE_DB_Object;
     function  Get_Ram_Data        : IFRE_DB_Object;
     function  Get_ZFS_Data_Once   : IFRE_DB_Object;
     function  Get_Network_Data    : IFRE_DB_Object;
-    function  Get_Disk_Data_Once  : IFRE_DB_Object;
     function  Get_ZpoolIostat_Data: IFRE_DB_Object;
     procedure Finalize;
   end;
@@ -139,14 +135,7 @@ type
   public
   end;
 
-  { TFOS_DISK_PARSER }
 
-  TFOS_DISK_PARSER=class(TFOS_PARSER_PROC)
-  protected
-     procedure   MyOutStreamCallBack (const stream:TStream); override;
-  public
-
-  end;
 
   { TFOS_ZFS_PARSER }
 
@@ -175,7 +164,6 @@ type
      cremotehost               : string;
      cremotekeyfilename        : string;
 
-     FDiskMon                  : TFOS_DISK_PARSER;
      FCPUMon                   : TFOS_CPU_PARSER;
      FRAMMon                   : TFOS_RAM_PARSER;
      FNetworkMon               : TFOS_NETWORK_PARSER;
@@ -187,20 +175,17 @@ type
   public
      constructor Create           (const user,host,dir : string);
      destructor  Destroy          ; override ;
-     procedure   StartDiskPersistentMonitorParser (const enable:boolean);
      procedure   StartCPUParser                   (const enable:boolean);
      procedure   StartRAMParser                   (const enable:boolean);
      procedure   StartNetworkParser               (const enable:boolean);
      procedure   StartCacheParser                 (const enable:boolean);
      procedure   StartZFSParser                   (const enable:boolean);
      procedure   StartZpoolIostatParser           (const enable:boolean);
-     function    Get_Disk_Data       : IFRE_DB_Object;
      function    Get_CPU_Data        : IFRE_DB_Object;
      function    Get_CacheData       : IFRE_DB_Object;
      function    Get_Ram_Data        : IFRE_DB_Object;
      function    Get_ZFS_Data_Once   : IFRE_DB_Object;
      function    Get_Network_Data    : IFRE_DB_Object;
-     function    Get_Disk_Data_Once  : IFRE_DB_Object;
      function    Get_ZpoolIostat_Data: IFRE_DB_Object;
   end;
 
@@ -629,70 +614,6 @@ end;
 
 { TFOS_DISK_PARSER }
 
-procedure TFOS_DISK_PARSER.MyOutStreamCallBack(const stream: TStream);
-var st : TStringStream;
-    sl : TStringlist;
-    i  : integer;
-    s  : string;
-    lc : integer;
-
-  //  r/s,w/s,kr/s,kw/s,wait,actv,wsvc_t,asvc_t,%w,%b,device
-  procedure _UpdateDisk;
-  var diskid : string[30];
-  begin
-    diskid := Fline[10];
-    FData.Field(diskid).AsObject.Field('rps').AsReal32    := StrToFloat(Fline[0]);
-    FData.Field(diskid).AsObject.Field('wps').AsReal32    := StrToFloat(Fline[1]);
-    FData.Field(diskid).AsObject.Field('krps').AsReal32   := StrToFloat(Fline[2]);
-    FData.Field(diskid).AsObject.Field('kwps').AsReal32   := StrToFloat(Fline[3]);
-    FData.Field(diskid).AsObject.Field('wait').AsReal32   := StrToFloat(Fline[4]);
-    FData.Field(diskid).AsObject.Field('actv').AsReal32   := StrToFloat(Fline[5]);
-    FData.Field(diskid).AsObject.Field('wsvc_t').AsReal32 := StrToFloat(Fline[6]);
-    FData.Field(diskid).AsObject.Field('actv_t').AsReal32 := StrToFloat(Fline[7]);
-    FData.Field(diskid).AsObject.Field('perc_w').AsReal32 := StrToFloat(Fline[8]);
-    FData.Field(diskid).AsObject.Field('perc_b').AsReal32 := StrToFloat(Fline[9]);
-  end;
-
-begin
-  stream.Position:=0;
-  st := TStringStream.Create('');
-  try
-    st.CopyFrom(stream,stream.Size);
-    stream.Size:=0;
-    FLines.DelimitedText := st.DataString;
-    if Flines.count>0 then begin
-      if pos('extended',Flines[0])=1 then begin
-        lc := FLines.Count;
-        for i := 2 to lc-2 do begin
-          Fline.DelimitedText := Flines[i];
-          if pos('extended',Fline[0])=1 then begin
-            Continue;
-          end;
-          if pos('r/s',Fline[0])=1 then begin
-            continue;
-          end;
-          FLock.Acquire;
-          try
-            try
-              _UpdateDisk;
-            except on E:Exception do begin
-              writeln(ClassName,'>>>Mickey Parser Error---');
-              s:= Fline.DelimitedText;
-              writeln(s);
-              writeln(Classname,'<<<Mickey Parser Error---');
-            end;end;
-          finally
-            FLock.Release;
-          end;
-        end;
-      end;
-    end else begin
-      writeln(ClassName,'*IGNORING JUNK : ',st.Size,': [',st.DataString,']');
-    end;
-  finally
-    st.Free;
-  end;
-end;
 
 { TFOS_CPU_PARSER }
 
@@ -794,7 +715,6 @@ constructor TFOS_STATS_CONTROL.Create(const user, host, dir: string);
 begin
   if user<>'' then
     begin
-      FDiskMon    := TFOS_DISK_PARSER.Create(user,dir,host,cIOSTATFILEHACKMIST);
       FCPUMon     := TFOS_CPU_PARSER.Create(user,dir,host,c_GET_CPU_DATA);
       FRAMMon     := TFOS_RAM_PARSER.Create(user,dir,host,c_GET_RAM_DATA);
       FNetworkMon := TFOS_NETWORK_PARSER.Create(user,dir,host,c_GET_NETWORK_DATA);
@@ -803,7 +723,6 @@ begin
     end
   else
     begin
-      FDiskMon    := TFOS_DISK_PARSER.Create(user,dir,host,cIOSTATFILEHACKMIST_LOC);
       FCPUMon     := TFOS_CPU_PARSER.Create(user,dir,host,c_GET_CPU_DATA_LOC);
       FRAMMon     := TFOS_RAM_PARSER.Create(user,dir,host,c_GET_RAM_DATA_LOC);
       FNetworkMon := TFOS_NETWORK_PARSER.Create(user,dir,host,c_GET_NETWORK_DATA_LOC);
@@ -827,19 +746,10 @@ begin
   FRAMMon.FRee;
   FCPUMon.Disable;
   FCPUMon.Free;
-  FDiskMon.Disable;
-  FDiskMon.Free;
   inherited Destroy;
 end;
 
 
-procedure TFOS_STATS_CONTROL.StartDiskPersistentMonitorParser(const enable: boolean);
-begin
-  if enable then
-    FDiskMon.Enable
-  else
-    FDiskMon.Disable;
-end;
 
 procedure TFOS_STATS_CONTROL.StartCPUParser(const enable: boolean);
 begin
@@ -889,26 +799,7 @@ begin
     FZpoolIoMon.Disable;
 end;
 
-function TFOS_STATS_CONTROL.Get_Disk_Data: IFRE_DB_Object;
-var
-  DISKAGGR: IFRE_DB_Object;
 
-  procedure _addDisk(const field: IFRE_DB_Field);
-    begin
-    if pos('C',field.FieldName)<>1 then exit; //fixxme - hack to check for disks
-    DISKAGGR.Field('rps').AsInt64:=DISKAGGR.Field('rps').AsInt64 + field.AsObject.Field('rps').AsInt64;
-    DISKAGGR.Field('wps').AsInt64:=DISKAGGR.Field('wps').AsInt64 + field.AsObject.Field('wps').AsInt64;
-  end;
-
-begin
-  result := FDiskMon.Get_Data_Object;
-  DISKAGGR:=GFRE_DBI.NewObject;
-  DISKAGGR.Field('rps').AsInt64:=0;
-  DISKAGGR.Field('wps').AsInt64:=0;
-  result.ForAllFields(@_addDisk);
-
-  result.Field('disk_aggr').AsObject := DISKAGGR;
-end;
 
 function TFOS_STATS_CONTROL.Get_CPU_Data: IFRE_DB_Object;
 var
@@ -1024,15 +915,6 @@ begin
   result.ForAllFields(@_addNet);
 
   result.Field('NET_AGGR').AsObject := NETAGGR;
-end;
-
-function TFOS_STATS_CONTROL.Get_Disk_Data_Once: IFRE_DB_Object;
-var dimon : TFOS_DISK_PARSER;
-begin
-  dimon  := TFOS_DISK_PARSER.Create(cremoteuser,cremotekeyfilename,cremotehost,cIOSTATFILEONCE);
-  dimon.Once;
-  result := dimon.Get_Data_Object;
-  dimon.Free;
 end;
 
 function TFOS_STATS_CONTROL.Get_ZpoolIostat_Data: IFRE_DB_Object;

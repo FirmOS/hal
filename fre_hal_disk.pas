@@ -39,25 +39,47 @@ unit fre_hal_disk;
 
 {$mode objfpc}{$H+}
 {$codepage UTF8}
+{$modeswitch nestedprocvars}
+{$interfaces corba}
 
 interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi;
+  FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi,fre_base_parser;
 
+
+const
+
+  cIOSTATFILEHACKMIST     = '/zones/firmos/myiostat.sh';
+  cIOSTATFILEHACKMIST_LOC = 'sh -c /zones/firmos/myiostat.sh';
 
 type
+
+
+  TFRE_HAL_DISK = class;
+
+  { TFOS_IOSTAT_PARSER }
+
+  { TFRE_IOSTAT_PARSER }
+
+  TFRE_IOSTAT_PARSER=class(TFOS_PARSER_PROC)
+  private
+    fhal_disk  : TFRE_HAL_DISK;
+  protected
+    procedure   MyOutStreamCallBack (const stream:TStream); override;
+  public
+    constructor Create (const remoteuser,remotekeyfile,remotehost,cmd : string;const hal_disk:TFRE_HAL_DISK);
+  end;
 
   { TFRE_HAL_DISK }
 
   TFRE_HAL_DISK = class (TFRE_DB_Base)
   private
-    diskenclosure_lock     : IFOS_LOCK;
-    pools_lock             : IFOS_LOCK;
+    FDiskIoStatMon        : TFRE_IOSTAT_PARSER;
 
-    diskenclosure_information          : IFRE_DB_Object;
-    pools_information                  : IFRE_DB_Object;
+    disk_lock                          : IFOS_LOCK;
+    disk_information                   : IFRE_DB_Object;
 
   public
     constructor Create                 ; override;
@@ -65,15 +87,16 @@ type
 
     procedure InitializeDiskandEnclosureInformation (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
     procedure InitializePoolInformation             (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
+    procedure StartIostatMonitor                    (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
 
-    function  IsDiskandEnclosureInformationAvailable:boolean;
-    function  IsPoolInformationAvailable            :boolean;
+    function  IsInformationAvailable                :boolean;
 
-    function  GetPoolsInformation                   : IFRE_DB_Object;
-    function  GetDiskandEnclosureInformation        : IFRE_DB_Object;
+    function  GetInformation                        : IFRE_DB_Object;
 
     function  FetchDiskAndEnclosureInformation      (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
     function  FetchPoolConfiguration                (const zfs_pool_name:string; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
+
+    procedure UpdateDiskIoStatInformation           (const devicename:string; const iostat_information: TFRE_DB_BLOCKDEVICE_IOSTAT);
 
     function  GetPools                  (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
     function  CreateDiskpool            (const input:IFRE_DB_Object; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
@@ -87,7 +110,76 @@ type
 
 implementation
 
+{ TFRE_IOSTAT_PARSER }
 
+procedure TFRE_IOSTAT_PARSER.MyOutStreamCallBack(const stream: TStream);
+var st : TStringStream;
+    sl : TStringlist;
+    i  : integer;
+    s  : string;
+    lc : integer;
+
+  //  r/s,w/s,kr/s,kw/s,wait,actv,wsvc_t,asvc_t,%w,%b,device
+  procedure _UpdateDisk;
+  var devicename : string[30];
+      diskiostat : TFRE_DB_BLOCKDEVICE_IOSTAT;
+  begin
+    devicename := Fline[10];
+    diskiostat := TFRE_DB_BLOCKDEVICE_IOSTAT.Create;
+    try
+      diskiostat.Field('rps').AsReal32    := StrToFloat(Fline[0]);
+      diskiostat.Field('wps').AsReal32    := StrToFloat(Fline[1]);
+      diskiostat.Field('krps').AsReal32   := StrToFloat(Fline[2]);
+      diskiostat.Field('kwps').AsReal32   := StrToFloat(Fline[3]);
+      diskiostat.Field('wait').AsReal32   := StrToFloat(Fline[4]);
+      diskiostat.Field('actv').AsReal32   := StrToFloat(Fline[5]);
+      diskiostat.Field('wsvc_t').AsReal32 := StrToFloat(Fline[6]);
+      diskiostat.Field('actv_t').AsReal32 := StrToFloat(Fline[7]);
+      diskiostat.Field('perc_w').AsReal32 := StrToFloat(Fline[8]);
+      diskiostat.Field('perc_b').AsReal32 := StrToFloat(Fline[9]);
+    except on E:Exception do begin
+      writeln(ClassName,'>>>Mickey Parser Error---');
+      s:= Fline.DelimitedText;
+      writeln(s);
+      writeln(Classname,'<<<Mickey Parser Error---');
+    end;end;
+    fhal_disk.UpdateDiskIoStatInformation(devicename,diskiostat);
+  end;
+
+begin
+  stream.Position:=0;
+  st := TStringStream.Create('');
+  try
+    st.CopyFrom(stream,stream.Size);
+    stream.Size:=0;
+    FLines.DelimitedText := st.DataString;
+    if Flines.count>0 then begin
+      if pos('extended',Flines[0])=1 then begin
+        lc := FLines.Count;
+        for i := 2 to lc-2 do begin
+          Fline.DelimitedText := Flines[i];
+          if pos('extended',Fline[0])=1 then begin
+            Continue;
+          end;
+          if pos('r/s',Fline[0])=1 then begin
+            continue;
+          end;
+          _UpdateDisk;
+        end;
+      end;
+    end else begin
+      writeln(ClassName,'*IGNORING JUNK : ',st.Size,': [',st.DataString,']');
+    end;
+  finally
+    st.Free;
+  end;
+end;
+
+constructor TFRE_IOSTAT_PARSER.Create(const remoteuser, remotekeyfile, remotehost, cmd: string; const hal_disk: TFRE_HAL_DISK);
+begin
+  inherited Create(remoteuser,remotekeyfile,remotehost,cmd);
+  fhal_disk := hal_disk;
+end;
 
 
 { TFRE_HAL_DISK }
@@ -95,16 +187,16 @@ implementation
 constructor TFRE_HAL_DISK.Create;
 begin
   inherited;
-  GFRE_TF.Get_Lock(diskenclosure_lock);
-  GFRE_TF.Get_Lock(pools_lock);
+  GFRE_TF.Get_Lock(disk_lock);
 end;
 
 destructor TFRE_HAL_DISK.Destroy;
 begin
-  pools_lock.Finalize;
-  diskenclosure_lock.Finalize;
-  pools_information.Finalize;
-  diskenclosure_information.Finalize;
+  if Assigned(FDiskIostatMon) then
+    FDiskIOstatMon.Free;
+
+  disk_lock.Finalize;
+  disk_information.Finalize;
 
   inherited Destroy;
 end;
@@ -112,7 +204,6 @@ end;
 procedure TFRE_HAL_DISK.InitializeDiskandEnclosureInformation(const remoteuser: string; const remotehost: string; const remotekey: string);
 var
     disks    : IFRE_DB_Object;
-
 begin
   disks := FetchDiskAndEnclosureInformation(remoteuser,remotehost,remotekey);
   if disks.Field('resultcode').AsInt32<>0 then
@@ -122,13 +213,14 @@ begin
     end
   else
     begin
-      diskenclosure_lock.Acquire;
+      disk_lock.Acquire;
       try
-        if Assigned(diskenclosure_information) then
-          diskenclosure_information.Finalize;
-        diskenclosure_information := disks;
+        if Assigned(disk_information) then
+          disk_information.Finalize;
+        disk_information := disks.Field('data').AsObject.CloneToNewObject(false);
+        disks.Finalize;
       finally
-        diskenclosure_lock.Release;
+        disk_lock.Release;
       end;
     end;
 end;
@@ -139,10 +231,8 @@ var
     pool     : IFRE_DB_Object;
     i        : NativeInt;
     poolname : TFRE_DB_String;
-    pool_res : IFRE_DB_Object;
 
 begin
-  pool_res   := GFRE_DBI.NewObject;
 
   // send all pool data once
   pools := GetPools(remoteuser,remotehost,remotekey);
@@ -158,54 +248,44 @@ begin
           poolname := pools.Field('data').AsObjectItem[i].Field('name').asstring;
           pool     := FetchPoolConfiguration(poolname,remoteuser,remotehost,remotekey);
           (pool.Field('data').asobject.Implementor_HC as TFRE_DB_ZFS_POOL).setZFSGuid(pools.Field('data').AsObjectItem[i].Field('zpool_guid').asstring);
-          pool_res.Field('data').AddObject(pool.Field('data').asobject);
+
+          disk_lock.Acquire;
+          try
+            if disk_information.FieldExists('pools')=false then
+              disk_information.Field('pools').AddObject(GFRE_DBI.NewObject);
+            disk_information.Field('pools').asobject.Field(poolname).asObject:=pool.Field('data').asobject;
+          finally
+            disk_lock.Release;
+          end;
         end;
-      pools_lock.Acquire;
-      try
-        if Assigned(pools_information) then
-          pools_information.Finalize;
-        pools_information := pool_res;
-      finally
-        pools_lock.Release;
-      end;
     end;
 
 end;
 
-function TFRE_HAL_DISK.IsDiskandEnclosureInformationAvailable: boolean;
+procedure TFRE_HAL_DISK.StartIostatMonitor(const remoteuser: string; const remotehost: string; const remotekey: string);
 begin
-  result := Assigned(diskenclosure_information);
-end;
-
-function TFRE_HAL_DISK.IsPoolInformationAvailable: boolean;
-begin
-  result := Assigned(pools_information);
-end;
-
-function TFRE_HAL_DISK.GetPoolsInformation: IFRE_DB_Object;
-begin
-  if IsPoolInformationAvailable then
-    begin
-      pools_lock.Acquire;
-      try
-        result := pools_information.CloneToNewObject;
-      finally
-        pools_lock.Release;
-      end;
-    end
+  if remotehost<>'' then
+    FDiskIoStatMon := TFRE_IOSTAT_PARSER.Create(remoteuser,remotekey,remotehost,cIOSTATFILEHACKMIST_LOC,self)
   else
-    result := nil;
+    FDiskIoStatMon := TFRE_IOSTAT_PARSER.Create(remoteuser,remotekey,remotehost,cIOSTATFILEHACKMIST,self);
+
+  FDiskIoStatMon.Enable;
 end;
 
-function TFRE_HAL_DISK.GetDiskandEnclosureInformation: IFRE_DB_Object;
+function TFRE_HAL_DISK.IsInformationAvailable: boolean;
 begin
-  if IsDiskandEnclosureInformationAvailable then
+  result := Assigned(disk_information);
+end;
+
+function TFRE_HAL_DISK.GetInformation: IFRE_DB_Object;
+begin
+  if IsInformationAvailable then
     begin
-      diskenclosure_lock.Acquire;
+      disk_lock.Acquire;
       try
-        result := diskenclosure_information.CloneToNewObject;
+        result := disk_information.CloneToNewObject;
       finally
-        diskenclosure_lock.Release;
+        disk_lock.Release;
       end;
     end
   else
@@ -222,8 +302,8 @@ begin
   so     := TFRE_DB_SCSI.create;
   try
     so.SetRemoteSSH(remoteuser, remotehost, remotekey);
-//      res    := so.GetSG3DiskAndEnclosureInformation(error,obj);
-    res    := so.GetDiskInformation(error,obj);
+    res    := so.GetSG3DiskAndEnclosureInformation(error,obj);
+//    res    := so.GetDiskInformation(error,obj);
     result := GFRE_DBI.NewObject;
     result.Field('resultcode').AsInt32 := res;
     result.Field('error').asstring     := error;
@@ -271,6 +351,32 @@ begin
   end;
 end;
 
+procedure TFRE_HAL_DISK.UpdateDiskIoStatInformation(const devicename: string; const iostat_information: TFRE_DB_BLOCKDEVICE_IOSTAT);
+
+  function _FindDiskbyDevicename (const fld:IFRE_DB_FIELD):boolean;
+  var
+    disk : TFRE_DB_ZFS_BLOCKDEVICE;
+  begin
+    result := false;
+    if fld.FieldType=fdbft_Object then
+      begin
+        disk := (fld.AsObject.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+        if disk.DeviceName=devicename then
+          begin
+            disk.IoStat:=iostat_information;
+            result :=true;
+          end;
+      end;
+  end;
+begin
+ disk_lock.Acquire;
+ try
+   disk_information.Field('disks').AsObject.ForAllFieldsBreak(@_FindDiskbyDevicename);
+ finally
+   disk_lock.Release;
+ end;
+end;
+
 function TFRE_HAL_DISK.CreateDiskpool(const input: IFRE_DB_Object; const remoteuser: string; const remotehost: string; const remotekey: string): IFRE_DB_OBJECT;
 var zo    : TFRE_DB_ZFS;
     obj   : IFRE_DB_Object;
@@ -313,6 +419,28 @@ begin
   // AnswerSyncCommand(command_id,CreateDiskpool(input,input.Field('remoteuser').asstring,input.Field('remotehost').asstring,input.Field('remotekey').asstring));
   input.Finalize;
 end;
+
+//function TFOS_STATS_CONTROL.Get_Disk_Data: IFRE_DB_Object;
+//var
+//  DISKAGGR: IFRE_DB_Object;
+//
+//  procedure _addDisk(const field: IFRE_DB_Field);
+//    begin
+//    if pos('C',field.FieldName)<>1 then exit; //fixxme - hack to check for disks
+//    DISKAGGR.Field('rps').AsInt64:=DISKAGGR.Field('rps').AsInt64 + field.AsObject.Field('rps').AsInt64;
+//    DISKAGGR.Field('wps').AsInt64:=DISKAGGR.Field('wps').AsInt64 + field.AsObject.Field('wps').AsInt64;
+//  end;
+//
+//begin
+//  result := FDiskMon.Get_Data_Object;
+//  DISKAGGR:=GFRE_DBI.NewObject;
+//  DISKAGGR.Field('rps').AsInt64:=0;
+//  DISKAGGR.Field('wps').AsInt64:=0;
+//  result.ForAllFields(@_addDisk);
+//
+//  result.Field('disk_aggr').AsObject := DISKAGGR;
+//end;
+
 
 end.
 

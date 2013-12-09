@@ -63,6 +63,12 @@ const
   CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX   = 'deviceId';
   CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX = 'deviceName';
 
+  CFRE_DB_ENCLOSURE_ID_INDEX   = 'deviceIdentifier';
+  CFRE_DB_EXPANDER_ID_INDEX    = 'deviceIdentifier';
+  CFRE_DB_DRIVESLOT_ID_INDEX   = 'deviceIdentifier';
+  CFRE_DB_DRIVESLOT_TP1_INDEX  = 'targetport1';
+  CFRE_DB_DRIVESLOT_TP2_INDEX  = 'targetport2';
+
 
 type
   EFOS_ZFS_Exception=class(Exception);
@@ -124,12 +130,22 @@ type
   public
   end;
 
+  { TFRE_DB_BLOCKDEVICE_IOSTAT }
+
+  TFRE_DB_BLOCKDEVICE_IOSTAT=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+  public
+  end;
+
   { TFRE_DB_ZFS_BLOCKDEVICE }
 
   TFRE_DB_ZFS_BLOCKDEVICE=class(TFRE_DB_ZFS_OBJ)
   private
     function  getIsOffline          : Boolean;
     procedure setIsOffline          (AValue: Boolean);
+    function  getIOStat             : TFRE_DB_BLOCKDEVICE_IOSTAT;
+    procedure setIOStat             (const Avalue: TFRE_DB_BLOCKDEVICE_IOSTAT);
   protected
     function  getDeviceIdentifier               : TFRE_DB_String;
     function  getDeviceName                     : TFRE_DB_String;
@@ -146,6 +162,7 @@ type
     property  isOffline        : Boolean read getIsOffline write setIsOffline;
     property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DeviceName       : TFRE_DB_String read getDeviceName write setDeviceName;
+    property  IoStat           : TFRE_DB_BLOCKDEVICE_IOSTAT read getIOStat write setIOStat;
   end;
 
   { TFRE_DB_ZFS_DISKCONTAINER }
@@ -347,6 +364,13 @@ procedure Register_DB_Extensions;
 function String2DBZFSRaidLevelType(const fts: string): TFRE_DB_ZFS_RAID_LEVEL;
 
 implementation
+
+{ TFRE_DB_BLOCKDEVICE_IOSTAT }
+
+class procedure TFRE_DB_BLOCKDEVICE_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
 
 { TFRE_DB_ZFS_UNASSIGNED }
 
@@ -802,6 +826,19 @@ end;
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setIsOffline(AValue: Boolean);
 begin
   Field('isOffline').AsBoolean:=AValue;
+end;
+
+function TFRE_DB_ZFS_BLOCKDEVICE.getIOStat: TFRE_DB_BLOCKDEVICE_IOSTAT;
+begin
+  result :=  (Field('iostat').AsObject.Implementor_HC as TFRE_DB_BLOCKDEVICE_IOSTAT);
+end;
+
+procedure TFRE_DB_ZFS_BLOCKDEVICE.setIOStat(const Avalue: TFRE_DB_BLOCKDEVICE_IOSTAT);
+begin
+  if FieldExists('iostat') then
+    AValue.Field('UID').asGUID:=Field('iostat').AsObject.UID;
+
+  Field('iostat').AsObject:=AValue;
 end;
 
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceIdentifier(AValue: TFRE_DB_String);
@@ -2076,6 +2113,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DATASTORAGE);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_VDEV);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_BLOCKDEVICE);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_BLOCKDEVICE_IOSTAT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DISKCONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_VDEVCONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_SPARE);
