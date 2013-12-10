@@ -275,6 +275,8 @@ end;
 function TFRE_HAL_DISK.IsInformationAvailable: boolean;
 begin
   result := Assigned(disk_information);
+  if result then
+    result := disk_information.FieldExists('pools');
 end;
 
 function TFRE_HAL_DISK.GetInformation: IFRE_DB_Object;
