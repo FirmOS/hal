@@ -96,15 +96,17 @@ type
     procedure SetTransferRead  (AValue: TFRE_DB_String);
     procedure SetTransferWrite (AValue: TFRE_DB_String);
   protected
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    procedure MapClassToDragAndDropClass (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure removeFromPool          ;
     function  getPool                 (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_ROOTOBJ; virtual;
     function  getZFSParent            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_OBJ;
     function  getId                   : TFRE_DB_String; virtual;
-    function  getChildren             (const conn: IFRE_DB_CONNECTION): IFRE_DB_ObjectArray; virtual;
-    function  mayHaveChildren         : Boolean; virtual;
-    function  acceptsNewChildren      (const conn: IFRE_DB_CONNECTION): Boolean; virtual;
+    function  getZFSChildren          (const conn: IFRE_DB_CONNECTION): IFRE_DB_ObjectArray; virtual;
+    function  mayHaveZFSChildren      : Boolean; virtual;
+    function  acceptsNewZFSChildren   (const conn: IFRE_DB_CONNECTION): Boolean; virtual;
     function  getIsModified           : Boolean;
     function  getIsNew                : Boolean;
     function  getZFSGuid              : string;
@@ -152,17 +154,18 @@ type
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure setDeviceName                     (AValue: TFRE_DB_String);
 
-    procedure MapClassToDragAndDropClass(const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure MapClassToDragAndDropClass(const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getIcon                  (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
 
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    function  mayHaveChildren  : Boolean; override;
-    function  canIdentify      : Boolean; override;
-    property  isOffline        : Boolean read getIsOffline write setIsOffline;
-    property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
-    property  DeviceName       : TFRE_DB_String read getDeviceName write setDeviceName;
-    property  IoStat           : TFRE_DB_BLOCKDEVICE_IOSTAT read getIOStat write setIOStat;
+    function  mayHaveZFSChildren: Boolean; override;
+    function  canIdentify       : Boolean; override;
+    property  isOffline         : Boolean read getIsOffline write setIsOffline;
+    property  DeviceIdentifier  : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
+    property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
+    property  IoStat            : TFRE_DB_BLOCKDEVICE_IOSTAT read getIOStat write setIOStat;
   end;
 
   { TFRE_DB_ZFS_DISKCONTAINER }
@@ -171,12 +174,14 @@ type
   private
     function  GetRaidLevel       : TFRE_DB_ZFS_RAID_LEVEL; virtual;
     procedure SetRaidLevel       (AValue: TFRE_DB_ZFS_RAID_LEVEL); virtual;
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     function  addBlockdevice            (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
     function  addBlockdeviceEmbedded    (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
     function  createBlockdeviceEmbedded : TFRE_DB_ZFS_BLOCKDEVICE; virtual;
-    function  mayHaveChildren           : Boolean; override;
-    function  acceptsNewChildren        (const conn: IFRE_DB_CONNECTION): Boolean; override;
+    function  mayHaveZFSChildren       : Boolean; override;
+    function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
     function  getLastChildId            (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
     property  raidLevel                 : TFRE_DB_ZFS_RAID_LEVEL read GetRaidLevel write SetRaidLevel;
   end;
@@ -191,7 +196,7 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    function acceptsNewChildren  (const conn: IFRE_DB_CONNECTION): Boolean; override;
+    function acceptsNewZFSChildren  (const conn: IFRE_DB_CONNECTION): Boolean; override;
   end;
 
   { TFRE_DB_ZFS_VDEVCONTAINER }
@@ -201,6 +206,7 @@ type
     function  GetRaidLevel                   : TFRE_DB_ZFS_RAID_LEVEL; override;
     procedure SetRaidLevel                   (AValue: TFRE_DB_ZFS_RAID_LEVEL); override;
   protected
+    class procedure RegisterSystemScheme     (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function  createVdev         : TFRE_DB_ZFS_VDEV; virtual;
@@ -259,12 +265,14 @@ type
   { TFRE_DB_ZFS_ROOTOBJ }
 
   TFRE_DB_ZFS_ROOTOBJ=class(TFRE_DB_ZFS_OBJ)
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
-    function mayHaveChildren    : Boolean; override;
-    function acceptsNewChildren (const conn: IFRE_DB_CONNECTION): Boolean; override;
-    function getPool            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_ROOTOBJ; override;
-    function getPoolName        : TFRE_DB_String;
-    function getLastChildId     (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
+    function mayHaveZFSChildren    : Boolean; override;
+    function acceptsNewZFSChildren (const conn: IFRE_DB_CONNECTION): Boolean; override;
+    function getPool               (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_ROOTOBJ; override;
+    function getPoolName           : TFRE_DB_String;
+    function getLastChildId        (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
   end;
 
   { TFRE_DB_ZFS_POOL }
@@ -297,6 +305,7 @@ type
 
   TFRE_DB_ZFS_UNASSIGNED=class(TFRE_DB_ZFS_ROOTOBJ)
   protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function  addBlockdevice            (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
@@ -374,6 +383,11 @@ end;
 
 { TFRE_DB_ZFS_UNASSIGNED }
 
+class procedure TFRE_DB_ZFS_UNASSIGNED.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
 class procedure TFRE_DB_ZFS_UNASSIGNED.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
@@ -400,12 +414,17 @@ end;
 
 { TFRE_DB_ZFS_ROOTOBJ }
 
-function TFRE_DB_ZFS_ROOTOBJ.mayHaveChildren: Boolean;
+class procedure TFRE_DB_ZFS_ROOTOBJ.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+function TFRE_DB_ZFS_ROOTOBJ.mayHaveZFSChildren: Boolean;
 begin
   Result:=true;
 end;
 
-function TFRE_DB_ZFS_ROOTOBJ.acceptsNewChildren(const conn: IFRE_DB_CONNECTION): Boolean;
+function TFRE_DB_ZFS_ROOTOBJ.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
 begin
   Result:=true;
 end;
@@ -424,7 +443,7 @@ function TFRE_DB_ZFS_ROOTOBJ.getLastChildId(const conn: IFRE_DB_CONNECTION): Str
 var
   children: IFRE_DB_ObjectArray;
 begin
-  children:=getChildren(conn);
+  children:=getZFSChildren(conn);
   if Length(children)>0 then begin
     Result:=(children[Length(children)-1].Implementor_HC as TFRE_DB_ZFS_OBJ).getId;
   end else begin
@@ -448,6 +467,11 @@ begin
   Field('raidLevel').AsString:=CFRE_DB_ZFS_RAID_LEVEL[AValue];
 end;
 
+class procedure TFRE_DB_ZFS_DISKCONTAINER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
 function TFRE_DB_ZFS_DISKCONTAINER.addBlockdevice(const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
   blockdevice.parentInZFSId:=UID;
@@ -466,12 +490,12 @@ begin
   Field('vdev').AddObject(Result);
 end;
 
-function TFRE_DB_ZFS_DISKCONTAINER.mayHaveChildren: Boolean;
+function TFRE_DB_ZFS_DISKCONTAINER.mayHaveZFSChildren: Boolean;
 begin
   Result:=true;
 end;
 
-function TFRE_DB_ZFS_DISKCONTAINER.acceptsNewChildren(const conn: IFRE_DB_CONNECTION): Boolean;
+function TFRE_DB_ZFS_DISKCONTAINER.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
 begin
   Result:=true;
 end;
@@ -480,7 +504,7 @@ function TFRE_DB_ZFS_DISKCONTAINER.getLastChildId(const conn: IFRE_DB_CONNECTION
 var
   children: IFRE_DB_ObjectArray;
 begin
-  children:=getChildren(conn);
+  children:=getZFSChildren(conn);
   if Length(children)>0 then begin
     Result:=(children[Length(children)-1].Implementor_HC as TFRE_DB_ZFS_OBJ).getId;
   end else begin
@@ -499,6 +523,11 @@ procedure TFRE_DB_ZFS_VDEVCONTAINER.SetRaidLevel(AValue: TFRE_DB_ZFS_RAID_LEVEL)
 begin
   if AValue<>zfs_rl_stripe then raise EFOS_ZFS_Exception.Create('A Vdev container has to be striped.');
   inherited SetRaidLevel(AValue);
+end;
+
+class procedure TFRE_DB_ZFS_VDEVCONTAINER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
 end;
 
 class procedure TFRE_DB_ZFS_VDEVCONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -591,6 +620,8 @@ end;
 class procedure TFRE_DB_ZFS_OBJ.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
+  scheme.AddCalcSchemeField('dndclass',fdbft_String,@MapClassToDragAndDropClass);
+  scheme.AddCalcSchemeField('icon',fdbft_String,@_getIcon);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.removeFromPool;
@@ -649,18 +680,36 @@ begin
   Field('transfer_w').AsString:=AValue;
 end;
 
+procedure TFRE_DB_ZFS_OBJ.MapClassToDragAndDropClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString(ClassName);
+end;
+
+procedure TFRE_DB_ZFS_OBJ._getIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+   if getIsNew then begin
+     calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_new.png'));
+   end else begin
+     if getIsModified then begin
+       calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_mod.png'));
+     end else begin
+       calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
+     end;
+   end;
+end;
+
 function TFRE_DB_ZFS_OBJ.getId: TFRE_DB_String;
 begin
   Result:=UID_String;
 end;
 
-function TFRE_DB_ZFS_OBJ.getChildren(const conn: IFRE_DB_CONNECTION): IFRE_DB_ObjectArray;
+function TFRE_DB_ZFS_OBJ.getZFSChildren(const conn: IFRE_DB_CONNECTION): IFRE_DB_ObjectArray;
 var
   refs: TFRE_DB_GUIDArray;
   obj : IFRE_DB_Object;
   i   : Integer;
 begin
-  refs:=conn.GetReferences(Self.UID,false,'');
+  refs:=conn.GetReferences(Self.UID,false,''); //get refs of spezific field (parent_in_zfs_uid)
   SetLength(Result,Length(refs));
   for i := 0 to Length(refs) - 1 do begin
     CheckDbResult(conn.Fetch(refs[i],obj),'TFRE_DB_ZFS_OBJ.getChildren');
@@ -668,12 +717,12 @@ begin
   end;
 end;
 
-function TFRE_DB_ZFS_OBJ.mayHaveChildren: Boolean;
+function TFRE_DB_ZFS_OBJ.mayHaveZFSChildren: Boolean;
 begin
   Result:=false;
 end;
 
-function TFRE_DB_ZFS_OBJ.acceptsNewChildren(const conn: IFRE_DB_CONNECTION): Boolean;
+function TFRE_DB_ZFS_OBJ.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
 begin
   Result:=false;
 end;
@@ -784,7 +833,7 @@ begin
   newVersionId:='1.0';
 end;
 
-function TFRE_DB_ZFS_VDEV.acceptsNewChildren(const conn: IFRE_DB_CONNECTION): Boolean;
+function TFRE_DB_ZFS_VDEV.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
 var
   zfsParent: TFRE_DB_ZFS_OBJ;
 begin
@@ -818,6 +867,23 @@ begin
   calcfieldsetter.SetAsString('TFRE_DB_ZFS_BLOCKDEVICE');
 end;
 
+procedure TFRE_DB_ZFS_BLOCKDEVICE._getIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  if getIsNew then begin
+    calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_new.png'));
+  end else begin
+    if getIsModified then begin
+      calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_mod.png'));
+    end else begin
+      if isOffline then begin
+        calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_offline.png'));
+      end else begin
+        calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
+      end;
+    end;
+  end;
+end;
+
 function TFRE_DB_ZFS_BLOCKDEVICE.getDeviceIdentifier: TFRE_DB_String;
 begin
  result := Field('deviceIdentifier').AsString;
@@ -849,7 +915,6 @@ end;
 class procedure TFRE_DB_ZFS_BLOCKDEVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.AddCalcSchemeField('dndclass',fdbft_String,@MapClassToDragAndDropClass);
 end;
 
 class procedure TFRE_DB_ZFS_BLOCKDEVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -857,7 +922,7 @@ begin
   newVersionId:='1.0';
 end;
 
-function TFRE_DB_ZFS_BLOCKDEVICE.mayHaveChildren: Boolean;
+function TFRE_DB_ZFS_BLOCKDEVICE.mayHaveZFSChildren: Boolean;
 begin
   Result:=false;
 end;
@@ -875,7 +940,7 @@ var
   children: IFRE_DB_ObjectArray;
 begin
   Result:=nil;
-  children:=getChildren(conn);
+  children:=getZFSChildren(conn);
   for i := 0 to Length(children) - 1 do begin
     if children[i].Implementor_HC is TFRE_DB_ZFS_DATASTORAGE then begin
       Result:=children[i].Implementor_HC as TFRE_DB_ZFS_DATASTORAGE;
@@ -902,7 +967,7 @@ var
   children: IFRE_DB_ObjectArray;
 begin
   Result:=nil;
-  children:=getChildren(conn);
+  children:=getZFSChildren(conn);
   for i := 0 to Length(children) - 1 do begin
     if children[i].Implementor_HC is TFRE_DB_ZFS_SPARE then begin
       Result:=children[i].Implementor_HC as TFRE_DB_ZFS_SPARE;
@@ -917,7 +982,7 @@ var
   children: IFRE_DB_ObjectArray;
 begin
   Result:=nil;
-  children:=getChildren(conn);
+  children:=getZFSChildren(conn);
   for i := 0 to Length(children) - 1 do begin
     if children[i].Implementor_HC is TFRE_DB_ZFS_CACHE then begin
       Result:=children[i].Implementor_HC as TFRE_DB_ZFS_CACHE;
@@ -932,7 +997,7 @@ var
   children: IFRE_DB_ObjectArray;
 begin
   Result:=nil;
-  children:=getChildren(conn);
+  children:=getZFSChildren(conn);
   for i := 0 to Length(children) - 1 do begin
     if children[i].Implementor_HC is TFRE_DB_ZFS_LOG then begin
       Result:=children[i].Implementor_HC as TFRE_DB_ZFS_LOG;
