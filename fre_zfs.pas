@@ -145,9 +145,11 @@ type
   TFRE_DB_ZFS_BLOCKDEVICE=class(TFRE_DB_ZFS_OBJ)
   private
     function  getIsOffline          : Boolean;
+    function  getisUnassigned       : Boolean;
     procedure setIsOffline          (AValue: Boolean);
     function  getIOStat             : TFRE_DB_BLOCKDEVICE_IOSTAT;
     procedure setIOStat             (const Avalue: TFRE_DB_BLOCKDEVICE_IOSTAT);
+    procedure setIsUnassgined       (AValue: Boolean);
   protected
     function  getDeviceIdentifier               : TFRE_DB_String;
     function  getDeviceName                     : TFRE_DB_String;
@@ -166,6 +168,7 @@ type
     property  DeviceIdentifier  : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
     property  IoStat            : TFRE_DB_BLOCKDEVICE_IOSTAT read getIOStat write setIOStat;
+    property  IsUnassigned      : Boolean read getisUnassigned write setIsUnassgined;
   end;
 
   { TFRE_DB_ZFS_DISKCONTAINER }
@@ -397,6 +400,7 @@ function TFRE_DB_ZFS_UNASSIGNED.addBlockdevice(const blockdevice: TFRE_DB_ZFS_BL
 begin
   blockdevice.parentInZFSId:=UID;
   blockdevice.poolId:=poolId;
+  blockdevice.IsUnassigned:=true;
   Result:=blockdevice;
 end;
 
@@ -857,6 +861,11 @@ begin
    Result:=(FieldExists('isOffline') and Field('isOffline').AsBoolean);
 end;
 
+function TFRE_DB_ZFS_BLOCKDEVICE.getisUnassigned: Boolean;
+begin
+  result:=Field('isUnassigned').AsBoolean;
+end;
+
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceName(AValue: TFRE_DB_String);
 begin
   Field('devicename').AsString := AValue;
@@ -905,6 +914,11 @@ begin
     AValue.Field('UID').asGUID:=Field('iostat').AsObject.UID;
 
   Field('iostat').AsObject:=AValue;
+end;
+
+procedure TFRE_DB_ZFS_BLOCKDEVICE.setIsUnassgined(AValue: Boolean);
+begin
+  Field('isUnassigned').AsBoolean:=AValue;
 end;
 
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceIdentifier(AValue: TFRE_DB_String);
@@ -1111,6 +1125,7 @@ var poolcolletion        : IFRE_DB_COLLECTION;
         dbblockdevice_obj.setZFSGuid(Field('pool').asstring+'-'+disk.Field('name').asstring);         //FIXME FAKE
         dbblockdevice_obj.parentInZFSId :=  parent_id;
         dbblockdevice_obj.poolId        :=  db_pool_uid;
+        dbblockdevice_obj.IsUnassigned  :=  false;
       end;
 
     begin
