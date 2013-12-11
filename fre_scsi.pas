@@ -626,18 +626,23 @@ var sl : TStringList;
 begin
 //  if FieldExists('remotehost') then
 //    begin
+      writeln('AA');
       ClearProcess;
       proc := TFRE_DB_Process.create;
-      proc.SetupInput('find',TFRE_DB_StringArray.Create ('/dev/rdsk/*d0'));
+      proc.SetupInput('find',TFRE_DB_StringArray.Create ('/dev/rdsk'));
       AddProcess(proc);
       ExecuteMulti;
       result := GFRE_DBI.NewObject;
+      writeln('AB');
       sl := TStringList.Create;
       try
         sl.Text:=TFRE_DB_Process (proc.Implementor_HC).OutputToString;
-        for i:= 0 to sl.count-1 do
+        for i:= 1 to sl.count-1 do
           begin
-            result.Field('device').AddString(sl[i]);
+            if Pos('s2',sl[i])=length(sl[i])-1 then
+              result.Field('device').AddString(sl[i])
+            else
+              writeln('skipping ',sl[i]);
           end;
       finally
         sl.Free;
@@ -653,24 +658,26 @@ var sl : TStringList;
     proc  : TFRE_DB_Process;
 begin
 //  if FieldExists('remotehost') then
-    begin
+//    begin
       ClearProcess;
+      result := GFRE_DBI.NewObject;
       proc := TFRE_DB_Process.create;
-      proc.SetupInput('find',TFRE_DB_StringArray.Create ('/dev/es/ses*'));
+      proc.SetupInput('find',TFRE_DB_StringArray.Create ('/dev/es'));
       AddProcess(proc);
       ExecuteMulti;
       result := GFRE_DBI.NewObject;
       sl := TStringList.Create;
       try
         sl.Text:=TFRE_DB_Process (proc.Implementor_HC).OutputToString;
-        for i:= 0 to sl.count-1 do
+        for i:= 1 to sl.count-1 do
           begin
             result.Field('device').AddString(sl[i]);
           end;
+        writeln(sl.text,sl.count,proc.ExitStatus,proc.ErrorToString);
       finally
         sl.Free;
       end;
-    end
+//    end
 //  else
 //    abort; //Implement local Find for devices
 end;
@@ -1008,13 +1015,14 @@ begin
   scsi_structure.Field('enclosures').asObject := GFRE_DBI.NewObject;
   scsi_structure.Field('disks').asObject      := GFRE_DBI.NewObject;
 
-  devices := getexpanderDevices;
-  for i := 0 to devices.Field('device').ValueCount-1 do
-    begin
-      SG3SESInquiry(devices.Field('device').AsStringItem[i],scsi_structure);
-    end;
+  //devices := getexpanderDevices;
+  //writeln('ES :',devices.DumpToString());
+  //for i := 0 to devices.Field('device').ValueCount-1 do
+  //  begin
+  //    SG3SESInquiry(devices.Field('device').AsStringItem[i],scsi_structure);
+  //  end;
+  //devices.Finalize;
 
-  devices.Finalize;
   devices := getrdskDevices;
   for i := 0 to devices.Field('device').ValueCount-1 do
     begin
