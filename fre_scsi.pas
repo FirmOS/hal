@@ -262,6 +262,10 @@ type
     procedure Setserial_number(AValue: string);
     procedure SetSize_MB(AValue: UInt32);
     procedure SetSize_Sectors(AValue: UInt32);
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    procedure _getLayoutCaption                 (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutIcon                    (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
   public
     function GetTargetPorts: TFRE_DB_StringArray;
     property WWN                                 : string read GetWWN write SetWWN;
@@ -357,6 +361,10 @@ type
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string='');
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    procedure _getChildrenString                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutCaption                 (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
 
@@ -432,6 +440,29 @@ end;
 class procedure TFRE_DB_ENCLOSURE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+end;
+
+class procedure TFRE_DB_ENCLOSURE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddCalcSchemeField('children',fdbft_String,@_getChildrenString);
+  scheme.AddCalcSchemeField('caption_layout',fdbft_String,@_getLayoutCaption);
+  scheme.AddCalcSchemeField('icon_layout',fdbft_String,@_getLayoutIcon);
+end;
+
+procedure TFRE_DB_ENCLOSURE._getChildrenString(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString('UNCHECKED');
+end;
+
+procedure TFRE_DB_ENCLOSURE._getLayoutCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString(DeviceIdentifier);
+end;
+
+procedure TFRE_DB_ENCLOSURE._getLayoutIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
 end;
 
 procedure TFRE_DB_ENCLOSURE.AddExpanderEmbedded(const expander: TFRE_DB_SAS_Expander;const devicename:string);
@@ -1068,7 +1099,11 @@ end;
 
 function TFRE_DB_PHYS_DISK.GetSlotNr: Uint16;
 begin
-  Result:=Field('slotnr').AsUInt16;
+  if FieldExists('slotnr') then begin
+    Result:=Field('slotnr').AsUInt16;
+  end else begin
+    Result:=0;
+  end;
 end;
 
 function TFRE_DB_PHYS_DISK.GetWWN: string;
@@ -1146,6 +1181,31 @@ end;
 procedure TFRE_DB_PHYS_DISK.SetSize_Sectors(AValue: UInt32);
 begin
   field('size_sectors').AsUInt32 := AValue;
+end;
+
+class procedure TFRE_DB_PHYS_DISK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.AddCalcSchemeField('caption_layout',fdbft_String,@_getLayoutCaption);
+  scheme.AddCalcSchemeField('icon_layout',fdbft_String,@_getLayoutIcon);
+end;
+
+procedure TFRE_DB_PHYS_DISK._getLayoutCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString(caption + ' (' + IntToStr(SlotNr) + ')');
+end;
+
+procedure TFRE_DB_PHYS_DISK._getLayoutIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  if getIsNew then begin
+    calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_new.png'));
+  end else begin
+    if IsUnassigned then begin
+      calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_unassigned.png'));
+    end else begin
+      calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
+    end;
+  end;
 end;
 
 function TFRE_DB_PHYS_DISK.GetTargetPorts: TFRE_DB_StringArray;

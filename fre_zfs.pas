@@ -106,8 +106,12 @@ type
     function  getIOStat             : TFRE_DB_IOSTAT;
     procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
   protected
-    procedure MapClassToDragAndDropClass (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getChildrenString         (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure removeFromPool          ;
@@ -159,8 +163,10 @@ type
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure setDeviceName                     (AValue: TFRE_DB_String);
 
-    procedure MapClassToDragAndDropClass(const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getIcon                  (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
 
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -482,6 +488,7 @@ function TFRE_DB_ZFS_DISKCONTAINER.addBlockdevice(const blockdevice: TFRE_DB_ZFS
 begin
   blockdevice.parentInZFSId:=UID;
   blockdevice.poolId:=poolId;
+  blockdevice.IsUnassigned:=false;
   Result:=blockdevice;
 end;
 
@@ -492,7 +499,7 @@ end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.createBlockdeviceEmbedded: TFRE_DB_ZFS_BLOCKDEVICE;
 begin
-  Result:=TFRE_DB_ZFS_BLOCKDEVICE.create;
+  Result:=TFRE_DB_ZFS_BLOCKDEVICE.CreateForDB;
   Field('vdev').AddObject(Result);
 end;
 
@@ -543,14 +550,14 @@ end;
 
 function TFRE_DB_ZFS_VDEVCONTAINER.createVdev: TFRE_DB_ZFS_VDEV;
 begin
-  Result:=TFRE_DB_ZFS_VDEV.create;
+  Result:=TFRE_DB_ZFS_VDEV.CreateForDB;
   Result.parentInZFSId:=UID;
   Result.poolId:=poolId;
 end;
 
 function TFRE_DB_ZFS_VDEVCONTAINER.createVdevEmbedded: TFRE_DB_ZFS_VDEV;
 begin
-  Result:=TFRE_DB_ZFS_VDEV.create;
+  Result:=TFRE_DB_ZFS_VDEV.CreateForDB;
   Field('vdev').AddObject(Result);
 end;
 
@@ -626,8 +633,12 @@ end;
 class procedure TFRE_DB_ZFS_OBJ.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.AddCalcSchemeField('dndclass',fdbft_String,@MapClassToDragAndDropClass);
+  scheme.AddCalcSchemeField('dndclass',fdbft_String,@_getDnDClass);
   scheme.AddCalcSchemeField('icon',fdbft_String,@_getIcon);
+  scheme.AddCalcSchemeField('caption',fdbft_String,@_getCaption);
+  scheme.AddCalcSchemeField('children',fdbft_String,@_getChildrenString);
+  scheme.AddCalcSchemeField('_disabledrop_',fdbft_Boolean,@_getDisableDrop);
+  scheme.AddCalcSchemeField('_disabledrag_',fdbft_Boolean,@_getDisableDrag);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.removeFromPool;
@@ -696,7 +707,7 @@ begin
   Field('iostat').AsObject:=AValue;
 end;
 
-procedure TFRE_DB_ZFS_OBJ.MapClassToDragAndDropClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+procedure TFRE_DB_ZFS_OBJ._getDnDClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
   calcfieldsetter.SetAsString(ClassName);
 end;
@@ -712,6 +723,34 @@ begin
        calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
      end;
    end;
+end;
+
+procedure TFRE_DB_ZFS_OBJ._getChildrenString(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  if mayHaveZFSChildren then begin
+    calcfieldsetter.SetAsString('UNCHECKED');
+  end else begin
+    calcfieldsetter.SetAsString('');
+  end;
+end;
+
+procedure TFRE_DB_ZFS_OBJ._getDisableDrag(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsBoolean(true);
+end;
+
+procedure TFRE_DB_ZFS_OBJ._getDisableDrop(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  if mayHaveZFSChildren then begin
+    calcfieldsetter.SetAsBoolean(false);
+  end else begin
+    calcfieldsetter.SetAsBoolean(true);
+  end;
+end;
+
+procedure TFRE_DB_ZFS_OBJ._getCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString(caption);
 end;
 
 function TFRE_DB_ZFS_OBJ.getId: TFRE_DB_String;
@@ -875,7 +914,7 @@ end;
 
 function TFRE_DB_ZFS_BLOCKDEVICE.getisUnassigned: Boolean;
 begin
-  result:=Field('isUnassigned').AsBoolean;
+  result:=(FieldExists('isUnassigned') and Field('isUnassigned').AsBoolean);
 end;
 
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceName(AValue: TFRE_DB_String);
@@ -883,7 +922,7 @@ begin
   Field('devicename').AsString := AValue;
 end;
 
-procedure TFRE_DB_ZFS_BLOCKDEVICE.MapClassToDragAndDropClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+procedure TFRE_DB_ZFS_BLOCKDEVICE._getDnDClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
   calcfieldsetter.SetAsString('TFRE_DB_ZFS_BLOCKDEVICE');
 end;
@@ -902,6 +941,24 @@ begin
         calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
       end;
     end;
+  end;
+end;
+
+procedure TFRE_DB_ZFS_BLOCKDEVICE._getDisableDrag(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  if IsUnassigned or getIsNew then begin
+    calcfieldsetter.SetAsBoolean(false);
+  end else begin
+    calcfieldsetter.SetAsBoolean(true);
+  end;
+end;
+
+procedure TFRE_DB_ZFS_BLOCKDEVICE._getDisableDrop(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  if IsUnassigned then begin
+    calcfieldsetter.SetAsBoolean(true);
+  end else begin
+    calcfieldsetter.SetAsBoolean(false);
   end;
 end;
 
@@ -1044,40 +1101,40 @@ function TFRE_DB_ZFS_POOL.createDatastorage: TFRE_DB_ZFS_DATASTORAGE;
 var
   coll: IFRE_DB_COLLECTION;
 begin
-  Result:=TFRE_DB_ZFS_DATASTORAGE.create;
+  Result:=TFRE_DB_ZFS_DATASTORAGE.CreateForDB;
   Result.poolId:=UID;
   Result.parentInZFSId:=UID;
 end;
 
 function TFRE_DB_ZFS_POOL.createDatastorageEmbedded: TFRE_DB_ZFS_DATASTORAGE;
 begin
-  Result:=TFRE_DB_ZFS_DATASTORAGE.create;
+  Result:=TFRE_DB_ZFS_DATASTORAGE.CreateForDB;
   Field('vdev').AddObject(Result);
 end;
 
 function TFRE_DB_ZFS_POOL.createCache: TFRE_DB_ZFS_CACHE;
 begin
-  Result:=TFRE_DB_ZFS_CACHE.create;
+  Result:=TFRE_DB_ZFS_CACHE.CreateForDB;
   Result.poolId:=UID;
   Result.parentInZFSId:=UID;
 end;
 
 function TFRE_DB_ZFS_POOL.createCacheEmbedded: TFRE_DB_ZFS_CACHE;
 begin
-  Result:=TFRE_DB_ZFS_CACHE.create;
+  Result:=TFRE_DB_ZFS_CACHE.CreateForDB;
   Field('vdev').AddObject(Result);
 end;
 
 function TFRE_DB_ZFS_POOL.createLog: TFRE_DB_ZFS_LOG;
 begin
-  Result:=TFRE_DB_ZFS_LOG.create;
+  Result:=TFRE_DB_ZFS_LOG.CreateForDB;
   Result.poolId:=UID;
   Result.parentInZFSId:=UID;
 end;
 
 function TFRE_DB_ZFS_POOL.createLogEmbedded: TFRE_DB_ZFS_LOG;
 begin
-  Result:=TFRE_DB_ZFS_LOG.create;
+  Result:=TFRE_DB_ZFS_LOG.CreateForDB;
   Field('vdev').AddObject(Result);
 end;
 
@@ -1085,14 +1142,14 @@ function TFRE_DB_ZFS_POOL.createSpare: TFRE_DB_ZFS_SPARE;
 var
   coll: IFRE_DB_COLLECTION;
 begin
-  Result:=TFRE_DB_ZFS_SPARE.create;
+  Result:=TFRE_DB_ZFS_SPARE.CreateForDB;
   Result.poolId:=UID;
   Result.parentInZFSId:=UID;
 end;
 
 function TFRE_DB_ZFS_POOL.createSpareEmbedded: TFRE_DB_ZFS_SPARE;
 begin
-  Result:=TFRE_DB_ZFS_SPARE.create;
+  Result:=TFRE_DB_ZFS_SPARE.CreateForDB;
   Field('vdev').AddObject(Result);
 end;
 
@@ -1251,7 +1308,7 @@ var res                     : integer;
 
   function SourceZFS : TFRE_DB_ZFS;
   begin
-    result   := TFRE_DB_ZFS.create;
+    result   := TFRE_DB_ZFS.CreateForDB;
     if Field('remotehost').AsString<>'' then begin
       result.SetRemoteSSH (Field('remoteuser').asstring, Field('remotehost').asstring, Field('remotekeyfilename').asstring);
     end;
@@ -1259,7 +1316,7 @@ var res                     : integer;
 
   function DestinationZFS : TFRE_DB_ZFS;
   begin
-    result   := TFRE_DB_ZFS.create;
+    result   := TFRE_DB_ZFS.CreateForDB;
     result.SetRemoteSSH(config.Field('destinationuser').AsString,config.Field('destinationhost').AsString, config.Field('destinationkeyfilename').AsString, config.Field('destinationport').AsInt32);
   end;
 
@@ -1334,7 +1391,7 @@ var
   diffs        : integer;
 
 begin
- zfs   := TFRE_DB_ZFS.Create;
+ zfs   := TFRE_DB_ZFS.CreateForDB;
  zfs.SetRemoteSSH (Field('remoteuser').asstring, Field('remotehost').asstring, Field('remotekeyfilename').asstring);
  res   := zfs.GetLastSnapShot(config.Field('dataset').AsString,config.Field('snapshotkey').AsString,snapshotname,creation_ts,error);
  if res<>0 then begin
@@ -1363,7 +1420,7 @@ var zfs    : TFRE_DB_ZFS;
     error  : string;
     pool   : IFRE_DB_Object;
 begin
-  zfs      := TFRE_DB_ZFS.create;
+  zfs      := TFRE_DB_ZFS.CreateForDB;
   zfs.SetRemoteSSH (Field('remoteuser').asstring, Field('remotehost').asstring, Field('remotekeyfilename').asstring);
   res      := zfs.GetPoolStatus(config.Field('poolname').AsString,error,pool);
   if res<>0 then begin
@@ -1384,7 +1441,7 @@ var zfs             : TFRE_DB_ZFS;
     percent         : double;
     percent_b       : byte;
 begin
-  zfs      := TFRE_DB_ZFS.create;
+  zfs      := TFRE_DB_ZFS.CreateForDB;
   zfs.SetRemoteSSH (Field('remoteuser').asstring, Field('remotehost').asstring, Field('remotekeyfilename').asstring);
   res      := zfs.GetDataset(config.Field('dataset').AsString,error,datasetobject);
 //  writeln(datasetobject.DumpToString());
@@ -1486,7 +1543,7 @@ var
 
   procedure SetupZFS;
   begin
-    zfs   := TFRE_DB_ZFS.Create;
+    zfs   := TFRE_DB_ZFS.CreateForDB;
     zfs.SetRemoteSSH (Field('remoteuser').asstring, Field('remotehost').asstring, Field('remotekeyfilename').asstring);
   end;
 
@@ -1561,7 +1618,6 @@ begin
     end;
   end;
 end;
-
 
 procedure TFRE_DB_ZFS.AnalyzeDataSetSpace(const proc: TFRE_DB_Process);
 var  slist         : TStringList;
