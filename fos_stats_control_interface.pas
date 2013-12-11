@@ -69,9 +69,6 @@ const
         c_GET_CACHE_DATA_LOC = 'kstat -p zfs:0:arcstats:size zfs:0:arcstats:misses zfs:0:arcstats:hits zfs:0:arcstats:c zfs:0:arcstats:c_min zfs:0:arcstats:c_max 1';
 
 
-        c_GET_ZPOOL_IOSTAT     = 'zpool iostat -v 1';
-        c_GET_ZPOOL_IOSTAT_LOC = 'zpool iostat -v 1';
-
 type
 
   { IFOS_STATS_CONTROL }
@@ -82,13 +79,11 @@ type
     procedure StartNetworkParser               (const enable:boolean);
     procedure StartCacheParser                 (const enable:boolean);
     procedure StartZFSParser                   (const enable:boolean);
-    procedure StartZpoolIostatParser           (const enable:boolean);
     function  Get_CPU_Data        : IFRE_DB_Object;
     function  Get_CacheData       : IFRE_DB_Object;
     function  Get_Ram_Data        : IFRE_DB_Object;
     function  Get_ZFS_Data_Once   : IFRE_DB_Object;
     function  Get_Network_Data    : IFRE_DB_Object;
-    function  Get_ZpoolIostat_Data: IFRE_DB_Object;
     procedure Finalize;
   end;
 
@@ -147,14 +142,7 @@ type
   public
   end;
 
-  { TFOS_ZPOOL_IOSTAT_PARSER }
 
-  TFOS_ZPOOL_IOSTAT_PARSER=class(TFOS_PARSER_PROC)
-  protected
-     procedure   MySetup ; override;
-     procedure   MyOutStreamCallBack (const stream:TStream); override;
-  public
-  end;
 
   { TFOS_STATS_CONTROL }
 
@@ -169,7 +157,6 @@ type
      FNetworkMon               : TFOS_NETWORK_PARSER;
      FCacheMon                 : TFOS_CACHE_PARSER;
      FZFSMon                   : TFOS_ZFS_PARSER;
-     FZpoolIoMon               : TFOS_ZPOOL_IOSTAT_PARSER;
 
      procedure   Finalize;
   public
@@ -180,13 +167,11 @@ type
      procedure   StartNetworkParser               (const enable:boolean);
      procedure   StartCacheParser                 (const enable:boolean);
      procedure   StartZFSParser                   (const enable:boolean);
-     procedure   StartZpoolIostatParser           (const enable:boolean);
      function    Get_CPU_Data        : IFRE_DB_Object;
      function    Get_CacheData       : IFRE_DB_Object;
      function    Get_Ram_Data        : IFRE_DB_Object;
      function    Get_ZFS_Data_Once   : IFRE_DB_Object;
      function    Get_Network_Data    : IFRE_DB_Object;
-     function    Get_ZpoolIostat_Data: IFRE_DB_Object;
   end;
 
 
@@ -197,93 +182,6 @@ begin
   dir := SetDirSeparators(cFRE_SERVER_DEFAULT_DIR+'/ssl/user/id_rsa');
   res := TFOS_STATS_CONTROL.Create(user,host,dir);
   Result := res;
-end;
-
-procedure TFOS_ZPOOL_IOSTAT_PARSER.MySetup;
-begin
-  FLine.Delimiter:=' ';
-end;
-
-procedure TFOS_ZPOOL_IOSTAT_PARSER.MyOutStreamCallBack(const stream: TStream);
-var st       : TStringStream;
-    sl       : TStringlist;
-    i,j      : integer;
-    s        : string;
-    lc       : integer;
-    SA       : TFOSStringArray;
-    pool_name: String;
-    np       : Boolean;
-    rz_cout  : Integer;
-
-  //                               capacity     operations    bandwidth
-  // pool                       alloc   free   read  write   read  write
-  procedure _UpdateZpoolIostat;
-  var zfsObjId : string[30];
-  begin
-    zfsObjId := Fline[0];
-    if np then begin
-      pool_name := zfsObjId;
-      np:=false;
-    end;
-    if pos('raidz',LowerCase(zfsObjId))=1 then begin //FIXXME - HACK
-      zfsObjId:=zfsObjId+'-'+IntToStr(rz_cout);
-      rz_cout:=rz_cout+1;
-    end;
-    FData.Field(pool_name).AsObject.Field(zfsObjId).AsObject.Field('iops_r').AsString     := Fline[3];//can be -
-    FData.Field(pool_name).AsObject.Field(zfsObjId).AsObject.Field('iops_w').AsString     := Fline[4];
-    FData.Field(pool_name).AsObject.Field(zfsObjId).AsObject.Field('transfer_r').AsString := Fline[5];//in K,M
-    FData.Field(pool_name).AsObject.Field(zfsObjId).AsObject.Field('transfer_w').AsString := Fline[6];//
-  end;
-
-begin
-  stream.Position:=0;
-  st := TStringStream.Create('');
-  try
-    st.CopyFrom(stream,stream.Size);
-    stream.Size:=0;
-    FLines.DelimitedText := st.DataString;
-    if Flines.count>0 then begin
-      if pos('capacity',Flines[0])>1 then begin
-        lc := FLines.Count;
-        for i := 2 to lc-4 do begin
-          s := FLines[i];
-          if s='' then begin
-            continue;
-          end;
-          GFRE_BT.SeperateString(s,' ',SA);
-          fline.Clear;
-          for j := 0 to high(sa) do begin
-            if sa[j]<>'' then FLine.Add(sa[j]);
-          end;
-          if pos('-',Fline[0])=1 then begin
-            np:=true;
-            rz_cout:=0;
-            continue;
-          end;
-          if FLine.count<>7 then
-            continue;
-            //raise EFRE_Exception.Create('zpool iostat parser error, unexpected val count ' + IntToStr(fline.Count)+' '+fline.text);
-          FLock.Acquire;
-          try
-            try
-              _UpdateZpoolIostat;
-            except on E:Exception do begin
-              writeln(ClassName,'>>>Mickey Parser Error---');
-              s:= Fline.DelimitedText;
-              writeln(s);
-              writeln(Classname,'<<<Mickey Parser Error---');
-            end;end;
-          finally
-            FLock.Release;
-          end;
-        end;
-      end;
-    end else begin
-      writeln(ClassName,'*IGNORING JUNK : ',st.Size,': [',st.DataString,']');
-    end;
-  finally
-    st.Free;
-  end;
 end;
 
 procedure TFOS_ZFS_PARSER.MySetup;
@@ -719,7 +617,6 @@ begin
       FRAMMon     := TFOS_RAM_PARSER.Create(user,dir,host,c_GET_RAM_DATA);
       FNetworkMon := TFOS_NETWORK_PARSER.Create(user,dir,host,c_GET_NETWORK_DATA);
       FCacheMon   := TFOS_CACHE_PARSER.Create(user,dir,host,c_GET_CACHE_DATA);
-      FZpoolIoMon := TFOS_ZPOOL_IOSTAT_PARSER.Create(user,dir,host,c_GET_ZPOOL_IOSTAT);
     end
   else
     begin
@@ -727,7 +624,6 @@ begin
       FRAMMon     := TFOS_RAM_PARSER.Create(user,dir,host,c_GET_RAM_DATA_LOC);
       FNetworkMon := TFOS_NETWORK_PARSER.Create(user,dir,host,c_GET_NETWORK_DATA_LOC);
       FCacheMon   := TFOS_CACHE_PARSER.Create(user,dir,host,c_GET_CACHE_DATA_LOC);
-      FZpoolIoMon := TFOS_ZPOOL_IOSTAT_PARSER.Create(user,dir,host,c_GET_ZPOOL_IOSTAT_LOC);
     end;
   cremoteuser        := user;
   cremotehost        := host;
@@ -740,8 +636,6 @@ begin
   FNetworkMon.Free;
   FCacheMon.Disable;
   FCacheMon.Free;
-  FZpoolIoMon.Disable;
-  FZpoolIoMon.Free;
   FRAMMon.Disable;
   FRAMMon.FRee;
   FCPUMon.Disable;
@@ -790,16 +684,6 @@ begin
   else
     FCPUMon.Disable;
 end;
-
-procedure TFOS_STATS_CONTROL.StartZpoolIostatParser(const enable: boolean);
-begin
-  if enable then
-    FZpoolIoMon.Enable
-  else
-    FZpoolIoMon.Disable;
-end;
-
-
 
 function TFOS_STATS_CONTROL.Get_CPU_Data: IFRE_DB_Object;
 var
@@ -915,11 +799,6 @@ begin
   result.ForAllFields(@_addNet);
 
   result.Field('NET_AGGR').AsObject := NETAGGR;
-end;
-
-function TFOS_STATS_CONTROL.Get_ZpoolIostat_Data: IFRE_DB_Object;
-begin
-  result    := FZpoolIoMon.Get_Data_Object;
 end;
 
 end.

@@ -77,6 +77,14 @@ type
 
   TFRE_DB_ZFS_ROOTOBJ=class;
 
+  { TFRE_DB_IOSTAT }
+
+  TFRE_DB_IOSTAT=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+  public
+  end;
+
   { TFRE_DB_ZFS_OBJ }
 
   TFRE_DB_ZFS_OBJ=class(TFRE_DB_ObjectEx)
@@ -95,6 +103,8 @@ type
     procedure SetPoolId        (AValue: TGuid);
     procedure SetTransferRead  (AValue: TFRE_DB_String);
     procedure SetTransferWrite (AValue: TFRE_DB_String);
+    function  getIOStat             : TFRE_DB_IOSTAT;
+    procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
   protected
     procedure MapClassToDragAndDropClass (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
@@ -114,6 +124,7 @@ type
     procedure setIsNew                (const avalue:Boolean=true);
     procedure setZFSGuid              (const avalue:String);
     function  canIdentify             : Boolean; virtual;
+    property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
     property  caption                 : TFRE_DB_String read GetCaption       write SetCaption;
     property  iopsR                   : TFRE_DB_String read GetIopsRead      write SetIopsRead;
     property  iopsW                   : TFRE_DB_String read GetIopsWrite     write SetIopsWrite;
@@ -132,13 +143,7 @@ type
   public
   end;
 
-  { TFRE_DB_BLOCKDEVICE_IOSTAT }
 
-  TFRE_DB_BLOCKDEVICE_IOSTAT=class(TFRE_DB_ObjectEx)
-  protected
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-  public
-  end;
 
   { TFRE_DB_ZFS_BLOCKDEVICE }
 
@@ -147,8 +152,6 @@ type
     function  getIsOffline          : Boolean;
     function  getisUnassigned       : Boolean;
     procedure setIsOffline          (AValue: Boolean);
-    function  getIOStat             : TFRE_DB_BLOCKDEVICE_IOSTAT;
-    procedure setIOStat             (const Avalue: TFRE_DB_BLOCKDEVICE_IOSTAT);
     procedure setIsUnassgined       (AValue: Boolean);
   protected
     function  getDeviceIdentifier               : TFRE_DB_String;
@@ -167,7 +170,6 @@ type
     property  isOffline         : Boolean read getIsOffline write setIsOffline;
     property  DeviceIdentifier  : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
-    property  IoStat            : TFRE_DB_BLOCKDEVICE_IOSTAT read getIOStat write setIOStat;
     property  IsUnassigned      : Boolean read getisUnassigned write setIsUnassgined;
   end;
 
@@ -321,7 +323,6 @@ type
   private
     procedure       AddParameter                (const parameter : string; var  params  : TFRE_DB_StringArray);
     procedure       AnalyzeSnapshots            (const proc   : TFRE_DB_Process);
-    procedure       AnalyzePoolStatus           (const proc   : TFRE_DB_Process);
     procedure       AnalyzeDataSetSpace         (const proc   : TFRE_DB_Process);
     procedure       AnalyzePoolList             (const proc   : TFRE_DB_Process);
   protected
@@ -371,15 +372,16 @@ type
   end;
 
 
-procedure Register_DB_Extensions;
+  procedure Register_DB_Extensions;
 
-function String2DBZFSRaidLevelType(const fts: string): TFRE_DB_ZFS_RAID_LEVEL;
+  function String2DBZFSRaidLevelType(const fts: string): TFRE_DB_ZFS_RAID_LEVEL;
+  function ParseZpool               (const pooltxt: string; out pool: TFRE_DB_ZFS_POOL): boolean;
 
 implementation
 
-{ TFRE_DB_BLOCKDEVICE_IOSTAT }
+{ TFRE_DB_IOSTAT }
 
-class procedure TFRE_DB_BLOCKDEVICE_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+class procedure TFRE_DB_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
 end;
@@ -684,6 +686,16 @@ begin
   Field('transfer_w').AsString:=AValue;
 end;
 
+function TFRE_DB_ZFS_OBJ.getIOStat: TFRE_DB_IOSTAT;
+begin
+  result :=  (Field('iostat').AsObject.Implementor_HC as TFRE_DB_IOSTAT);
+end;
+
+procedure TFRE_DB_ZFS_OBJ.setIOStat(const Avalue: TFRE_DB_IOSTAT);
+begin
+  Field('iostat').AsObject:=AValue;
+end;
+
 procedure TFRE_DB_ZFS_OBJ.MapClassToDragAndDropClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
   calcfieldsetter.SetAsString(ClassName);
@@ -903,18 +915,6 @@ begin
   Field('isOffline').AsBoolean:=AValue;
 end;
 
-function TFRE_DB_ZFS_BLOCKDEVICE.getIOStat: TFRE_DB_BLOCKDEVICE_IOSTAT;
-begin
-  result :=  (Field('iostat').AsObject.Implementor_HC as TFRE_DB_BLOCKDEVICE_IOSTAT);
-end;
-
-procedure TFRE_DB_ZFS_BLOCKDEVICE.setIOStat(const Avalue: TFRE_DB_BLOCKDEVICE_IOSTAT);
-begin
-  if FieldExists('iostat') then
-    AValue.Field('UID').asGUID:=Field('iostat').AsObject.UID;
-
-  Field('iostat').AsObject:=AValue;
-end;
 
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setIsUnassgined(AValue: Boolean);
 begin
@@ -1122,7 +1122,7 @@ var poolcolletion        : IFRE_DB_COLLECTION;
 
       procedure _SetPoolParameter;
       begin
-        dbblockdevice_obj.setZFSGuid(Field('pool').asstring+'-'+disk.Field('name').asstring);         //FIXME FAKE
+        dbblockdevice_obj.setZFSGuid((disk.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE).getZFSGuid);
         dbblockdevice_obj.parentInZFSId :=  parent_id;
         dbblockdevice_obj.poolId        :=  db_pool_uid;
         dbblockdevice_obj.IsUnassigned  :=  false;
@@ -1160,7 +1160,6 @@ var poolcolletion        : IFRE_DB_COLLECTION;
     begin
       dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER;
       dbvdevcontainer_obj.DeleteField('vdev');
-      dbvdevcontainer_obj.setZFSGuid(Field('pool').asstring+'-'+vdev.Field('name').asstring);        //FIXME FAKE
       dbvdevcontainer_obj.parentInZFSId := parent_id;
       dbvdevcontainer_obj.poolId        :=  db_pool_uid;
 
@@ -1204,7 +1203,6 @@ begin
                  begin
                    dbvdev_obj := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_VDEV;
                    dbvdev_obj.DeleteField('vdev');
-                   dbvdev_obj.setZFSGuid(Field('pool').asstring+'-'+vdev.Field('name').asstring);         //FIXME FAKE
                    dbvdev_obj.parentInZFSId := db_vdev_container_uid;
                    dbvdev_obj.poolId        :=  db_pool_uid;
 
@@ -1564,148 +1562,6 @@ begin
   end;
 end;
 
-procedure TFRE_DB_ZFS.AnalyzePoolStatus(const proc: TFRE_DB_Process);
-var  slist   : TStringList;
-     i       : integer;
-     cmd     : string;
-     namep   : integer;
-     statep  : integer;
-     readp   : integer;
-     writep  : integer;
-     cksump  : integer;
-     pool    : TFRE_DB_ZFS_POOL;
-
-    //  pool: zones
-    // state: ONLINE
-    //status: One or more devices has experienced an unrecoverable error.  An
-    //	attempt was made to correct the error.  Applications are unaffected.
-    //action: Determine if the device needs to be replaced, and clear the errors
-    //	using 'zpool clear' or replace the device with 'zpool replace'.
-    //   see: http://illumos.org/msg/ZFS-8000-9P
-    //  scan: scrub repaired 0 in 4h57m with 0 errors on Tue Sep 11 15:06:55 2012
-    //config:
-    //
-    //	NAME        STATE     READ WRITE CKSUM
-    //	zones       ONLINE       0     0     0
-    //	  raidz2-0  ONLINE       0     0     0
-    //	    c3t3d0  ONLINE       0     0     2
-    //	    c3t5d0  ONLINE       0     0     0
-    //	    c3t1d0  ONLINE       0     0     1
-    //	    c3t0d0  ONLINE       0     0     0
-    //	    c3t4d0  ONLINE       0     0     0
-    //	    c3t2d0  ONLINE       0     0     0
-    //	logs
-    //	  c1t1d0    ONLINE       0     0     0
-    //
-    //errors: No known data errors
-
-    //      pool: testpool
-    // state: ONLINE
-    //  scan: none requested
-    //config:
-    //
-    //        NAME                     STATE     READ WRITE CKSUM
-    //        testpool                 ONLINE       0     0     0
-    //          raidz1-0               ONLINE       0     0     0
-    //            /zones/testfiles/11  ONLINE       0     0     0
-    //            /zones/testfiles/12  ONLINE       0     0     0
-    //            /zones/testfiles/13  ONLINE       0     0     0
-    //          raidz1-1               ONLINE       0     0     0
-    //            /zones/testfiles/21  ONLINE       0     0     0
-    //            /zones/testfiles/22  ONLINE       0     0     0
-    //            /zones/testfiles/23  ONLINE       0     0     0
-    //
-  procedure Parseline (line : string);
-  var newcmd    : string;
-      cmdline   : boolean;
-      devname   : string;
-      dev       : IFRE_DB_Object;
-      parentdev : Array [0 .. 10 ] of IFRE_DB_Object;
-      devlvl    : integer;
-
-      function DevLevel(name : string) : integer;
-      begin
-       result := 0;
-       while (Pos('  ',name)=1) do begin
-        name := Copy(name, 3, maxint);
-        inc(result);
-       end;
-      end;
-
-  begin
-    newcmd    := trim(Copy ( line, 1, 8));
-    cmdline   := false;
-    if Pos    (':',newcmd)>0 then begin
-      cmd     := Copy(newcmd,1,Pos(':',newcmd)-1);
-      cmdline := true;
-    end;
-    if cmd <> 'config' then begin
-      writeln(line );
-      if not cmdline then begin
-        line   := trim( line );
-        pool.Field(cmd).AsString  := pool.Field(cmd).AsString + ' '+ line;
-      end else begin
-        line   := trim ( Copy ( line, Pos(':',line)+1, maxint ));
-        pool.Field(cmd).AsString  := line;
-      end;
-    end else begin
-      if (length (line) > 0) and (not cmdline)  then begin
-        if Pos('NAME',line) > 0  then begin
-          namep  := Pos('NAME' , line);
-          statep := Pos('STATE' , line);
-          readp  := Pos('READ', line);
-          writep := Pos('WRITE', line);
-          cksump := Pos('CKSUM', line);
-        end else begin
-          devname                       := Copy(line,namep,statep-namep-2);
-          devlvl                        := DevLevel(devname);
-          if (Pos('raid',trim(lowercase(devname)))=1) then begin
-            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded;
-            if (Pos('raidz1',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z1)
-              else if (Pos('raidz2',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z2)
-                else if (Pos('raidz3',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z3)
-                  else (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_undefined);
-          end else if (Pos('mirror',trim(lowercase(devname)))=1) then begin
-            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded;
-            (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_mirror);
-          end else if Pos('spare',trim(lowercase(devname)))=1 then begin
-            dev := pool.createSpareEmbedded;
-          end else if Pos('log',trim(lowercase(devname)))=1 then begin
-            dev := pool.createLogEmbedded;
-          end else if Pos('cache',trim(lowercase(devname)))=1 then begin
-            dev := pool.createCacheEmbedded;
-          end else begin
-            if devlvl = 0 then begin
-              dev := pool.createDatastorageEmbedded;
-            end else begin
-              dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded;
-            end;
-          end;
-          dev.Field('devicename').AsString := trim(devname);
-          dev.Field('name').AsString       := trim(devname);
-          dev.Field('state').AsString      := trim(Copy (line,statep,readp-statep-1));
-          dev.Field('read').AsString       := trim(Copy (line,readp,writep-readp-1));
-          dev.Field('write').AsString      := trim(Copy (line,writep,cksump-writep-1));
-          dev.Field('cksum').AsString      := trim(Copy (line,cksump,maxint));
-          parentdev [devlvl ]              := dev;
-        end;
-      end;
-    end;
-  end;
-
-begin
-  slist := TStringList.Create;
-  try
-     slist.text                          := TFRE_DB_Process (proc.Implementor_HC).OutputToString;
-     pool                                := TFRE_DB_ZFS_POOL.Create;
-     proc.Field('pool').asobject         := pool;
-     for i  := 0 to slist.Count -1 do begin
-       ParseLine(slist[i]);
-     end;
-  finally
-    slist.Free;
-  end;
-end;
 
 procedure TFRE_DB_ZFS.AnalyzeDataSetSpace(const proc: TFRE_DB_Process);
 var  slist         : TStringList;
@@ -1982,17 +1838,31 @@ end;
 
 function TFRE_DB_ZFS.GetPoolStatus(const poolname: string; out error: string; out pool: IFRE_DB_Object): integer;
 var
-  proc  : TFRE_DB_Process;
+  proc    : TFRE_DB_Process;
+  pool_hc : TFRE_DB_ZFS_POOL;
 begin
   ClearProcess;
   proc := TFRE_DB_Process.create;
   proc.SetupInput('zpool',TFRE_DB_StringArray.Create ('status',poolname));
   AddProcess(proc);
   ExecuteMulti;
-  AnalyzePoolStatus(proc);
-  pool   := proc.Field('pool').AsObject.CloneToNewObject();
+  if proc.Field('exitstatus').AsInt32=0 then
+    begin
+      if ParseZpool(TFRE_DB_Process (proc.Implementor_HC).OutputToString,pool_hc) then
+        begin
+         pool := pool_hc;
+         proc.Field('exitstatus').AsInt32    :=0;
+        end
+      else
+        begin
+          if Assigned(pool_hc) then
+            pool_hc.Finalize;
+          pool := nil;
+          proc.Field('exitstatus').AsInt32   :=-1;
+          error  := proc.Field('errorstring').AsString;
+        end;
+    end;
   result := proc.Field('exitstatus').AsInt32;
-  error  := proc.Field('errorstring').AsString;
 end;
 
 function TFRE_DB_ZFS.GetDataset(const dataset: string; out error: string; out datasetobject: IFRE_DB_Object): integer;
@@ -2193,7 +2063,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DATASTORAGE);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_VDEV);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_BLOCKDEVICE);
-  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_BLOCKDEVICE_IOSTAT);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IOSTAT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DISKCONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_VDEVCONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_SPARE);
@@ -2210,6 +2080,154 @@ begin
      if CFRE_DB_ZFS_RAID_LEVEL[result]=fts then exit;
   end;
   raise Exception.Create('invalid short DBZFSRaidLevel specifier : ['+fts+']');
+end;
+
+function ParseZpool(const pooltxt: string; out pool: TFRE_DB_ZFS_POOL): boolean;
+var  slist   : TStringList;
+     i       : integer;
+     cmd     : string;
+     namep   : integer;
+     statep  : integer;
+     readp   : integer;
+     writep  : integer;
+     cksump  : integer;
+
+    //  pool: zones
+    // state: ONLINE
+    //status: One or more devices has experienced an unrecoverable error.  An
+    //	attempt was made to correct the error.  Applications are unaffected.
+    //action: Determine if the device needs to be replaced, and clear the errors
+    //	using 'zpool clear' or replace the device with 'zpool replace'.
+    //   see: http://illumos.org/msg/ZFS-8000-9P
+    //  scan: scrub repaired 0 in 4h57m with 0 errors on Tue Sep 11 15:06:55 2012
+    //config:
+    //
+    //	NAME        STATE     READ WRITE CKSUM
+    //	zones       ONLINE       0     0     0
+    //	  raidz2-0  ONLINE       0     0     0
+    //	    c3t3d0  ONLINE       0     0     2
+    //	    c3t5d0  ONLINE       0     0     0
+    //	    c3t1d0  ONLINE       0     0     1
+    //	    c3t0d0  ONLINE       0     0     0
+    //	    c3t4d0  ONLINE       0     0     0
+    //	    c3t2d0  ONLINE       0     0     0
+    //	logs
+    //	  c1t1d0    ONLINE       0     0     0
+    //
+    //errors: No known data errors
+
+    //      pool: testpool
+    // state: ONLINE
+    //  scan: none requested
+    //config:
+    //
+    //        NAME                     STATE     READ WRITE CKSUM
+    //        testpool                 ONLINE       0     0     0
+    //          raidz1-0               ONLINE       0     0     0
+    //            /zones/testfiles/11  ONLINE       0     0     0
+    //            /zones/testfiles/12  ONLINE       0     0     0
+    //            /zones/testfiles/13  ONLINE       0     0     0
+    //          raidz1-1               ONLINE       0     0     0
+    //            /zones/testfiles/21  ONLINE       0     0     0
+    //            /zones/testfiles/22  ONLINE       0     0     0
+    //            /zones/testfiles/23  ONLINE       0     0     0
+    //
+  procedure Parseline (line : string);
+  var newcmd    : string;
+      cmdline   : boolean;
+      devname   : string;
+      dev       : IFRE_DB_Object;
+      parentdev : Array [0 .. 10 ] of IFRE_DB_Object;
+      zfs_path  : string;
+      devlvl    : integer;
+
+      function DevLevel(name : string) : integer;
+      begin
+       result := 0;
+       while (Pos('  ',name)=1) do begin
+        name := Copy(name, 3, maxint);
+        inc(result);
+       end;
+      end;
+
+  begin
+    newcmd    := trim(Copy ( line, 1, 8));
+    cmdline   := false;
+    if Pos    (':',newcmd)>0 then begin
+      cmd     := Copy(newcmd,1,Pos(':',newcmd)-1);
+      cmdline := true;
+    end;
+    if cmd <> 'config' then begin
+      if not cmdline then begin
+        line   := trim( line );
+        pool.Field(cmd).AsString  := pool.Field(cmd).AsString + ' '+ line;
+      end else begin
+        line   := trim ( Copy ( line, Pos(':',line)+1, maxint ));
+        pool.Field(cmd).AsString  := line;
+      end;
+    end else begin
+      if (length (line) > 0) and (not cmdline)  then begin
+        if Pos('NAME',line) > 0  then begin
+          namep  := Pos('NAME' , line);
+          statep := Pos('STATE' , line);
+          readp  := Pos('READ', line);
+          writep := Pos('WRITE', line);
+          cksump := Pos('CKSUM', line);
+        end else begin
+          devname                       := Copy(line,namep,statep-namep-2);
+          devlvl                        := DevLevel(devname);
+          if (Pos('raid',trim(lowercase(devname)))=1) then begin
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded;
+            if (Pos('raidz1',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z1)
+              else if (Pos('raidz2',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z2)
+                else if (Pos('raidz3',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z3)
+                  else (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_undefined);
+          end else if (Pos('mirror',trim(lowercase(devname)))=1) then begin
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded;
+            (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_mirror);
+          end else if Pos('spare',trim(lowercase(devname)))=1 then begin
+            dev := pool.createSpareEmbedded;
+          end else if Pos('log',trim(lowercase(devname)))=1 then begin
+            dev := pool.createLogEmbedded;
+          end else if Pos('cache',trim(lowercase(devname)))=1 then begin
+            dev := pool.createCacheEmbedded;
+          end else begin
+            if devlvl = 0 then begin
+              dev := pool.createDatastorageEmbedded;
+            end else begin
+              dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded;
+            end;
+          end;
+          dev.Field('devicename').AsString := trim(devname);
+          dev.Field('name').AsString       := trim(devname);
+          dev.Field('state').AsString      := trim(Copy (line,statep,readp-statep-1));
+          dev.Field('read').AsString       := trim(Copy (line,readp,writep-readp-1));
+          dev.Field('write').AsString      := trim(Copy (line,writep,cksump-writep-1));
+          dev.Field('cksum').AsString      := trim(Copy (line,cksump,maxint));
+          if devlvl>0 then
+            zfs_path := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_OBJ).GetZFSGuid+'/'+trim(devname)
+          else
+            zfs_path := pool.Field('pool').AsString+'/'+trim(devname);
+          (dev.Implementor_HC as TFRE_DB_ZFS_OBJ).setZFSGuid(zfs_path);
+          parentdev [devlvl ]              := dev;
+        end;
+      end;
+    end;
+  end;
+
+begin
+ result := false;
+ slist  := TStringList.Create;
+ try
+    slist.text                          := pooltxt;
+    pool                                := TFRE_DB_ZFS_POOL.Create;
+    for i  := 0 to slist.Count -1 do begin
+      ParseLine(slist[i]);
+    end;
+    result:=true;
+ finally
+   slist.Free;
+ end;
 end;
 
 

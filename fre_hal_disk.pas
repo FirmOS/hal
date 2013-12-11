@@ -46,57 +46,42 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi,fre_base_parser;
+  FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi,fre_base_parser,FRE_SYSTEM;
 
-
-const
-
-  cIOSTATFILEHACKMIST     = '/zones/firmos/myiostat.sh';
-  cIOSTATFILEHACKMIST_LOC = 'sh -c /zones/firmos/myiostat.sh';
 
 type
-
-
-  TFRE_HAL_DISK = class;
-
-  { TFOS_IOSTAT_PARSER }
-
-  { TFRE_IOSTAT_PARSER }
-
-  TFRE_IOSTAT_PARSER=class(TFOS_PARSER_PROC)
-  private
-    fhal_disk  : TFRE_HAL_DISK;
-  protected
-    procedure   MyOutStreamCallBack (const stream:TStream); override;
-  public
-    constructor Create (const remoteuser,remotekeyfile,remotehost,cmd : string;const hal_disk:TFRE_HAL_DISK);
-  end;
 
   { TFRE_HAL_DISK }
 
   TFRE_HAL_DISK = class (TFRE_DB_Base)
   private
-    FDiskIoStatMon        : TFRE_IOSTAT_PARSER;
 
-    disk_lock                          : IFOS_LOCK;
-    disk_information                   : IFRE_DB_Object;
+    data_lock                          : IFOS_LOCK;
+    Fdata                              : IFRE_DB_Object;
 
   public
     constructor Create                 ; override;
-    destructor Destroy                 ; override;
+    destructor  Destroy                ; override;
 
     procedure InitializeDiskandEnclosureInformation (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
     procedure InitializePoolInformation             (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
-    procedure StartIostatMonitor                    (const remoteuser:string='';const remotehost:string='';const remotekey:string='');
 
-    function  IsInformationAvailable                :boolean;
+    procedure ReceivedDBO                           (const dbo:IFRE_DB_Object);
+    procedure UpdateDiskAndEnclosure                (const dbo:IFRE_DB_Object);
+    procedure UpdateIostat                          (const dbo:IFRE_DB_Object);
+    procedure UpdateZpoolStatus                     (const dbo:IFRE_DB_Object);
+    procedure UpdateZpoolIostat                     (const dbo:IFRE_DB_Object);
 
-    function  GetInformation                        : IFRE_DB_Object;
+    procedure CheckDifferences                      (const old_fdata:IFRE_DB_Object);
+
+    function  IsDataAvailable                       :boolean;
+
+    function  GetData                               : IFRE_DB_Object;
 
     function  FetchDiskAndEnclosureInformation      (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
     function  FetchPoolConfiguration                (const zfs_pool_name:string; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
 
-    procedure UpdateDiskIoStatInformation           (const devicename:string; const iostat_information: TFRE_DB_BLOCKDEVICE_IOSTAT);
+    procedure UpdateDiskIoStatInformation           (const devicename:string; const iostat_information: TFRE_DB_IOSTAT);
 
     function  GetPools                  (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
     function  CreateDiskpool            (const input:IFRE_DB_Object; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
@@ -110,93 +95,27 @@ type
 
 implementation
 
-{ TFRE_IOSTAT_PARSER }
-
-procedure TFRE_IOSTAT_PARSER.MyOutStreamCallBack(const stream: TStream);
-var st : TStringStream;
-    sl : TStringlist;
-    i  : integer;
-    s  : string;
-    lc : integer;
-
-  //  r/s,w/s,kr/s,kw/s,wait,actv,wsvc_t,asvc_t,%w,%b,device
-  procedure _UpdateDisk;
-  var devicename : string[30];
-      diskiostat : TFRE_DB_BLOCKDEVICE_IOSTAT;
-  begin
-    devicename := Fline[10];
-    diskiostat := TFRE_DB_BLOCKDEVICE_IOSTAT.Create;
-    try
-      diskiostat.Field('rps').AsReal32    := StrToFloat(Fline[0]);
-      diskiostat.Field('wps').AsReal32    := StrToFloat(Fline[1]);
-      diskiostat.Field('krps').AsReal32   := StrToFloat(Fline[2]);
-      diskiostat.Field('kwps').AsReal32   := StrToFloat(Fline[3]);
-      diskiostat.Field('wait').AsReal32   := StrToFloat(Fline[4]);
-      diskiostat.Field('actv').AsReal32   := StrToFloat(Fline[5]);
-      diskiostat.Field('wsvc_t').AsReal32 := StrToFloat(Fline[6]);
-      diskiostat.Field('actv_t').AsReal32 := StrToFloat(Fline[7]);
-      diskiostat.Field('perc_w').AsReal32 := StrToFloat(Fline[8]);
-      diskiostat.Field('perc_b').AsReal32 := StrToFloat(Fline[9]);
-    except on E:Exception do begin
-      writeln(ClassName,'>>>Mickey Parser Error---');
-      s:= Fline.DelimitedText;
-      writeln(s);
-      writeln(Classname,'<<<Mickey Parser Error---');
-    end;end;
-    fhal_disk.UpdateDiskIoStatInformation(devicename,diskiostat);
-  end;
-
-begin
-  stream.Position:=0;
-  st := TStringStream.Create('');
-  try
-    st.CopyFrom(stream,stream.Size);
-    stream.Size:=0;
-    FLines.DelimitedText := st.DataString;
-    if Flines.count>0 then begin
-      if pos('extended',Flines[0])=1 then begin
-        lc := FLines.Count;
-        for i := 2 to lc-2 do begin
-          Fline.DelimitedText := Flines[i];
-          if pos('extended',Fline[0])=1 then begin
-            Continue;
-          end;
-          if pos('r/s',Fline[0])=1 then begin
-            continue;
-          end;
-          _UpdateDisk;
-        end;
-      end;
-    end else begin
-      writeln(ClassName,'*IGNORING JUNK : ',st.Size,': [',st.DataString,']');
-    end;
-  finally
-    st.Free;
-  end;
-end;
-
-constructor TFRE_IOSTAT_PARSER.Create(const remoteuser, remotekeyfile, remotehost, cmd: string; const hal_disk: TFRE_HAL_DISK);
-begin
-  inherited Create(remoteuser,remotekeyfile,remotehost,cmd);
-  fhal_disk := hal_disk;
-end;
-
 
 { TFRE_HAL_DISK }
 
 constructor TFRE_HAL_DISK.Create;
+var indbo:IFRE_DB_Object;
 begin
   inherited;
-  GFRE_TF.Get_Lock(disk_lock);
+  GFRE_TF.Get_Lock(data_lock);
+  Fdata:=GFRE_DBI.NewObject;
+
+  //indbo :=GFRE_DBI.CreateFromFile('DISKENC');
+  //ReceivedDBO(indbo);
+  //indbo :=GFRE_DBI.CreateFromFile('DISKENC');
+  //ReceivedDBO(indbo);
 end;
 
 destructor TFRE_HAL_DISK.Destroy;
 begin
-  if Assigned(FDiskIostatMon) then
-    FDiskIOstatMon.Free;
 
-  disk_lock.Finalize;
-  disk_information.Finalize;
+  data_lock.Finalize;
+  Fdata.Finalize;
 
   inherited Destroy;
 end;
@@ -213,14 +132,14 @@ begin
     end
   else
     begin
-      disk_lock.Acquire;
+      data_lock.Acquire;
       try
-        if Assigned(disk_information) then
-          disk_information.Finalize;
-        disk_information := disks.Field('data').AsObject.CloneToNewObject(false);
+        if Assigned(Fdata) then
+          Fdata.Finalize;
+        Fdata := disks.Field('data').AsObject.CloneToNewObject(false);
         disks.Finalize;
       finally
-        disk_lock.Release;
+        data_lock.Release;
       end;
     end;
 end;
@@ -249,45 +168,342 @@ begin
           pool     := FetchPoolConfiguration(poolname,remoteuser,remotehost,remotekey);
           (pool.Field('data').asobject.Implementor_HC as TFRE_DB_ZFS_POOL).setZFSGuid(pools.Field('data').AsObjectItem[i].Field('zpool_guid').asstring);
 
-          disk_lock.Acquire;
+          data_lock.Acquire;
           try
-            if disk_information.FieldExists('pools')=false then
-              disk_information.Field('pools').AddObject(GFRE_DBI.NewObject);
-            disk_information.Field('pools').asobject.Field(poolname).asObject:=pool.Field('data').asobject;
+            if Fdata.FieldExists('pools')=false then
+              Fdata.Field('pools').AddObject(GFRE_DBI.NewObject);
+            Fdata.Field('pools').asobject.Field(poolname).asObject:=pool.Field('data').asobject;
           finally
-            disk_lock.Release;
+            data_lock.Release;
           end;
         end;
     end;
 
 end;
 
-procedure TFRE_HAL_DISK.StartIostatMonitor(const remoteuser: string; const remotehost: string; const remotekey: string);
+procedure TFRE_HAL_DISK.ReceivedDBO(const dbo: IFRE_DB_Object);
+var subfeedmodule:string;
 begin
-  if remotehost<>'' then
-    FDiskIoStatMon := TFRE_IOSTAT_PARSER.Create(remoteuser,remotekey,remotehost,cIOSTATFILEHACKMIST_LOC,self)
+//  writeln(dbo.DumpToString());
+  subfeedmodule := dbo.Field('SUBFEED').asstring;
+  if subfeedmodule='DISKENCLOSURE' then
+    UpdateDiskAndEnclosure(dbo.Field('data').asobject)
   else
-    FDiskIoStatMon := TFRE_IOSTAT_PARSER.Create(remoteuser,remotekey,remotehost,cIOSTATFILEHACKMIST,self);
+    if subfeedmodule='IOSTAT' then
+      UpdateIostat(dbo.Field('data').asobject)
+    else
+      if subfeedmodule='ZPOOLSTATUS' then
+        UpdateZpoolStatus(dbo.Field('data').asobject)
+      else
+        if subfeedmodule='ZPOOLIOSTAT' then
+          UpdateZpoolIostat(dbo.Field('data').asobject)
+        else
+          writeln('UNHANDLED SUBFEEDMODULE ',subfeedmodule);
 
-  FDiskIoStatMon.Enable;
 end;
 
-function TFRE_HAL_DISK.IsInformationAvailable: boolean;
-begin
-  result := Assigned(disk_information);
-  if result then
-    result := disk_information.FieldExists('pools');
-end;
+procedure TFRE_HAL_DISK.UpdateDiskAndEnclosure(const dbo: IFRE_DB_Object);
+var
+  last_fdata:IFRE_DB_Object;
 
-function TFRE_HAL_DISK.GetInformation: IFRE_DB_Object;
-begin
-  if IsInformationAvailable then
+  procedure _UpdateDisks(const obj:IFRE_DB_Object);
+  var feed_disk : TFRE_DB_PHYS_DISK;
+      old_obj   : IFRE_DB_OBject;
+  begin
+    feed_disk := obj.Implementor_HC as TFRE_DB_PHYS_DISK;
+    if fdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_disk.DeviceIdentifier,old_obj,'') then
+      begin
+        old_obj.SetAllSimpleObjectFieldsFromObject(feed_disk);
+      end
+    else
+      begin
+        fdata.Field('disks').asObject.Field(feed_disk.Field('DEVICEIDENTIFIER').asstring).asobject:=feed_disk.CloneToNewObject;
+      end;
+  end;
+
+  procedure _UpdateEnclosures(const obj:IFRE_DB_Object);
+  var feed_enclosure : TFRE_DB_ENCLOSURE;
+      old_enclosure  : IFRE_DB_OBject;
+
+    procedure _UpdateSlots(const slotobj:IFRE_DB_Object);
+    var feed_slot    : TFRE_DB_DRIVESLOT;
+        old_slot     : IFRE_DB_Object;
     begin
-      disk_lock.Acquire;
+      feed_slot      := slotobj.Implementor_HC as TFRE_DB_DRIVESLOT;
+      if fdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_slot.DeviceIdentifier,old_slot,'') then
+        begin
+          writeln('update slot');
+          old_slot.SetAllSimpleObjectFieldsFromObject(feed_slot);
+        end
+      else
+        begin
+          writeln('new slot');
+          (old_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddDriveSlotEmbedded(feed_slot.SlotNr,(feed_slot.CloneToNewObject.Implementor_HC as TFRE_DB_DRIVESLOT));
+        end;
+    end;
+
+    procedure _UpdateExpanders(const expanderobj:IFRE_DB_Object);
+    var feed_expander    : TFRE_DB_SAS_EXPANDER;
+        old_expander     : IFRE_DB_Object;
+    begin
+      feed_expander      := expanderobj.Implementor_HC as TFRE_DB_SAS_EXPANDER;
+      if fdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_expander.DeviceIdentifier,old_expander,'') then
+        begin
+          writeln('update expander');
+          old_expander.SetAllSimpleObjectFieldsFromObject(feed_expander);
+        end
+      else
+        begin
+          writeln('new expander');
+          (old_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddExpanderEmbedded((feed_expander.CloneToNewObject.Implementor_HC as TFRE_DB_SAS_EXPANDER));
+        end;
+    end;
+
+  begin
+    feed_enclosure   := obj.Implementor_HC as TFRE_DB_ENCLOSURE;
+    if fdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_enclosure.DeviceIdentifier,old_enclosure,'') then
+      begin
+        writeln('update enclosure');
+        old_enclosure.SetAllSimpleObjectFieldsFromObject(feed_enclosure);
+        feed_enclosure.Field('slots').AsObject.ForAllObjects(@_updateslots);
+        feed_enclosure.Field('expanders').AsObject.ForAllObjects(@_updateexpanders);
+      end
+    else
+      begin
+        writeln('new enclosure');
+        fdata.Field('enclosures').asObject.Field(feed_enclosure.Field('DEVICEIDENTIFIER').asstring).asobject:=feed_enclosure.CloneToNewObject;
+      end;
+
+  end;
+
+begin
+  data_lock.Acquire;
+  try
+    last_fdata := fdata.CloneToNewObject;
+
+
+    if not Fdata.FieldExists('disks') then
+      fdata.Field('disks').AsObject:=GFRE_DBI.NewObject;
+    dbo.Field('disks').AsObject.ForAllObjects(@_updatedisks);
+
+    if not Fdata.FieldExists('enclosures') then
+      fdata.Field('enclosures').AsObject:=GFRE_DBI.NewObject;
+
+    dbo.Field('enclosures').AsObject.ForAllObjects(@_updateenclosures);
+
+//    writeln('FDATA:',fdata.DumpToString());
+//    writeln('OLDFDATA:',last_fdata.DumpToString());
+
+//    CheckDifferences(last_fdata);
+
+    last_fdata.Finalize;
+  finally
+    data_lock.Release;
+  end;
+end;
+
+procedure TFRE_HAL_DISK.UpdateIostat(const dbo: IFRE_DB_Object);
+
+  procedure _UpdateIostat(const obj:IFRE_DB_Object);
+  var feed_io   : TFRE_DB_IOSTAT;
+      old_obj   : IFRE_DB_Object;
+      disk_obj  : IFRE_DB_Object;
+      new_io    : IFRE_DB_Object;
+  begin
+    feed_io     := obj.Implementor_HC as TFRE_DB_IOSTAT;
+    if fdata.FetchObjWithStringFieldValue('IODEVICENAME',feed_io.Field('iodevicename').asstring,old_obj,'TFRE_DB_BLOCKDEVICE_IOSTAT') then
+      begin
+//        writeln('update iostat');
+        old_obj.SetAllSimpleObjectFieldsFromObject(feed_io);
+      end
+    else
+      begin
+        if fdata.FetchObjWithStringFieldValue('DEVICENAME',feed_io.Field('iodevicename').asstring,old_obj,'') then
+          begin
+//            writeln('new iostat');
+            new_io := feed_io.CloneToNewObject;
+            (old_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).IoStat:=(new_io.Implementor_HC as TFRE_DB_IOSTAT);
+          end
+        else
+          begin
+ //           writeln('update iostat for unknown devicename:',feed_io.Field('iodevicename').asstring);
+          end;
+      end;
+  end;
+
+begin
+  data_lock.Acquire;
+  try
+//    writeln('IOSTAT',dbo.DumpToString());
+
+    dbo.ForAllObjects(@_updateiostat);
+
+  finally
+    data_lock.Release;
+  end;
+end;
+
+procedure TFRE_HAL_DISK.UpdateZpoolStatus(const dbo: IFRE_DB_Object);
+
+  procedure _UpdatePools(const obj:IFRE_DB_Object);
+  var feed_pool : TFRE_DB_ZFS_POOL;
+      old_obj   : IFRE_DB_Object;
+
+
+    procedure _UpdateHierarchic(const obj:IFRE_DB_Object; var halt:boolean);
+    var zfs_guid : string;
+        zfs_obj  : IFRE_DB_Object;
+    begin
+      halt :=false;
+      zfs_guid :=obj.Field('zfs_guid').asstring;
+      if zfs_guid<>'' then
+        begin
+          if fdata.FetchObjWithStringFieldValue('ZFS_GUID',zfs_guid,old_obj,'') then
+            begin
+//              writeln('found:',zfs_guid);
+              old_obj.SetAllSimpleObjectFieldsFromObject(obj);
+            end
+          else
+            writeln('could not find ',zfs_guid);
+        end;
+    end;
+
+  begin
+    feed_pool   := obj.Implementor_HC as TFRE_DB_ZFS_POOL;
+    if fdata.FetchObjWithStringFieldValue('POOL',feed_pool.Field('pool').asstring,old_obj,'TFRE_DB_ZFS_POOL') then
+      begin
+        writeln('update pool');
+        old_obj.SetAllSimpleObjectFieldsFromObject(feed_pool);
+        feed_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
+      end
+    else
+      begin
+        writeln('new pool');
+        fdata.Field('pools').AsObject.Field(feed_pool.Field('pool').asstring).AsObject:=feed_pool.CloneToNewObject;
+      end;
+  end;
+
+
+begin
+  data_lock.Acquire;
+  try
+
+    if not Fdata.FieldExists('pools') then
+      fdata.Field('pools').AsObject:=GFRE_DBI.NewObject;
+
+//    writeln('ZPOOLSTATUS',dbo.DumpToString());
+
+    dbo.ForAllObjects(@_updatepools);
+//    writeln('FDATA',fdata.DumpToString());
+
+  finally
+    data_lock.Release;
+  end;
+
+end;
+
+procedure TFRE_HAL_DISK.UpdateZpoolIostat(const dbo: IFRE_DB_Object);
+
+
+
+begin
+  data_lock.Acquire;
+  try
+
+    if not Fdata.FieldExists('pools') then
+      fdata.Field('pools').AsObject:=GFRE_DBI.NewObject;
+
+//    writeln('ZPOOLIOSTAT',dbo.DumpToString());
+
+//    dbo.ForAllObjects(@_updatepools);
+//    writeln('FDATA',fdata.DumpToString());
+
+  finally
+    data_lock.Release;
+  end;
+
+end;
+
+procedure TFRE_HAL_DISK.CheckDifferences(const old_fdata: IFRE_DB_Object);
+var new_fdata:IFRE_DB_Object;
+
+  procedure _Insert(const o : IFRE_DB_Object);
+  begin
+    writeln('INSERT STEP : ',o.UID_String,' ',o.SchemeClass,' ',BoolToStr(o.IsObjectRoot,' ROOT OBJECT ',' CHILD OBJECT '));
+    writeln(o.DumpToString(2));
+  end;
+
+  procedure _Delete(const o : IFRE_DB_Object);
+    function  _ParentFieldnameIfExists:String;
+    begin
+      if not o.IsObjectRoot then
+        result := o.ParentField.FieldName
+      else
+        result := '';
+    end;
+
+  begin
+    writeln('DELETE STEP : ',o.UID_String,' ',o.SchemeClass,BoolToStr(o.IsObjectRoot,' ROOT OBJECT ',' CHILD OBJECT '),_ParentFieldnameIfExists);
+    writeln(o.DumpToString(2));
+  end;
+
+  procedure _Update(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field);
+  var nfn,nft,ofn,oft,updt,ofv,nfv : TFRE_DB_NameType;
+  begin
+    if assigned(new_field) then
+      begin
+        nfn := new_field.FieldName;
+        nft := new_field.FieldTypeAsString;
+        if new_field.IsEmptyArray then
+          nfv := '(empty array)'
+        else
+          nfv := new_field.AsString;
+      end;
+    if assigned(old_field) then
+      begin
+        ofn := old_field.FieldName;
+        oft := old_field.FieldTypeAsString;
+        if old_field.IsEmptyArray then
+          ofv := '(empty array)'
+        else
+          ofv := old_field.AsString;
+      end;
+    case update_type of
+      cev_FieldDeleted: updt := 'DELETE FIELD '+nfn+'('+nft+')';
+      cev_FieldAdded:   updt := 'ADD FIELD '+nfn+'('+nft+')';
+      cev_FieldChanged: updt := 'CHANGE FIELD : '+nfn+' FROM '+ofv+':'+oft+' TO '+nfv+':'+nft;
+    end;
+    writeln('UPDATE STEP : ',BoolToStr(is_child_update,' CHILD UPDATE ',' ROOT UPDATE '), update_obj.UID_String,' ',update_obj.SchemeClass,' '+updt);
+  end;
+begin
+  new_fdata:=GetData;
+  try
+    GFRE_DBI.GenerateAnObjChangeList(old_fdata,new_fdata,@_Insert,@_Delete,@_Update);
+  finally
+    new_fdata.Finalize;
+  end;
+end;
+
+function TFRE_HAL_DISK.IsDataAvailable: boolean;
+begin
+  result := Assigned(Fdata);
+  if result then
+    result := Fdata.FieldExists('enclosures');
+  if result then
+    result := Fdata.FieldExists('disks');
+  if result then
+    result := Fdata.FieldExists('pools');
+end;
+
+function TFRE_HAL_DISK.GetData: IFRE_DB_Object;
+begin
+  if IsDataAvailable then
+    begin
+      data_lock.Acquire;
       try
-        result := disk_information.CloneToNewObject;
+        result := Fdata.CloneToNewObject;
       finally
-        disk_lock.Release;
+        data_lock.Release;
       end;
     end
   else
@@ -353,7 +569,7 @@ begin
   end;
 end;
 
-procedure TFRE_HAL_DISK.UpdateDiskIoStatInformation(const devicename: string; const iostat_information: TFRE_DB_BLOCKDEVICE_IOSTAT);
+procedure TFRE_HAL_DISK.UpdateDiskIoStatInformation(const devicename: string; const iostat_information: TFRE_DB_IOSTAT);
 
   function _FindDiskbyDevicename (const fld:IFRE_DB_FIELD):boolean;
   var
@@ -371,11 +587,11 @@ procedure TFRE_HAL_DISK.UpdateDiskIoStatInformation(const devicename: string; co
       end;
   end;
 begin
- disk_lock.Acquire;
+ data_lock.Acquire;
  try
-   disk_information.Field('disks').AsObject.ForAllFieldsBreak(@_FindDiskbyDevicename);
+   Fdata.Field('disks').AsObject.ForAllFieldsBreak(@_FindDiskbyDevicename);
  finally
-   disk_lock.Release;
+   data_lock.Release;
  end;
 end;
 

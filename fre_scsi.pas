@@ -44,7 +44,7 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,fre_zfs;
+  FOS_TOOL_INTERFACES,fre_zfs,fre_system;
 
 
 // ./sas2ircu 0 DISPLAY
@@ -226,13 +226,14 @@ uses
 //                Name:  w5000c500562a02e2
 //                Relative ID:  0
 
-const
+var
 
-   cSG3Inq = '/opt/local/sg3utils/bin/sg_inq';
-   cSG3Ses = '/opt/local/sg3utils/bin/sg_ses';
+   cSG3Inq : string = '/opt/local/sg3utils/bin/sg_inq';
+   cSG3Ses : string = '/opt/local/sg3utils/bin/sg_ses';
 
 
 type
+
 
 
   { TFRE_DB_PHYS_DISK }
@@ -355,7 +356,7 @@ type
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string);
+    procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string='');
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
 
@@ -435,7 +436,8 @@ end;
 
 procedure TFRE_DB_ENCLOSURE.AddExpanderEmbedded(const expander: TFRE_DB_SAS_Expander;const devicename:string);
 begin
-  expander.DeviceIdentifier:=DeviceIdentifier+'_'+devicename;
+  if devicename<>'' then
+    expander.DeviceIdentifier:=DeviceIdentifier+'_'+devicename;
   if not FieldExists('expanders') then
     Field('expanders').AsObject:= GFRE_DBI.NewObject;
   Field('expanders').asObject.Field(expander.DeviceIdentifier).AsObject:=expander;
@@ -622,8 +624,8 @@ var sl : TStringList;
     i  : NativeInt;
     proc  : TFRE_DB_Process;
 begin
-  if FieldExists('remotehost') then
-    begin
+//  if FieldExists('remotehost') then
+//    begin
       ClearProcess;
       proc := TFRE_DB_Process.create;
       proc.SetupInput('find',TFRE_DB_StringArray.Create ('/dev/rdsk/*d0'));
@@ -640,9 +642,9 @@ begin
       finally
         sl.Free;
       end;
-    end
-  else
-    abort; //Implement local Find for devices
+//    end
+//  else
+//    abort; //Implement local Find for devices
 end;
 
 function TFRE_DB_SCSI.getexpanderDevices: IFRE_DB_Object;
@@ -650,7 +652,7 @@ var sl : TStringList;
     i  : NativeInt;
     proc  : TFRE_DB_Process;
 begin
-  if FieldExists('remotehost') then
+//  if FieldExists('remotehost') then
     begin
       ClearProcess;
       proc := TFRE_DB_Process.create;
@@ -669,8 +671,8 @@ begin
         sl.Free;
       end;
     end
-  else
-    abort; //Implement local Find for devices
+//  else
+//    abort; //Implement local Find for devices
 end;
 
 function TFRE_DB_SCSI.SG3DiskInquiry(const devicepath: TFRE_DB_String; out disk: IFRE_DB_Object): integer;
@@ -997,6 +999,11 @@ var devices : IFRE_DB_Object;
     disk    : IFRE_DB_Object;
     i       : NativeInt;
 begin
+
+  cSG3Inq := cFRE_ToolsPath+'/sg3utils/bin/sg_inq';
+  cSG3Ses := cFRE_ToolsPath+'/sg3utils/bin/sg_ses';
+  writeln('SG3INQ Program:',csg3inq);
+
   scsi_structure   := GFRE_DBI.NewObject;
   scsi_structure.Field('enclosures').asObject := GFRE_DBI.NewObject;
   scsi_structure.Field('disks').asObject      := GFRE_DBI.NewObject;
