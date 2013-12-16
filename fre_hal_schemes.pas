@@ -626,15 +626,15 @@ implementation
  var
      coll    : IFRE_DB_COLLECTION;
      id      : TGUID;
+     hlt     : boolean;
 
-     function _get(const obj:IFRE_DB_Object):boolean;
+     procedure _get(const obj:IFRE_DB_Object ; var halt : boolean);
      begin
-       result := false;
        writeln('SERVICE '+obj.UID_String);
        if obj.IsA(serviceclass) then begin
          writeln('FOUND '+serviceclass+' '+obj.UID_String);
          id:=obj.uid;
-         Result := true;
+         halt := true;
        end;
      end;
 
@@ -642,7 +642,8 @@ implementation
  begin
    writeln('GET SERVICE');
    coll   := dbc.Collection('service');
-   coll.ForAllBreak(@_get);
+   hlt    := false;
+   coll.ForAllBreak(@_get,hlt);
    result := id;
  end;
 
