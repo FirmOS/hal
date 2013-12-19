@@ -77,6 +77,27 @@ type
 
   TFRE_DB_ZFS_ROOTOBJ=class;
 
+  { TFRE_DB_ZPOOL_IOSTAT }
+
+  TFRE_DB_ZPOOL_IOSTAT=class(TFRE_DB_ObjectEx)
+  private
+    function  GetIopsRead      : TFRE_DB_String;
+    function  GetIopsWrite     : TFRE_DB_String;
+    function  GetTransferRead  : TFRE_DB_String;
+    function  GetTransferWrite : TFRE_DB_String;
+    procedure SetIopsRead      (AValue: TFRE_DB_String);
+    procedure SetIopsWrite     (AValue: TFRE_DB_String);
+    procedure SetTransferRead  (AValue: TFRE_DB_String);
+    procedure SetTransferWrite (AValue: TFRE_DB_String);
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+  public
+    property  iopsR                   : TFRE_DB_String read GetIopsRead      write SetIopsRead;
+    property  iopsW                   : TFRE_DB_String read GetIopsWrite     write SetIopsWrite;
+    property  transferR               : TFRE_DB_String read GetTransferRead  write SetTransferRead;
+    property  transferW               : TFRE_DB_String read GetTransferWrite write SetTransferWrite;
+  end;
+
   { TFRE_DB_IOSTAT }
 
   TFRE_DB_IOSTAT=class(TFRE_DB_ObjectEx)
@@ -95,16 +116,13 @@ type
     function  GetPoolId        : TGuid;
     function  GetTransferRead  : TFRE_DB_String;
     function  GetTransferWrite : TFRE_DB_String;
-    procedure SetIopsRead      (AValue: TFRE_DB_String);
-    procedure SetIopsWrite     (AValue: TFRE_DB_String);
     function  getCaption       : TFRE_DB_String; virtual;
     procedure setCaption       (avalue: TFRE_DB_String); virtual;
     procedure SetParentInZFSId (AValue: TGuid);
     procedure SetPoolId        (AValue: TGuid);
-    procedure SetTransferRead  (AValue: TFRE_DB_String);
-    procedure SetTransferWrite (AValue: TFRE_DB_String);
     function  getIOStat             : TFRE_DB_IOSTAT;
     procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
+    procedure setZpoolIoStat        (const AValue: TFRE_DB_ZPOOL_IOSTAT);
   protected
     procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
@@ -130,12 +148,13 @@ type
     function  canIdentify             : Boolean; virtual;
     property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
     property  caption                 : TFRE_DB_String read GetCaption       write SetCaption;
-    property  iopsR                   : TFRE_DB_String read GetIopsRead      write SetIopsRead;
-    property  iopsW                   : TFRE_DB_String read GetIopsWrite     write SetIopsWrite;
-    property  transferR               : TFRE_DB_String read GetTransferRead  write SetTransferRead;
-    property  transferW               : TFRE_DB_String read GetTransferWrite write SetTransferWrite;
+    property  iopsR                   : TFRE_DB_String read GetIopsRead;
+    property  iopsW                   : TFRE_DB_String read GetIopsWrite;
+    property  transferR               : TFRE_DB_String read GetTransferRead;
+    property  transferW               : TFRE_DB_String read GetTransferWrite;
     property  poolId                  : TGuid          read GetPoolId        write SetPoolId;
     property  parentInZFSId           : TGuid          read GetParentInZFS   write SetParentInZFSId;
+    property  ZPoolIostat             : TFRE_DB_ZPOOL_IOSTAT write SetZpoolIOstat;
   end;
 
   { TFRE_DB_DISK_MPATH }
@@ -385,7 +404,54 @@ type
 
 implementation
 
+{ TFRE_DB_ZPOOL_IOSTAT }
+
+class procedure TFRE_DB_ZPOOL_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
 { TFRE_DB_IOSTAT }
+
+function TFRE_DB_ZPOOL_IOSTAT.GetIopsRead: TFRE_DB_String;
+begin
+  Result:=Field('iops_r').AsString;
+end;
+
+function TFRE_DB_ZPOOL_IOSTAT.GetIopsWrite: TFRE_DB_String;
+begin
+  Result:=Field('iops_w').AsString;
+end;
+
+function TFRE_DB_ZPOOL_IOSTAT.GetTransferRead: TFRE_DB_String;
+begin
+ Result:=Field('transfer_r').AsString;
+end;
+
+function TFRE_DB_ZPOOL_IOSTAT.GetTransferWrite: TFRE_DB_String;
+begin
+  Result:=Field('transfer_w').AsString;
+end;
+
+procedure TFRE_DB_ZPOOL_IOSTAT.SetIopsRead(AValue: TFRE_DB_String);
+begin
+  Field('iops_r').AsString:=AValue;
+end;
+
+procedure TFRE_DB_ZPOOL_IOSTAT.SetIopsWrite(AValue: TFRE_DB_String);
+begin
+  Field('iops_w').AsString:=AValue;
+end;
+
+procedure TFRE_DB_ZPOOL_IOSTAT.SetTransferRead(AValue: TFRE_DB_String);
+begin
+  Field('transfer_r').AsString:=AValue;
+end;
+
+procedure TFRE_DB_ZPOOL_IOSTAT.SetTransferWrite(AValue: TFRE_DB_String);
+begin
+  Field('transfer_w').AsString:=AValue;
+end;
 
 class procedure TFRE_DB_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
@@ -597,32 +663,34 @@ end;
 
 function TFRE_DB_ZFS_OBJ.GetTransferRead: TFRE_DB_String;
 begin
-  Result:=Field('transfer_r').AsString;
+  if FieldExists('zpooliostat') then
+    result:=Field('zpooliostat').AsObject.Field('transfer_r').AsString
+  else
+    result:='';
 end;
 
 function TFRE_DB_ZFS_OBJ.GetTransferWrite: TFRE_DB_String;
 begin
- Result:=Field('transfer_w').AsString;
-end;
-
-procedure TFRE_DB_ZFS_OBJ.SetIopsRead(AValue: TFRE_DB_String);
-begin
-  Field('iops_r').AsString:=AValue;
-end;
-
-procedure TFRE_DB_ZFS_OBJ.SetIopsWrite(AValue: TFRE_DB_String);
-begin
-  Field('iops_w').AsString:=AValue;
+  if FieldExists('zpooliostat') then
+    result:=Field('zpooliostat').AsObject.Field('transfer_w').AsString
+  else
+    result:='';
 end;
 
 function TFRE_DB_ZFS_OBJ.GetIopsRead: TFRE_DB_String;
 begin
-  Result:=Field('iops_r').AsString;
+  if FieldExists('zpooliostat') then
+    result:=Field('zpooliostat').AsObject.Field('iops_r').AsString
+  else
+    result:='';
 end;
 
 function TFRE_DB_ZFS_OBJ.GetIopsWrite: TFRE_DB_String;
 begin
- Result:=Field('iops_w').AsString;
+  if FieldExists('zpooliostat') then
+    result:=Field('zpooliostat').AsObject.Field('iops_w').AsString
+  else
+    result:='';
 end;
 
 function TFRE_DB_ZFS_OBJ.getIsModified: Boolean;
@@ -687,16 +755,6 @@ begin
   Field('pool_uid').AsGUID:=AValue;
 end;
 
-procedure TFRE_DB_ZFS_OBJ.SetTransferRead(AValue: TFRE_DB_String);
-begin
-  Field('transfer_r').AsString:=AValue;
-end;
-
-procedure TFRE_DB_ZFS_OBJ.SetTransferWrite(AValue: TFRE_DB_String);
-begin
-  Field('transfer_w').AsString:=AValue;
-end;
-
 function TFRE_DB_ZFS_OBJ.getIOStat: TFRE_DB_IOSTAT;
 begin
   result :=  (Field('iostat').AsObject.Implementor_HC as TFRE_DB_IOSTAT);
@@ -705,6 +763,11 @@ end;
 procedure TFRE_DB_ZFS_OBJ.setIOStat(const Avalue: TFRE_DB_IOSTAT);
 begin
   Field('iostat').AsObject:=AValue;
+end;
+
+procedure TFRE_DB_ZFS_OBJ.setZpoolIoStat(const AValue: TFRE_DB_ZPOOL_IOSTAT);
+begin
+  Field('zpooliostat').AsObject:=AValue;
 end;
 
 procedure TFRE_DB_ZFS_OBJ._getDnDClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -2120,6 +2183,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_VDEV);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_BLOCKDEVICE);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IOSTAT);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZPOOL_IOSTAT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DISKCONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_VDEVCONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_SPARE);
@@ -2147,6 +2211,7 @@ var  slist   : TStringList;
      readp   : integer;
      writep  : integer;
      cksump  : integer;
+     vdevc   : integer;
 
     //  pool: zones
     // state: ONLINE
@@ -2206,6 +2271,18 @@ var  slist   : TStringList;
        end;
       end;
 
+      function RenumberVdev(const devn:string) : string;
+      begin
+        if Pos('-',devn)>0 then
+          begin
+            result := Copy(devn,1,Pos('-',devn));
+            result := result+'V'+inttostr(vdevc);
+            inc(vdevc);
+          end
+        else
+          result := devn;
+      end;
+
   begin
     newcmd    := trim(Copy ( line, 1, 8));
     cmdline   := false;
@@ -2238,9 +2315,11 @@ var  slist   : TStringList;
               else if (Pos('raidz2',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z2)
                 else if (Pos('raidz3',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z3)
                   else (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_undefined);
+            devname := RenumberVdev(devname);
           end else if (Pos('mirror',trim(lowercase(devname)))=1) then begin
             dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded;
             (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_mirror);
+            devname := RenumberVdev(devname);
           end else if Pos('spare',trim(lowercase(devname)))=1 then begin
             dev := pool.createSpareEmbedded;
           end else if Pos('log',trim(lowercase(devname)))=1 then begin
@@ -2260,10 +2339,11 @@ var  slist   : TStringList;
           dev.Field('read').AsString       := trim(Copy (line,readp,writep-readp-1));
           dev.Field('write').AsString      := trim(Copy (line,writep,cksump-writep-1));
           dev.Field('cksum').AsString      := trim(Copy (line,cksump,maxint));
-          if devlvl>0 then
-            zfs_path := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_OBJ).GetZFSGuid+'/'+trim(devname)
+          if (dev.Implementor_HC is TFRE_DB_ZFS_DATASTORAGE) then
+            zfs_path := trim(devname)
           else
             zfs_path := pool.Field('pool').AsString+'/'+trim(devname);
+
           (dev.Implementor_HC as TFRE_DB_ZFS_OBJ).setZFSGuid(zfs_path);
           parentdev [devlvl ]              := dev;
         end;
@@ -2273,6 +2353,7 @@ var  slist   : TStringList;
 
 begin
  result := false;
+ vdevc  := 1;
  slist  := TStringList.Create;
  try
     slist.text                          := pooltxt;
