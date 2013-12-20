@@ -1036,7 +1036,7 @@ begin
       GFRE_DBI.LogError(dblc_APPLICATION,'SG3 Ses for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
       exit;
     end;
-  writeln('ENCLO',enclosure.DumpToString());
+//  writeln('SWL:ENCLO',enclosure.DumpToString());
   if assigned(enclosure) then
     ClearProcess;
     for i:=0 to enclosure.DriveSlots-1 do
@@ -1095,7 +1095,6 @@ begin
       SG3SESInquiry(devices.Field('device').AsStringItem[i],scsi_structure);
     end;
   devices.Finalize;
-  writeln(scsi_structure.DumpToString);
 
   devices := getrdskDevices(iostat_devices);
 
@@ -1106,7 +1105,7 @@ begin
           scsi_structure.Field('disks').asObject.Field(disk.Field('DEVICEIDENTIFIER').asstring).asobject:=disk;
         end;
     end;
-   writeln(scsi_structure.DumpToString);
+  //  writeln('SWL:scsi_structure',scsi_structure.DumpToString);
 end;
 
 { TFRE_DB_PHYS_DISK }
