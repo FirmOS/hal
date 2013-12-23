@@ -146,6 +146,7 @@ type
     procedure setIsNew                (const avalue:Boolean=true);
     procedure setZFSGuid              (const avalue:String);
     function  canIdentify             : Boolean; virtual;
+    procedure embedChildrenRecursive  (const conn: IFRE_DB_CONNECTION);
     property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
     property  caption                 : TFRE_DB_String read GetCaption       write SetCaption;
     property  iopsR                   : TFRE_DB_String read GetIopsRead;
@@ -315,6 +316,7 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+    class function  CreateEmbeddedPoolObjectfromCollection (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID): TFRE_DB_ZFS_POOL;
     function  GetDatastorage            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_DATASTORAGE;
     function  GetDatastorageEmbedded    : TFRE_DB_ZFS_DATASTORAGE;
     function  GetSpare                  (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_SPARE;
@@ -866,6 +868,21 @@ begin
   Result:=false;
 end;
 
+procedure TFRE_DB_ZFS_OBJ.embedChildrenRecursive(const conn: IFRE_DB_CONNECTION);
+var
+    children             : IFRE_DB_ObjectArray;
+    i                    : NativeInt;
+
+begin
+ children := getZFSChildren(conn);
+ for i:= 0 to high(children) do
+   begin
+     Field('vdev').AddObject(children[i]);
+     if (children[i].Implementor_HC is TFRE_DB_ZFS_OBJ) then
+       (children[i].Implementor_HC as TFRE_DB_ZFS_OBJ).embedChildrenRecursive(conn);
+   end;
+end;
+
 { TFRE_DB_ZFS_CACHE }
 
 function TFRE_DB_ZFS_CACHE.GetRaidLevel: TFRE_DB_ZFS_RAID_LEVEL;
@@ -1148,6 +1165,42 @@ end;
 class procedure TFRE_DB_ZFS_POOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+end;
+
+class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromCollection(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TGUID): TFRE_DB_ZFS_POOL;
+var
+    poolcolletion        : IFRE_DB_COLLECTION;
+    vdevcollection       : IFRE_DB_COLLECTION;
+    blockcollection      : IFRE_DB_COLLECTION;
+    obj                  : IFRE_DB_Object;
+    emb_obj              : TFRE_DB_ZFS_OBJ;
+
+    zo                   : TFRE_DB_ZFS;  //DEBUG
+    error                : string;
+    resobj               : IFRE_DB_Object;
+
+begin
+   poolcolletion  := conn.Collection(CFRE_DB_ZFS_POOL_COLLECTION,false);
+   vdevcollection  := conn.Collection(CFRE_DB_ZFS_VDEV_COLLECTION,false);
+   blockcollection := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION,false);
+
+   if poolcolletion.Fetch(db_zfs_pool_id,obj)=false then
+     raise EFRE_DB_Exception.Create(edb_NOT_FOUND,'Could not find pool for CreateEmbeddedPoolObjectfromCollection');
+
+   emb_obj := (obj.Implementor_HC as TFRE_DB_ZFS_OBJ);
+   emb_obj.embedChildrenRecursive(conn);
+   emb_obj.Field('debug').asboolean:=true;
+//   writeln('SWL:',emb_obj.DumpToString());
+
+     zo     := TFRE_DB_ZFS.create;
+     try
+//       zo.SetRemoteSSH(remoteuser, remotehost, remotekey);
+       zo.CreateDiskpool(emb_obj,error,resobj);
+       writeln('SWL:',resobj.DumpToString());
+     finally
+       zo.Free;
+     end;
+
 end;
 
 function TFRE_DB_ZFS_POOL.getCaption: TFRE_DB_String;
@@ -2043,7 +2096,7 @@ var zfs_cmd   : TFRE_DB_String;
     end;
 
 begin
-  zfs_cmd  := 'xpool create '+pool_definition.Field('pool').asstring;
+  zfs_cmd  := 'zpool create '+pool_definition.Field('pool').asstring;
   for i    := 0 to pool_definition.Field('vdev').ValueCount-1 do
     begin
       vdevcont := pool_definition.Field('vdev').AsObjectItem[i];
@@ -2108,16 +2161,19 @@ begin
       writeln(vdev.SchemeClass);
     end;
 
-  ClearProcess;
-  proc := TFRE_DB_Process.create;
-  proc.SetupInput(zfs_cmd,nil);
-  AddProcess(proc);
-  ExecuteMulti;
   pool_result := GFRE_DBI.NewObject;
   pool_result.Field('zfs_cmd').asstring := zfs_cmd;
 
-  result := proc.Field('exitstatus').AsInt32;
-  error  := proc.Field('errorstring').AsString;
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+  if not pool_definition.FieldExists('debug') then
+    begin
+      proc.SetupInput(zfs_cmd,nil);
+      AddProcess(proc);
+      ExecuteMulti;
+      result := proc.Field('exitstatus').AsInt32;
+      error  := proc.Field('errorstring').AsString;
+    end;
 end;
 
 procedure TFRE_DB_ZFSJob.SetScrub(const poolname: string);
