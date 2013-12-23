@@ -77,16 +77,16 @@ var coll   :IFRE_DB_Collection;
     cmsob  :IFRE_DB_Object;
     baseurl:string;
     ads    :IFRE_DB_Object;
+    hlt    :boolean;
 
- function _findcms(const obj:IFRE_DB_object):boolean;
+ procedure _findcms(const obj:IFRE_DB_object; var halt : boolean);
  begin
-  result:=false;
 //  writeln(obj.SchemeClass);
 //  writeln(obj.DumpToString());
   if FREDB_Guids_Same(obj.Field('servicegroup').AsObjectLink,serviceobj.Field('servicegroup').AsObjectLink) then begin
    if obj.SchemeClass='TFRE_DB_CMS' then begin
     cmsob:=obj;
-    result:=true;
+    hlt:=true;
    end;
   end;
  end;
@@ -288,7 +288,8 @@ begin
  cmsob:=nil;
 
  coll:=Conn.Collection('service');
- coll.ForAllBreak(@_findcms);
+ hlt:=false;
+ coll.ForAllBreak(@_findcms,hlt);
 
  if not Assigned(cmsob) then begin
   LogError('Could not find CMS for ServiceGroup '+GFRE_BT.GUID_2_HexString(serviceobj.uid));

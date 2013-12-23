@@ -511,12 +511,6 @@ end;
 function TFRE_HAL_DISK.IsDataAvailable: boolean;
 begin
   result := Assigned(Fdata);
-  if result then
-    result := Fdata.FieldExists('enclosures');
-  if result then
-    result := Fdata.FieldExists('disks');
-  if result then
-    result := Fdata.FieldExists('pools');
 end;
 
 function TFRE_HAL_DISK.GetData: IFRE_DB_Object;

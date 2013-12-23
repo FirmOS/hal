@@ -269,6 +269,7 @@ type
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure _getLayoutCaption                 (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutSubCaption              (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutIcon                    (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getSizeMB                        (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
   public
@@ -364,11 +365,12 @@ type
     procedure SetEnclosureNr                    (AValue: Uint16);
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string='');
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure _getChildrenString                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutCaption                 (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutSubcaption              (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
@@ -376,7 +378,6 @@ type
     property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DriveSlots       : UInt16 read GetDriveSlots write SetDriveSlots;
     property  EnclosureNr      : Uint16 read GetEnclosureNr write SetEnclosureNr;
-
   end;
 
   { TFRE_DB_SCSI }
@@ -453,6 +454,7 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.AddCalcSchemeField('children',fdbft_String,@_getChildrenString);
   scheme.AddCalcSchemeField('caption_layout',fdbft_String,@_getLayoutCaption);
+  scheme.AddCalcSchemeField('subcaption_layout',fdbft_String,@_getLayoutSubcaption);
   scheme.AddCalcSchemeField('icon_layout',fdbft_String,@_getLayoutIcon);
 end;
 
@@ -463,7 +465,12 @@ end;
 
 procedure TFRE_DB_ENCLOSURE._getLayoutCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  calcfieldsetter.SetAsString(DeviceIdentifier);
+  calcfieldsetter.SetAsString('Enclosure '+inttostr(EnclosureNr)+' '+Field('subcaption_layout').asstring);
+end;
+
+procedure TFRE_DB_ENCLOSURE._getLayoutSubcaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString('ID:'+DeviceIdentifier+' Slots:'+inttostr(DriveSlots));
 end;
 
 procedure TFRE_DB_ENCLOSURE._getLayoutIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -986,7 +993,7 @@ var
     proc := TFRE_DB_Process.create;
     proc.SetupInput(cSG3Ses,TFRE_DB_StringArray.Create ('-I','0,'+inttostr(slotnr),'-p','aes',devicepath));
     proc.Field('slotnr').AsUInt16:=slotnr;
-    writeln('slot ',slotnr,' ',devicepath);
+    writeln('SWL:slot ',slotnr,' ',devicepath);
     AddProcess(proc);
   end;
 
@@ -995,7 +1002,7 @@ begin
 
   writeln(devicepath);
   // determine sas/sata, get target ports
-
+  writeln('SWL:',devicepath);
   res := _SG3GetPage(cSG3Ses,outstring,errstring,TFRE_DB_StringArray.Create ('-p','cf',devicepath));
   if res=0 then
     begin
@@ -1038,16 +1045,15 @@ begin
     end;
 //  writeln('SWL:ENCLO',enclosure.DumpToString());
   if assigned(enclosure) then
-    ClearProcess;
-    for i:=0 to enclosure.DriveSlots-1 do
-      begin
-        _GetDriveSlotInformation(i);
-      end;
-    ExecuteMulti;
-    for i:=0 to ProcessCount-1 do
-      begin
-        _AnalyzeDriveSlotInformation(GetProcess(i));
-      end;
+    begin
+      for i:=0 to enclosure.DriveSlots-1 do
+        begin
+          ClearProcess;
+          _GetDriveSlotInformation(i);
+          ExecuteMulti;
+          _AnalyzeDriveSlotInformation(GetProcess(0));
+        end;
+    end;
 end;
 
 class procedure TFRE_DB_SCSI.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1239,12 +1245,18 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.AddCalcSchemeField('size_mb',fdbft_UInt32,@_getSizeMb);
   scheme.AddCalcSchemeField('caption_layout',fdbft_String,@_getLayoutCaption);
+  scheme.AddCalcSchemeField('subcaption_layout',fdbft_String,@_getLayoutSubcaption);
   scheme.AddCalcSchemeField('icon_layout',fdbft_String,@_getLayoutIcon);
 end;
 
 procedure TFRE_DB_PHYS_DISK._getLayoutCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  calcfieldsetter.SetAsString(caption + ' (' + IntToStr(SlotNr) + ')');
+  calcfieldsetter.SetAsString('(' + IntToStr(SlotNr) + ')'+inttostr(Field('size_mb').AsUint32)+' '+Field('subcaption_layout').asstring);
+end;
+
+procedure TFRE_DB_PHYS_DISK._getLayoutSubCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString(Manufacturer+' '+Model_number+' '+Serial_number+' '+WWN);
 end;
 
 procedure TFRE_DB_PHYS_DISK._getLayoutIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
