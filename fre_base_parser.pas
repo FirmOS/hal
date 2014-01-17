@@ -109,6 +109,7 @@ end;
 
 destructor TFOS_PARSER_PROC.Destroy;
 begin
+  Disable;
   helpline.free;
   MyFinalize;
   FLine.Free;

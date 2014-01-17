@@ -52,7 +52,7 @@ uses
 const
 
   cremoteuser               = 'root';
-  cremotehost               = '10.220.251.10';
+  cremotehost               = '10.1.0.121';
 
 type
 
@@ -62,11 +62,10 @@ type
 
   TFRE_HAL_Tester_Tests = class (TTestCase)
   private
-    procedure GetPoolConfiguration;
     procedure GetPools;
-    procedure GetDiskInformation;
-  published
     procedure CreateDiskPool;
+  published
+    procedure GetPoolConfiguration;
   end;
 
 
@@ -91,7 +90,7 @@ var disko  : TFRE_HAL_DISK;
 begin
   disko     := TFRE_HAL_DISK.create;
   try
-    obj       := disko.GetPoolConfiguration('zones',cremoteuser,cremotehost,GetRemoteKeyFilename);
+    obj       := disko.FetchPoolConfiguration('filetest',cremoteuser,cremotehost,GetRemoteKeyFilename);
     writeln   (obj.DumpToString());
     obj.Finalize;
 
@@ -116,21 +115,6 @@ begin
   end;
 end;
 
-procedure TFRE_HAL_Tester_Tests.GetDiskInformation;
-var disko  : TFRE_HAL_DISK;
-    error  : string;
-    res    : integer;
-    obj    : IFRE_DB_Object;
-begin
-  disko     := TFRE_HAL_DISK.create;
-  try
-    obj       := disko.GetDiskInformation(cremoteuser,cremotehost,GetRemoteKeyFilename);
-    writeln   (obj.DumpToString());
-    obj.Finalize;
-  finally
-    disko.Free;
-  end;
-end;
 
 procedure TFRE_HAL_Tester_Tests.CreateDiskPool;
 var disko  : TFRE_HAL_DISK;
@@ -141,7 +125,7 @@ var disko  : TFRE_HAL_DISK;
 begin
   disko     := TFRE_HAL_DISK.create;
   try
-    obj       := disko.GetPoolConfiguration('zones',cremoteuser,cremotehost,GetRemoteKeyFilename);
+    obj       := disko.FetchPoolConfiguration('zones',cremoteuser,cremotehost,GetRemoteKeyFilename);
     writeln   (obj.DumpToString());
     obj2      := disko.CreateDiskpool(obj.Field('data').asobject,cremoteuser,cremotehost,GetRemoteKeyFilename);
     writeln   (obj2.DumpToString());

@@ -71,6 +71,7 @@ type
     procedure UpdateIostat                          (const dbo:IFRE_DB_Object);
     procedure UpdateZpoolStatus                     (const dbo:IFRE_DB_Object);
     procedure UpdateZpoolIostat                     (const dbo:IFRE_DB_Object);
+    procedure UpdateMpath                           (const dbo:IFRE_DB_Object);
 
     procedure CheckDifferences                      (const old_fdata:IFRE_DB_Object);
 
@@ -198,7 +199,10 @@ begin
         if subfeedmodule='ZPOOLIOSTAT' then
           UpdateZpoolIostat(dbo.Field('data').asobject)
         else
-          writeln('UNHANDLED SUBFEEDMODULE ',subfeedmodule);
+          if subfeedmodule='MPATH' then
+            UpdateMpath(dbo.Field('data').asobject)
+          else
+            writeln('UNHANDLED SUBFEEDMODULE ',subfeedmodule);
 
 end;
 
@@ -275,7 +279,6 @@ begin
   try
     last_fdata := fdata.CloneToNewObject;
 
-
     if not Fdata.FieldExists('disks') then
       fdata.Field('disks').AsObject:=GFRE_DBI.NewObject;
     dbo.Field('disks').AsObject.ForAllObjects(@_updatedisks);
@@ -285,7 +288,6 @@ begin
 
     dbo.Field('enclosures').AsObject.ForAllObjects(@_updateenclosures);
 
-//    writeln('FDATA:',fdata.DumpToString());
 //    writeln('OLDFDATA:',last_fdata.DumpToString());
 
 //    CheckDifferences(last_fdata);
@@ -324,11 +326,8 @@ procedure TFRE_HAL_DISK.UpdateIostat(const dbo: IFRE_DB_Object);
   end;
 
 begin
-  exit;
   data_lock.Acquire;
   try
-//    writeln('IOSTAT',dbo.DumpToString());
-
     dbo.ForAllObjects(@_updateiostat);
 
   finally
@@ -446,6 +445,37 @@ begin
     data_lock.Release;
   end;
 
+end;
+
+procedure TFRE_HAL_DISK.UpdateMpath(const dbo: IFRE_DB_Object);
+
+  procedure _UpdateMPath(const obj:IFRE_DB_Object);
+  var old_obj   : IFRE_DB_OBject;
+  begin
+    if fdata.FetchObjWithStringFieldValue('DEVICENAME',obj.Field('DEVICE').asstring,old_obj,'') then
+      begin
+        if (old_obj.Implementor_HC is TFRE_DB_PHYS_DISK) then
+          begin
+            (old_obj.Implementor_HC as TFRE_DB_PHYS_DISK).OperationalPathCount := obj.Field('OPATHCOUNT').AsUInt16;
+            (old_obj.Implementor_HC as TFRE_DB_PHYS_DISK).TotalPathCount       := obj.Field('TPATHCOUNT').AsUInt16;
+          end
+        else
+          writeln('device is not a phys diskin mpath update:',obj.Field('DEVICE').asstring);
+      end
+    else
+      writeln('undefined device in mpath update:',obj.Field('DEVICE').asstring);
+  end;
+
+
+begin
+  data_lock.Acquire;
+  try
+    if not Fdata.FieldExists('disks') then
+      fdata.Field('disks').AsObject:=GFRE_DBI.NewObject;
+    dbo.ForAllObjects(@_updatempath);
+  finally
+    data_lock.Release;
+  end;
 end;
 
 procedure TFRE_HAL_DISK.CheckDifferences(const old_fdata: IFRE_DB_Object);

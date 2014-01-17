@@ -159,16 +159,16 @@ begin
     grid_ca.AddButton.Describe(CWSF(@WEB_DelCertificateAuthority),'images_apps/certificate/delete_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
-  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
-    txt:=app.FetchAppTextFull(ses,'$backup_ca');
-    grid_ca.AddButton.Describe(CWSF(@WEB_backupCertificateAuthority),'images_apps/certificate/backup_ca.png',txt.Getshort,txt.GetHint);
-    txt.Finalize;
-  end;
-  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
-    txt:=app.FetchAppTextFull(ses,'$restore_ca');
-    grid_ca.AddButton.Describe(CWSF(@WEB_restoreCertificateAuthority),'images_apps/certificate/restore_ca.png',txt.Getshort,txt.GetHint);
-    txt.Finalize;
-  end;
+  //if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+  //  txt:=app.FetchAppTextFull(ses,'$backup_ca');
+  //  grid_ca.AddButton.Describe(CWSF(@WEB_backupCertificateAuthority),'images_apps/certificate/backup_ca.png',txt.Getshort,txt.GetHint);
+  //  txt.Finalize;
+  //end;
+  //if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+  //  txt:=app.FetchAppTextFull(ses,'$restore_ca');
+  //  grid_ca.AddButton.Describe(CWSF(@WEB_restoreCertificateAuthority),'images_apps/certificate/restore_ca.png',txt.Getshort,txt.GetHint);
+  //  txt.Finalize;
+  //end;
 
   dc_crt       := ses.FetchDerivedCollection('crt_grid');
   grid_ca.AddFilterEvent(dc_crt.getDescriptionStoreId(),'uids');

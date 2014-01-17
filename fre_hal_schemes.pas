@@ -597,7 +597,7 @@ implementation
      cao.Field('key_stream').AsStream.SetFromRawByteString(ca_base_information.key);
      cao.Field('issued').AsDateTimeUTC := GFRE_DT.Now_UTC;
    end;
-   writeln(cao.DumpToString());
+//   writeln(cao.DumpToString());
  end;
 
  procedure DBOtoCA_BaseInformation(const cao:IFRE_DB_OBJECT; out ca_base_information:RFRE_CA_BASEINFORMATION);
@@ -1980,7 +1980,7 @@ var
             crt.Field('key_stream').AsStream.SetFromRawByteString(crt.Field('key').asstring);
             crt.DeleteField('key');
           end;
-        writeln(crt.DumpToString);
+//        writeln(crt.DumpToString);
         CheckDbResult(collc.Store(crt),'could not store crt');
       end;
   end;

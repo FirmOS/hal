@@ -129,7 +129,7 @@ type
     procedure _getChildrenString         (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure removeFromPool          ;
@@ -158,16 +158,6 @@ type
     property  ZPoolIostat             : TFRE_DB_ZPOOL_IOSTAT write SetZpoolIOstat;
   end;
 
-  { TFRE_DB_DISK_MPATH }
-
-  TFRE_DB_DISK_MPATH=class(TFRE_DB_ObjectEx)
-  private
-  protected
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-  public
-  end;
-
-
 
   { TFRE_DB_ZFS_BLOCKDEVICE }
 
@@ -188,6 +178,7 @@ type
     procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
     procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
 
+
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
@@ -198,6 +189,9 @@ type
     property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
     property  IsUnassigned      : Boolean read getisUnassigned write setIsUnassgined;
   end;
+
+  TFRE_DB_ZFS_DISKREPLACECONTAINER=class;
+  TFRE_DB_ZFS_DISKSPARECONTAINER=class;
 
   { TFRE_DB_ZFS_DISKCONTAINER }
 
@@ -211,10 +205,35 @@ type
     function  addBlockdevice            (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
     function  addBlockdeviceEmbedded    (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
     function  createBlockdeviceEmbedded : TFRE_DB_ZFS_BLOCKDEVICE; virtual;
+    function  createDiskReplaceContainerEmbedded : TFRE_DB_ZFS_DISKREPLACECONTAINER; virtual;
+    function  createDiskSpareContainerEmbedded   : TFRE_DB_ZFS_DISKSPARECONTAINER; virtual;
     function  mayHaveZFSChildren       : Boolean; override;
     function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
     function  getLastChildId            (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
     property  raidLevel                 : TFRE_DB_ZFS_RAID_LEVEL read GetRaidLevel write SetRaidLevel;
+  end;
+
+
+  { TFRE_DB_ZFS_DISKREPLACECONTAINER }
+
+  TFRE_DB_ZFS_DISKREPLACECONTAINER=class(TFRE_DB_ZFS_DISKCONTAINER)
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function  mayHaveZFSChildren       : Boolean; override;
+    function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
+  end;
+
+  { TFRE_DB_ZFS_DISKSPARECONTAINER }
+
+  TFRE_DB_ZFS_DISKSPARECONTAINER=class(TFRE_DB_ZFS_DISKCONTAINER)
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function  mayHaveZFSChildren       : Boolean; override;
+    function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
   end;
 
   { TFRE_DB_ZFS_VDEV }
@@ -406,6 +425,50 @@ type
 
 implementation
 
+{ TFRE_DB_ZFS_DISKSPARECONTAINER }
+
+class procedure TFRE_DB_ZFS_DISKSPARECONTAINER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+class procedure TFRE_DB_ZFS_DISKSPARECONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
+function TFRE_DB_ZFS_DISKSPARECONTAINER.mayHaveZFSChildren: Boolean;
+begin
+  Result:=true;
+end;
+
+function TFRE_DB_ZFS_DISKSPARECONTAINER.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
+begin
+  Result:=false;
+end;
+
+{ TFRE_DB_ZFS_DISKREPLACECONTAINER }
+
+class procedure TFRE_DB_ZFS_DISKREPLACECONTAINER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+class procedure TFRE_DB_ZFS_DISKREPLACECONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
+function TFRE_DB_ZFS_DISKREPLACECONTAINER.mayHaveZFSChildren: Boolean;
+begin
+  Result:=true;
+end;
+
+function TFRE_DB_ZFS_DISKREPLACECONTAINER.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
+begin
+  Result:=false;
+end;
+
 { TFRE_DB_ZPOOL_IOSTAT }
 
 class procedure TFRE_DB_ZPOOL_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -485,13 +548,6 @@ begin
   Field('vdev').AddObject(blockdevice);
 end;
 
-{ TFRE_DB_DISK_MPATH }
-
-class procedure TFRE_DB_DISK_MPATH.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-end;
-
 { TFRE_DB_ZFS_ROOTOBJ }
 
 class procedure TFRE_DB_ZFS_ROOTOBJ.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -569,6 +625,18 @@ function TFRE_DB_ZFS_DISKCONTAINER.createBlockdeviceEmbedded: TFRE_DB_ZFS_BLOCKD
 begin
   Result:=TFRE_DB_ZFS_BLOCKDEVICE.CreateForDB;
   Field('vdev').AddObject(Result);
+end;
+
+function TFRE_DB_ZFS_DISKCONTAINER.createDiskReplaceContainerEmbedded: TFRE_DB_ZFS_DISKREPLACECONTAINER;
+begin
+ Result:=TFRE_DB_ZFS_DISKREPLACECONTAINER.CreateForDB;
+ Field('vdev').AddObject(Result);
+end;
+
+function TFRE_DB_ZFS_DISKCONTAINER.createDiskSpareContainerEmbedded: TFRE_DB_ZFS_DISKSPARECONTAINER;
+begin
+ Result:=TFRE_DB_ZFS_DISKSPARECONTAINER.CreateForDB;
+ Field('vdev').AddObject(Result);
 end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.mayHaveZFSChildren: Boolean;
@@ -815,7 +883,7 @@ end;
 
 procedure TFRE_DB_ZFS_OBJ._getCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  calcfieldsetter.SetAsString(caption);
+  calcfieldsetter.SetAsString(caption+' '+Field('state').asstring);     //DEBUG
 end;
 
 function TFRE_DB_ZFS_OBJ.getId: TFRE_DB_String;
@@ -1196,7 +1264,7 @@ begin
      try
 //       zo.SetRemoteSSH(remoteuser, remotehost, remotekey);
        zo.CreateDiskpool(emb_obj,error,resobj);
-       writeln('SWL:',resobj.DumpToString());
+//       writeln('SWL:',resobj.DumpToString());
      finally
        zo.Free;
      end;
@@ -1311,19 +1379,72 @@ var poolcolletion        : IFRE_DB_COLLECTION;
         end
       else
         begin
-          blockcollection.GetIndexedObj(devicename,dbblockdevice_uo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX);
-          dbblockdevice_obj := (dbblockdevice_uo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
-          _SetPoolParameter;
-          CheckDbResult(blockcollection.Update(dbblockdevice_obj),'could not update blockdevice');
+          if disk.Field('STATE').asstring<>'INUSE' then
+            begin
+              blockcollection.GetIndexedObj(devicename,dbblockdevice_uo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX);
+              dbblockdevice_obj := (dbblockdevice_uo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+              _SetPoolParameter;
+              CheckDbResult(blockcollection.Update(dbblockdevice_obj),'could not update blockdevice');
+            end;
         end;
     end;
 
+    function _AddDiskReplaceContainer(const vdev:IFRE_DB_Object; const parent_id:TGUID) : TGUID;
+    var
+      dbvdevcontainer_obj  : TFRE_DB_ZFS_DISKREPLACECONTAINER;
+      zfsguid              : string;
+    begin
+      dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_DISKREPLACECONTAINER;
+      dbvdevcontainer_obj.DeleteField('vdev');
+      dbvdevcontainer_obj.parentInZFSId := parent_id;
+      dbvdevcontainer_obj.poolId        :=  db_pool_uid;
+
+      zfsguid                           := dbvdevcontainer_obj.getZFSGuid;
+
+      result := dbvdevcontainer_obj.UID;
+      CheckDbResult(vdevcollection.Store(dbvdevcontainer_obj),'could not store vdev disk replace container '+zfsguid);
+    end;
+
+    function _AddDiskSpareContainer(const vdev:IFRE_DB_Object; const parent_id:TGUID) : TGUID;
+    var
+      dbvdevcontainer_obj  : TFRE_DB_ZFS_DISKSPARECONTAINER;
+      zfsguid              : string;
+    begin
+      dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_DISKSPARECONTAINER;
+      dbvdevcontainer_obj.DeleteField('vdev');
+      dbvdevcontainer_obj.parentInZFSId := parent_id;
+      dbvdevcontainer_obj.poolId        :=  db_pool_uid;
+
+      zfsguid                           := dbvdevcontainer_obj.getZFSGuid;
+
+      result := dbvdevcontainer_obj.UID;
+      CheckDbResult(vdevcollection.Store(dbvdevcontainer_obj),'could not store vdev disk spare container '+zfsguid);
+    end;
+
     procedure _AddDisksofVdev(const vdev:IFRE_DB_Object; const parent_id:TGUID);
-    var i     : NativeInt;
+    var i        : NativeInt;
+        dev      : IFRE_DB_Object;
+        dbdevUID : TGUID;
     begin
       for i:= 0 to vdev.Field('vdev').ValueCount-1 do
         begin
-          _AddBlockdevice(vdev.Field('vdev').AsObjectItem[i],parent_id);
+          dev := vdev.Field('vdev').AsObjectItem[i];
+          if (dev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
+            _AddBlockdevice(dev,parent_id)
+          else
+            if (dev.Implementor_HC is TFRE_DB_ZFS_DISKREPLACECONTAINER) then
+              begin
+                dbdevUID:=_AddDiskReplaceContainer(dev,parent_id);
+                _AddDisksofVdev(dev,dbdevUID);
+              end
+            else
+              if (dev.Implementor_HC is TFRE_DB_ZFS_DISKSPARECONTAINER) then
+                begin
+                  dbdevUID:=_AddDiskSpareContainer(dev,parent_id);
+                  _AddDisksofVdev(dev,dbdevUID);
+                end
+              else
+                GFRE_DBI.LogError(dblc_APPLICATION,'>Unknown device in vdev TFRE_DB_ZFS_POOL.FlatEmbeddedAndStoreInCollection : '+dev.DumpToString());
         end;
     end;
 
@@ -1331,7 +1452,7 @@ var poolcolletion        : IFRE_DB_COLLECTION;
     var
       dbvdevcontainer_obj  : TFRE_DB_ZFS_DISKCONTAINER;
     begin
-      dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER;
+      dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER;
       dbvdevcontainer_obj.DeleteField('vdev');
       dbvdevcontainer_obj.parentInZFSId := parent_id;
       dbvdevcontainer_obj.poolId        :=  db_pool_uid;
@@ -1354,6 +1475,7 @@ begin
    if poolcolletion.ExistsIndexed(getZFSGuid) then      // FIXME UPDATE CASE
      exit;
 
+//   writeln('SWL: DUMPING POOL',DumpToString);
    // Add to DB
    dbpool_obj        := CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_POOL;
    dbpool_obj.DeleteField('vdev');
@@ -1390,11 +1512,13 @@ begin
        else
          if (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_SPARE) then
            begin
+             db_vdev_container_uid := _StoreVdevcontainer(vdevcontainer,db_pool_uid);
              _AddDisksofVdev(vdevcontainer,db_vdev_container_uid);
            end
          else
            if (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_CACHE) then
              begin
+               db_vdev_container_uid := _StoreVdevcontainer(vdevcontainer,db_pool_uid);
                _AddDisksofVdev(vdevcontainer,db_vdev_container_uid);
              end
            else
@@ -2020,6 +2144,7 @@ begin
   ExecuteMulti;
   if proc.Field('exitstatus').AsInt32=0 then
     begin
+//      if ParseZpool(GFRE_BT.StringFromFile('spare2'),pool_hc) then  //DEBUG
       if ParseZpool(TFRE_DB_Process (proc.Implementor_HC).OutputToString,pool_hc) then
         begin
          pool := pool_hc;
@@ -2245,8 +2370,9 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_SPARE);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_LOG);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_CACHE);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DISKREPLACECONTAINER);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DISKSPARECONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_PARSE_DATASET);
-  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DISK_MPATH);
   GFRE_DBI.Initialize_Extension_Objects;
 end;
 
@@ -2377,11 +2503,16 @@ var  slist   : TStringList;
             (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_mirror);
             devname := RenumberVdev(devname);
           end else if Pos('spare',trim(lowercase(devname)))=1 then begin
-            dev := pool.createSpareEmbedded;
+            if devlvl = 0 then
+              dev := pool.createSpareEmbedded
+            else
+              dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createDiskSpareContainerEmbedded;
           end else if Pos('log',trim(lowercase(devname)))=1 then begin
             dev := pool.createLogEmbedded;
           end else if Pos('cache',trim(lowercase(devname)))=1 then begin
             dev := pool.createCacheEmbedded;
+          end else if Pos('replacing',trim(lowercase(devname)))=1 then begin
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createDiskReplaceContainerEmbedded;
           end else begin
             if devlvl = 0 then begin
               dev := pool.createDatastorageEmbedded;
@@ -2392,13 +2523,31 @@ var  slist   : TStringList;
           dev.Field('devicename').AsString := trim(devname);
           dev.Field('name').AsString       := trim(devname);
           dev.Field('state').AsString      := trim(Copy (line,statep,readp-statep-1));
-          dev.Field('read').AsString       := trim(Copy (line,readp,writep-readp-1));
-          dev.Field('write').AsString      := trim(Copy (line,writep,cksump-writep-1));
-          dev.Field('cksum').AsString      := trim(Copy (line,cksump,maxint));
+
+          if (dev.Field('state').AsString='AVAIL') or (dev.Field('state').AsString='INUSE') then
+            begin
+              dev.Field('read').AsString       := '';
+              dev.Field('write').AsString      := '';
+              dev.Field('cksum').AsString      := '';
+            end
+          else
+            begin
+              dev.Field('read').AsString       := trim(Copy (line,readp,writep-readp-1));
+              dev.Field('write').AsString      := trim(Copy (line,writep,cksump-writep-1));
+              dev.Field('cksum').AsString      := trim(Copy (line,cksump,maxint));
+              if Pos('resilvering',line)>0 then
+                begin
+                  dev.Field('resilvering').Asboolean := true;
+                  dev.Field('cksum').AsString        := GFRE_BT.SepLeft(dev.Field('cksum').AsString,' ');
+                end;
+            end;
           if (dev.Implementor_HC is TFRE_DB_ZFS_DATASTORAGE) then
             zfs_path := trim(devname)
           else
-            zfs_path := pool.Field('pool').AsString+'/'+trim(devname);
+            if (dev.Implementor_HC is TFRE_DB_ZFS_DISKREPLACECONTAINER) or (dev.Implementor_HC is TFRE_DB_ZFS_DISKSPARECONTAINER) then
+              zfs_path := pool.Field('pool').AsString+'/'+(parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).getZFSGuid+'/'+trim(devname)
+            else
+              zfs_path := pool.Field('pool').AsString+'/'+trim(devname);
 
           (dev.Implementor_HC as TFRE_DB_ZFS_OBJ).setZFSGuid(zfs_path);
           parentdev [devlvl ]              := dev;

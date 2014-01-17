@@ -232,6 +232,7 @@ var
    cSG3Inq : string = '/opt/local/sg3utils/bin/sg_inq';
    cSG3Ses : string = '/opt/local/sg3utils/bin/sg_ses';
    cSG3cap : string = '/opt/local/sg3utils/bin/sg_readcap';
+   cMpathListLu : string = 'mpathadm';
 
 
 type
@@ -250,8 +251,10 @@ type
     function Getfw_revision: string;
     function Getmanufacturer: string;
     function Getmodel_number: string;
+    function GetOperationalPathCount: Uint16;
     function GetParentInEnclosureUID: TGUID;
     function GetSlotNr: Uint16;
+    function GetTotalPathCount: Uint16;
     function GetWWN: string;
     function Getserial_number: string;
     function GetSize_Sectors: UInt32;
@@ -261,8 +264,10 @@ type
     procedure Setfw_revision(AValue: string);
     procedure Setmanufacturer(AValue: string);
     procedure Setmodel_number(AValue: string);
+    procedure SetOperationalPathCount(AValue: Uint16);
     procedure SetParentInEnclosureUID(AValue: TGUID);
     procedure SetSlotNr(AValue: Uint16);
+    procedure SetTotalPathCount(AValue: Uint16);
     procedure SetWWN(AValue: string);
     procedure Setserial_number(AValue: string);
     procedure SetSize_Sectors(AValue: UInt32);
@@ -272,6 +277,7 @@ type
     procedure _getLayoutSubCaption              (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutIcon                    (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getSizeMB                        (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getCaption                       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
     function GetTargetPorts: TFRE_DB_StringArray;
     property WWN                                 : string read GetWWN write SetWWN;
@@ -285,6 +291,8 @@ type
     property EnclosureNr                         : Uint16 read GetEnclosureNr write SetEnclosureNr;
     property EnclosureUID                        : TGUID  read GetEnclosureUID write SetEnclosureUID;
     property BlockSize                           : Uint16 read GetBlockSize write SetBlockSize;
+    property TotalPathCount                      : Uint16 read GetTotalPathCount write SetTotalPathCount;
+    property OperationalPathCount                : Uint16 read GetOperationalPathCount write SetOperationalPathCount;
   end;
 
   { TFRE_DB_SATA_DISK }
@@ -387,7 +395,6 @@ type
     function        _SG3GetPage                        (const cmd:string;  out output:string;out error:string; const params : TFRE_DB_StringArray=nil):integer;
     function        _FileExistsLocalorRemote           (const filename:string) : boolean;
 
-    procedure       AnalyzePrtConfDisks                (const proc   : TFRE_DB_Process;const disks:IFRE_DB_Object);
     function        getrdskDevices                     (const iostat_devices: IFRE_DB_Object): IFRE_DB_Object;
     function        getexpanderDevices                 : IFRE_DB_Object;
     function        SG3DiskInquiry                     (const devicepath : TFRE_DB_String; out disk: IFRE_DB_Object) : integer;
@@ -395,8 +402,8 @@ type
   protected
     class procedure RegisterSystemScheme               (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
-    function        GetDiskInformation                 (out error: string; out disks:IFRE_DB_Object) : integer;
     function        GetSG3DiskandEnclosureInformation  (const iostat_devices: IFRE_DB_Object; out error: string; out scsi_structure:IFRE_DB_Object) : integer;
+    function        GetMpathAdmLUInformation           (out error: string; out mpathinfo:IFRE_DB_Object) : integer;
 
   end;
 
@@ -522,6 +529,7 @@ begin
   output := proc.OutputToString;
   error  := proc.ErrorToString;
   result := proc.Field('exitstatus').AsInt32;
+  ClearProcess;
 end;
 
 function TFRE_DB_SCSI._FileExistsLocalorRemote(const filename: string): boolean;
@@ -540,144 +548,6 @@ begin
     result := FileExists(filename);
 end;
 
-procedure TFRE_DB_SCSI.AnalyzePrtConfDisks(const proc: TFRE_DB_Process; const disks: IFRE_DB_Object);
-type
-     TPrtConf_Parsestate = (psInvalid,psNoDisk,psDiskInfo,psDiskMPT,psDeviceName);
-
-var  slist         : TStringList;
-     disk          : IFRE_DB_Object;
-     mpath         : IFRE_DB_Object;
-     i             : NativeInt;
-     s             : TFRE_DB_String;
-     devicename    : TFRE_DB_String;
-     pstate        : TPrtConf_Parsestate;
-
-     procedure _newMpath;
-     begin
-        mpath  :=GFRE_DBI.NewObjectScheme(TFRE_DB_DISK_MPATH);
-        if Pos('online',s)>0 then
-          mpath.Field('online').asboolean:=true
-        else
-          mpath.Field('online').asboolean:=false
-     end;
-
-     function GetValueS(const valuestring: TFRE_DB_String): TFRE_DB_String;
-     begin
-       result := GFRE_BT.SepRight(valuestring,'''');
-       result := GFRE_BT.SepLeft(result,'''');
-     end;
-
-     function GetValueHexUInt32(const valuestring: TFRE_DB_String): UInt32;
-     begin
-       result := strtoint('$'+GFRE_BT.SepRight(valuestring,'='));
-     end;
-
-     function GetDirectS(const valuestring: TFRE_DB_String): TFRE_DB_String;
-     begin
-       result := GFRE_BT.SepRight(valuestring,'=');
-     end;
-
-begin
-
-
-  slist := TStringList.Create;
-  try
-     slist.text              := TFRE_DB_Process (proc.Implementor_HC).OutputToString;
-     pstate                  := psNoDisk;
-
-     for i:= 1 to slist.count-1 do
-       begin
-         s := slist[i];
-
-         case pstate of
-           psNoDisk:           begin
-                                 if Pos('disk, instance',s)>0 then
-                                   begin
-                                     pstate := psDiskInfo;
-//                                     writeln('{899838B2-08CF-97CE-4C85-67FEDCF05C16}','disk found',s);
-                                     disk   := GFRE_DBI.NewObjectScheme(TFRE_DB_PHYS_DISK);
-                                   end;
-                               end;
-           psDiskInfo:        begin
-//                                writeln('DISKINFO:',s);
-                                 if Pos('name=''inquiry-serial-no''',s)>0 then
-                                   (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setserial_number(GetValueS(slist[i+1]));
-                                 if Pos('name=''inquiry-revision-id''',s)>0 then
-                                   (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setfw_revision(GetValueS(slist[i+1]));
-                                 if Pos('name=''inquiry-product-id''',s)>0 then
-                                   (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setmodel_number(GetValueS(slist[i+1]));
-                                 if Pos('name=''inquiry-vendor-id''',s)>0 then
-                                   (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setmanufacturer(GetValueS(slist[i+1]));
-                                 if Pos('mpt_sas',s)>0 then
-                                   begin
-                                     _newMpath;
-                                     pstate :=psDiskMPT;
-                                   end;
-
-                                 if Pos('Device Minor Nodes',s)>0 then
-                                   pstate :=psDeviceName;
-                               end;
-           psDiskMPT:          begin
-                                 if Pos('name=''wwn''',s)>0 then
-                                   (disk.Implementor_HC as TFRE_DB_PHYS_DISK).SetWWN(GetValueS(slist[i+1]));
-                                 if Pos('name=''target-port''',s)>0 then
-                                   mpath.Field('target-port').AsString:=GetValueS(slist[i+1]);
-                                 if Pos('name=''attached-port''',s)>0 then
-                                   mpath.Field('attached-port').AsString:=GetValueS(slist[i+1]);
-                                 if Pos('name=''path-class''',s)>0 then
-                                   mpath.Field('path-class').AsString:=GetValueS(slist[i+1]);
-                                 if Pos('name=''phy-num''',s)>0 then
-                                   mpath.Field('phy-num').AsUInt32:=GetValueHexUInt32(slist[i+1]);
-
-
-                                 if Pos('mpt_sas',s)>0 then                                      // next mpath
-                                   begin
-                                     disk.Field('mpath').AddObject(mpath);
-                                     _newmpath;
-                                   end;
-
-                                 if Pos('Device Minor Nodes',s)>0 then                          // end of mpath
-                                   begin
-//                                     writeln('add mpath');
-                                     disk.Field('mpath').AddObject(mpath);
-                                     pstate :=psDeviceName;
-                                   end;
-
-                                 if Pos('disk, instance',s)>0 then                              // no devicename, ignore
-                                   begin
-                                     disk.Finalize;
-                                     pstate := psDiskInfo;
-                                     disk   := GFRE_DBI.NewObjectScheme(TFRE_DB_PHYS_DISK);
-                                   end;
-
-                               end;
-           psDeviceName:       begin
-                                 if Pos('dev_link',s)>0 then
-                                   begin
-                                     devicename := GetDirectS(s);
-                                     devicename := Copy(devicename,1,length(devicename)-2);
-                                     devicename := Copy(devicename,10,length(devicename));
-                                     (disk.Implementor_HC as TFRE_DB_PHYS_DISK).DeviceName := devicename;
-
-                                     if (disk.Implementor_HC as TFRE_DB_PHYS_DISK).DeviceIdentifier='' then          // no WWN
-                                       (disk.Implementor_HC as TFRE_DB_PHYS_DISK).DeviceIdentifier:=devicename;
-
-                                     if Pos('c',devicename)=1 then
-                                       disks.Field('disks').addobject(disk)
-                                     else
-                                       disk.Finalize;
-
-                                     pstate := psNoDisk;
-                                   end;
-                               end
-         else
-           raise Exception.Create('INVALID PRTCONF PARSE STATE:'+inttostr(ord(pstate)));
-         end;
-       end;
-  finally
-    slist.Free;
-  end;
-end;
 
 function TFRE_DB_SCSI.getrdskDevices(const iostat_devices: IFRE_DB_Object): IFRE_DB_Object;
 
@@ -689,8 +559,6 @@ function TFRE_DB_SCSI.getrdskDevices(const iostat_devices: IFRE_DB_Object): IFRE
 begin
   result := GFRE_DBI.NewObject;
   iostat_devices.ForAllObjects(@_getdevices);
-  iostat_devices.Finalize;
-//  writeln('DEVICES:',result.DumpToString());
 end;
 
 function TFRE_DB_SCSI.getexpanderDevices: IFRE_DB_Object;
@@ -700,23 +568,25 @@ var sl : TStringList;
 begin
 //  if FieldExists('remotehost') then
 //    begin
+      result := GFRE_DBI.NewObject;
       ClearProcess;
-      result := GFRE_DBI.NewObject;
       proc := TFRE_DB_Process.create;
-      proc.SetupInput('find',TFRE_DB_StringArray.Create ('/dev/es'));
-      AddProcess(proc);
-      ExecuteMulti;
-      result := GFRE_DBI.NewObject;
-      sl := TStringList.Create;
       try
-        sl.Text:=TFRE_DB_Process (proc.Implementor_HC).OutputToString;
-        for i:= 1 to sl.count-1 do
-          begin
-            result.Field('device').AddString(sl[i]);
-          end;
-        writeln(sl.text,sl.count,proc.ExitStatus,proc.ErrorToString);
+        proc.SetupInput('find',TFRE_DB_StringArray.Create ('/dev/es'));
+        AddProcess(proc);
+        ExecuteMulti;
+        sl := TStringList.Create;
+        try
+          sl.Text:=TFRE_DB_Process (proc.Implementor_HC).OutputToString;
+          for i:= 1 to sl.count-1 do
+            begin
+              result.Field('device').AddString(sl[i]);
+            end;
+        finally
+          sl.Free;
+        end;
       finally
-        sl.Free;
+        ClearProcess;
       end;
 //    end
 //  else
@@ -749,9 +619,10 @@ begin
   devicename := Copy(devicename,1,length(devicename)-2);
 //  writeln(devicename);
 
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3DiskInquiry [%s]',[devicepath]);
   if not _FileExistsLocalorRemote(devicepath) then                      // devices from iostat without /dev/rdsk/*s2 entry
     begin
-      writeln('undefined: ',devicepath);
+      GFRE_DBI.LogInfo(dblc_APPLICATION,'SG3DiskInquiry Undefined Blockdevice [%s]',[devicepath]);
       undefineddisk  := TFRE_DB_UNDEFINED_BLOCKDEVICE.CreateForDB;
       undefineddisk.DeviceName       := devicename;
       undefineddisk.DeviceIdentifier := devicename;
@@ -759,9 +630,9 @@ begin
       exit(0);
     end;
 
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: 0x88 [%s]',[devicepath]);
 
   res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create ('-p','0x88',devicepath));
-
   if res=0 then //SAS DISK
     begin
       disk  := GFRE_DBI.NewObjectScheme(TFRE_DB_SAS_DISK);
@@ -804,7 +675,7 @@ begin
     end;
 
   // get wwn
-  writeln('wwn');
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: di [%s]',[devicepath]);
   res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create ('-p','di',devicepath));
   if res=0 then
     begin
@@ -854,7 +725,8 @@ begin
     (disk.Implementor_HC as TFRE_DB_PHYS_DISK).DeviceIdentifier:=devicename;
 
   //get serial, vendor
-  writeln('serial');
+//  writeln('serial');
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: <default> [%s]',[devicepath]);
 
   res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create (devicepath));
   if res=0 then
@@ -880,12 +752,16 @@ begin
     end
   else
     begin
+      if Assigned(disk) then
+        disk.Finalize;
       disk   := nil;
       GFRE_DBI.LogError(dblc_APPLICATION,'SG3 Inquire for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
       exit(res);
     end;
 
-  writeln('size');
+//  writeln('size');
+
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: cap [%s]',[devicepath]);
 
   res := _SG3GetPage(cSG3cap,outstring,errstring,TFRE_DB_StringArray.Create ('-b',devicepath));
   if res=0 then
@@ -898,6 +774,8 @@ begin
     end
   else
     begin
+      if Assigned(disk) then
+        disk.Finalize;
       disk   := nil;
       GFRE_DBI.LogError(dblc_APPLICATION,'SG3 Readcap for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
       exit(res);
@@ -990,19 +868,22 @@ var
   var
     proc         : TFRE_DB_Process;
   begin
+    GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3Ses: -I 0 [%d] -p aes [%s]',[slotnr,devicepath]);
+
     proc := TFRE_DB_Process.create;
     proc.SetupInput(cSG3Ses,TFRE_DB_StringArray.Create ('-I','0,'+inttostr(slotnr),'-p','aes',devicepath));
     proc.Field('slotnr').AsUInt16:=slotnr;
-    writeln('SWL:slot ',slotnr,' ',devicepath);
+//    writeln('SWL:slot ',slotnr,' ',devicepath);
     AddProcess(proc);
   end;
 
 
 begin
 
-  writeln(devicepath);
   // determine sas/sata, get target ports
-  writeln('SWL:',devicepath);
+//  writeln('SWL:',devicepath);
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: cf [%s]',[devicepath]);
+
   res := _SG3GetPage(cSG3Ses,outstring,errstring,TFRE_DB_StringArray.Create ('-p','cf',devicepath));
   if res=0 then
     begin
@@ -1052,6 +933,7 @@ begin
           _GetDriveSlotInformation(i);
           ExecuteMulti;
           _AnalyzeDriveSlotInformation(GetProcess(0));
+          ClearProcess;
         end;
     end;
 end;
@@ -1061,57 +943,102 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-function TFRE_DB_SCSI.GetDiskInformation(out error: string; out disks: IFRE_DB_Object): integer;
-var
-  proc  : TFRE_DB_Process;
-begin
-  ClearProcess;
-  proc := TFRE_DB_Process.create;
-  proc.SetupInput('prtconf',TFRE_DB_StringArray.Create ('-v'));
-  AddProcess(proc);
-  ExecuteMulti;
-  disks         := GFRE_DBI.NewObject;
-  AnalyzePrtConfDisks(proc,disks);
-  result        := proc.Field('exitstatus').AsInt32;
-  error         := proc.Field('errorstring').AsString;
-end;
 
 function TFRE_DB_SCSI.GetSG3DiskandEnclosureInformation(const iostat_devices: IFRE_DB_Object; out error: string; out scsi_structure: IFRE_DB_Object): integer;
 var devices : IFRE_DB_Object;
     disk    : IFRE_DB_Object;
     i       : NativeInt;
 begin
-
 //  writeln('IOStat Devices:',iostat_devices.DumpToString());
+  try
+    cSG3Inq := cFRE_ToolsPath+'/sg3utils/bin/sg_inq';
+    cSG3Ses := cFRE_ToolsPath+'/sg3utils/bin/sg_ses';
+    cSG3cap := cFRE_ToolsPath+'/sg3utils/bin/sg_readcap';
 
-  cSG3Inq := cFRE_ToolsPath+'/sg3utils/bin/sg_inq';
-  cSG3Ses := cFRE_ToolsPath+'/sg3utils/bin/sg_ses';
-  cSG3cap := cFRE_ToolsPath+'/sg3utils/bin/sg_readcap';
+  //  writeln('SG3INQ Program:',csg3inq);
 
-  writeln('SG3INQ Program:',csg3inq);
-
-  scsi_structure   := GFRE_DBI.NewObject;
-  scsi_structure.Field('enclosures').asObject := GFRE_DBI.NewObject;
-  scsi_structure.Field('disks').asObject      := GFRE_DBI.NewObject;
-
-  devices := getexpanderDevices;
-//  writeln('ES :',devices.DumpToString());
-  for i := 0 to devices.Field('device').ValueCount-1 do
-    begin
-      SG3SESInquiry(devices.Field('device').AsStringItem[i],scsi_structure);
-    end;
-  devices.Finalize;
-
-  devices := getrdskDevices(iostat_devices);
-
-  for i := 0 to devices.Field('device').ValueCount-1 do
-    begin
-      if SG3DiskInquiry(devices.Field('device').AsStringItem[i],disk)=0 then
+    scsi_structure   := GFRE_DBI.NewObject;
+    scsi_structure.Field('enclosures').asObject := GFRE_DBI.NewObject;
+    scsi_structure.Field('disks').asObject      := GFRE_DBI.NewObject;
+    devices := getexpanderDevices;
+  //  writeln('ES :',devices.DumpToString());
+    try
+      for i := 0 to devices.Field('device').ValueCount-1 do
         begin
-          scsi_structure.Field('disks').asObject.Field(disk.Field('DEVICEIDENTIFIER').asstring).asobject:=disk;
+          SG3SESInquiry(devices.Field('device').AsStringItem[i],scsi_structure);
         end;
+    finally
+      devices.Finalize;
     end;
-  //  writeln('SWL:scsi_structure',scsi_structure.DumpToString);
+    devices := getrdskDevices(iostat_devices);
+    try
+      for i := 0 to devices.Field('device').ValueCount-1 do
+        begin
+          if SG3DiskInquiry(devices.Field('device').AsStringItem[i],disk)=0 then
+            scsi_structure.Field('disks').asObject.Field(disk.Field('DEVICEIDENTIFIER').asstring).asobject:=disk;
+        end;
+    finally
+      devices.Finalize;
+    end;
+  finally
+    iostat_devices.Finalize;
+  end;
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3DiskandEnclosureInformation Done');
+end;
+
+function TFRE_DB_SCSI.GetMpathAdmLUInformation(out error: string; out mpathinfo: IFRE_DB_Object): integer;
+var   proc        : TFRE_DB_Process;
+      sl          : TStringList;
+      s           : string;
+      device      : string;
+      i           : NativeInt;
+      p           : NativeInt;
+      tpathcount  : NativeInt;
+      opathcount  : NativeInt;
+      devobj      : IFRE_DB_Object;
+begin
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+  proc.SetupInput(cMpathListLu,TFRE_DB_StringArray.Create ('list','lu'));
+  AddProcess(proc);
+  ExecuteMulti;
+
+  error  := proc.ErrorToString;
+  result := proc.Field('exitstatus').AsInt32;
+  mpathinfo := GFRE_DBI.NewObject;
+  if result=0 then
+    begin
+      sl:=TStringList.Create;
+      try
+        sl.Text := proc.OutputToString;
+        for i:=0 to sl.count-1 do
+          begin
+            s := sl[i];
+            p := Pos('/dev/rdsk/',s);
+            if p>0 then
+              begin
+                device := Copy(s,p+10,length(s));
+                device := Copy(device,1,length(device)-2);
+//                writeln('SWL: DEVICE:',device);
+                if (i+1<sl.count) then
+                  tpathcount:= strtoint(trim(GFRE_BT.SepRight(sl[i+1],':')))
+                else
+                  tpathcount:= 0;
+                if (i+2<sl.count) then
+                  opathcount:= strtoint(trim(GFRE_BT.SepRight(sl[i+2],':')))
+                else
+                  opathcount:= 0;
+                devobj:=GFRE_DBI.NewObject;
+                devobj.Field('device').asstring     := device;
+                devobj.Field('tpathcount').AsUInt16 := tpathcount;
+                devobj.Field('opathcount').AsUInt16 := opathcount;
+                mpathinfo.Field(device).AsObject    := devobj;
+              end;
+          end;
+      finally
+        sl.Free;
+      end;
+  end;
 end;
 
 { TFRE_DB_PHYS_DISK }
@@ -1146,6 +1073,14 @@ begin
   result:=field('model_number').asstring;
 end;
 
+function TFRE_DB_PHYS_DISK.GetOperationalPathCount: Uint16;
+begin
+  if FieldExists('operationalpathcount') then
+    Result:=Field('operationalpathcount').AsUInt16
+  else
+    Result:=0;
+end;
+
 function TFRE_DB_PHYS_DISK.GetParentInEnclosureUID: TGUID;
 begin
   Result:=Field('parent_in_enclosure_uid').AsObjectLink;
@@ -1158,6 +1093,14 @@ begin
   end else begin
     Result:=0;
   end;
+end;
+
+function TFRE_DB_PHYS_DISK.GetTotalPathCount: Uint16;
+begin
+  if FieldExists('totalpathcount') then
+    Result:=Field('totalpathcount').AsUInt16
+  else
+    Result:=0;
 end;
 
 function TFRE_DB_PHYS_DISK.GetWWN: string;
@@ -1206,6 +1149,11 @@ begin
   field('model_number').asstring := avalue;
 end;
 
+procedure TFRE_DB_PHYS_DISK.SetOperationalPathCount(AValue: Uint16);
+begin
+  Field('operationalpathcount').AsUInt16:=AValue;
+end;
+
 procedure TFRE_DB_PHYS_DISK.SetParentInEnclosureUID(AValue: TGUID);
 begin
   Field('parent_in_enclosure_uid').AsObjectLink:=Avalue;
@@ -1214,6 +1162,11 @@ end;
 procedure TFRE_DB_PHYS_DISK.SetSlotNr(AValue: Uint16);
 begin
   Field('slotnr').AsUInt16 := AValue;
+end;
+
+procedure TFRE_DB_PHYS_DISK.SetTotalPathCount(AValue: Uint16);
+begin
+  Field('totalpathcount').AsUInt16:=AValue;
 end;
 
 
@@ -1240,6 +1193,11 @@ begin
     calcfieldsetter.SetAsUInt32(0);
 end;
 
+procedure TFRE_DB_PHYS_DISK._getCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+   calcfieldsetter.SetAsString('(' + IntToStr(SlotNr) + ')'+' '+WWN);
+end;
+
 class procedure TFRE_DB_PHYS_DISK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
@@ -1256,7 +1214,7 @@ end;
 
 procedure TFRE_DB_PHYS_DISK._getLayoutSubCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  calcfieldsetter.SetAsString(Manufacturer+' '+Model_number+' '+Serial_number+' '+WWN);
+  calcfieldsetter.SetAsString(Manufacturer+' '+Model_number+' '+Serial_number+' '+WWN+' ('+inttostr(OperationalPathCount)+'/'+inttostr(TotalPathCount)+')');
 end;
 
 procedure TFRE_DB_PHYS_DISK._getLayoutIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
