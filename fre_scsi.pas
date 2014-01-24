@@ -611,7 +611,11 @@ var
   undefineddisk : TFRE_DB_UNDEFINED_BLOCKDEVICE;
   blocks_s    : string;
   blocksize_s : string;
-
+  vendor      : string;
+  model_number: string;
+  fw_revision : string;
+  serialnr    : string;
+  devicetype  : string;
 
 begin
 //  writeln(devicepath);
@@ -630,42 +634,87 @@ begin
       exit(0);
     end;
 
-  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: 0x88 [%s]',[devicepath]);
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: <default> [%s]',[devicepath]);
 
-  res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create ('-p','0x88',devicepath));
-  if res=0 then //SAS DISK
+  res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create (devicepath));
+  if res=0 then
     begin
-      disk  := GFRE_DBI.NewObjectScheme(TFRE_DB_SAS_DISK);
-      porti := 0;
       sl := TStringList.Create;
       try
         sl.Text := outstring;
         for i:=0 to sl.count-1 do
          begin
            s:= sl[i];
-           if Pos('Relative port=1',s)>0 then
-             porti := 1;
-           if Pos('Relative port=2',s)>0 then
-             porti := 2;
-           if Pos('Vendor Specific Identifier:',s)>0 then
-             begin
-               if porti>0 then
-                 begin
-                   s := sl[i+1];
-                   ports[porti] := GFRE_BT.SepLeft(GFRE_BT.SepRight(s,'['),']');
-                   porti :=0;
-                 end;
-             end;
+           if Pos('Vendor identification',s)>0 then
+             vendor       := trim(GFRE_BT.SepRight(s,':'));
+           if Pos('Product identification',s)>0 then
+             model_number := trim(GFRE_BT.SepRight(s,':'));
+           if Pos('Product revision level',s)>0 then
+             fw_revision  := trim(GFRE_BT.SepRight(s,':'));
+           if Pos('Unit serial number',s)>0 then
+             serialnr     := trim(GFRE_BT.SepRight(s,':'));
+           if Pos('Peripheral device type',s)>0 then
+             devicetype   := trim(GFRE_BT.SepRight(s,':'));
          end;
       finally
         sl.Free;
       end;
-      (disk.Implementor_HC as TFRE_DB_SAS_DISK).SetTargetPorts(ports[1],ports[2]);
     end
   else
     begin
-      if res=5 then
-        disk  := GFRE_DBI.NewObjectScheme(TFRE_DB_SATA_DISK)
+      disk   := nil;
+      GFRE_DBI.LogError(dblc_APPLICATION,'SG3 Inquire for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
+      exit(res);
+    end;
+
+   if devicetype<>'disk' then
+     begin
+       GFRE_DBI.LogInfo(dblc_APPLICATION,'SG3DiskInquiry Type of device [%s] is not disk [%s]',[devicetype,devicepath]);
+       undefineddisk  := TFRE_DB_UNDEFINED_BLOCKDEVICE.CreateForDB;
+       undefineddisk.DeviceName       := devicename;
+       undefineddisk.DeviceIdentifier := devicename;
+       disk := undefineddisk;
+       exit(0);
+     end;
+
+  if vendor='ATA' then
+    begin
+      GFRE_DBI.LogDebug(dblc_APPLICATION,'Vendor of device is %s [%s]',[vendor, devicepath]);
+      disk  := GFRE_DBI.NewObjectScheme(TFRE_DB_SATA_DISK)
+    end
+  else
+    begin
+      GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: 0x88 [%s]',[devicepath]);
+      res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create ('-p','0x88',devicepath));
+      if res=0 then //SAS DISK
+        begin
+          disk  := GFRE_DBI.NewObjectScheme(TFRE_DB_SAS_DISK);
+          porti := 0;
+          sl := TStringList.Create;
+          try
+            sl.Text := outstring;
+            for i:=0 to sl.count-1 do
+             begin
+               s:= sl[i];
+               if Pos('Relative port=1',s)>0 then
+                 porti := 1;
+               if Pos('Relative port=2',s)>0 then
+                 porti := 2;
+               if Pos('Vendor Specific Identifier:',s)>0 then
+                 begin
+                   if porti>0 then
+                     begin
+                       s := sl[i+1];
+                       ports[porti] := GFRE_BT.SepLeft(GFRE_BT.SepRight(s,'['),']');
+                       porti :=0;
+                     end;
+                 end;
+             end;
+          finally
+            sl.Free;
+          end;
+          (disk.Implementor_HC as TFRE_DB_SAS_DISK).SetTargetPorts(ports[1],ports[2]);
+        end
       else
         begin
           disk   := nil;
@@ -673,6 +722,11 @@ begin
           exit(res);
         end;
     end;
+
+  (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setmanufacturer(vendor);
+  (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setmodel_number(model_number);
+  (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setfw_revision(fw_revision);
+  (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setserial_number(serialnr);
 
   // get wwn
   GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: di [%s]',[devicepath]);
@@ -724,46 +778,9 @@ begin
   if (disk.Implementor_HC as TFRE_DB_PHYS_DISK).DeviceIdentifier='' then          // no WWN
     (disk.Implementor_HC as TFRE_DB_PHYS_DISK).DeviceIdentifier:=devicename;
 
-  //get serial, vendor
-//  writeln('serial');
-  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: <default> [%s]',[devicepath]);
-
-  res := _SG3GetPage(cSG3Inq,outstring,errstring,TFRE_DB_StringArray.Create (devicepath));
-  if res=0 then
-    begin
-      sl := TStringList.Create;
-      try
-        sl.Text := outstring;
-        for i:=0 to sl.count-1 do
-         begin
-           s:= sl[i];
-           if Pos('Vendor identification',s)>0 then
-             (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setmanufacturer(trim(GFRE_BT.SepRight(s,':')));
-           if Pos('Product identification',s)>0 then
-             (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setmodel_number(trim(GFRE_BT.SepRight(s,':')));
-           if Pos('Product revision level',s)>0 then
-             (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setfw_revision(trim(GFRE_BT.SepRight(s,':')));
-           if Pos('Unit serial number',s)>0 then
-             (disk.Implementor_HC as TFRE_DB_PHYS_DISK).Setserial_number(trim(GFRE_BT.SepRight(s,':')));
-         end;
-      finally
-        sl.Free;
-      end;
-    end
-  else
-    begin
-      if Assigned(disk) then
-        disk.Finalize;
-      disk   := nil;
-      GFRE_DBI.LogError(dblc_APPLICATION,'SG3 Inquire for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
-      exit(res);
-    end;
-
-//  writeln('size');
-
   GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: cap [%s]',[devicepath]);
 
-  res := _SG3GetPage(cSG3cap,outstring,errstring,TFRE_DB_StringArray.Create ('-b',devicepath));
+  res := _SG3GetPage(cSG3cap,outstring,errstring,TFRE_DB_StringArray.Create ('-l','-b',devicepath));
   if res=0 then
     begin
       s:=outstring;
