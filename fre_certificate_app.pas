@@ -117,7 +117,7 @@ begin
     end;
     dc_crt := session.NewDerivedCollection('crt_grid');
     with dc_crt do begin
-      SetReferentialLinkMode('TFRE_DB_CERTIFICATE|CA',false);
+      SetReferentialLinkMode(['TFRE_DB_CERTIFICATE<CA']);
 //            SetDeriveParent           (conn.Collection('certificate'));
       SetDeriveTransformation(crt_Grid);
       SetDisplayType(cdt_Listview,[],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));

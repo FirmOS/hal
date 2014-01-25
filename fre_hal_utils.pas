@@ -190,7 +190,7 @@ end;
 
 procedure SaveHAL(const halo: IFRE_DB_Object);
 begin
-   halo.SaveToFile(cFRE_HAL_CFG_DIR+'/'+cfre_hal_dbo,true);
+   halo.SaveToFile(cFRE_HAL_CFG_DIR+'/'+cfre_hal_dbo);
 end;
 
 function LoadHal: IFRE_DB_Object;
@@ -200,7 +200,7 @@ end;
 
 procedure SaveRedirect(const halo: IFRE_DB_Object);
 begin
- halo.SaveToFile(cFRE_HAL_CFG_DIR+'/'+cfre_redirect_dbo,true);
+ halo.SaveToFile(cFRE_HAL_CFG_DIR+'/'+cfre_redirect_dbo);
 end;
 
 function LoadRedirect: IFRE_DB_Object;
