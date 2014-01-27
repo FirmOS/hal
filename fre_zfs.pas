@@ -2283,7 +2283,6 @@ begin
               _AddDisk(vdev);
             end;
         end;
-      writeln(vdev.SchemeClass);
     end;
 
   pool_result := GFRE_DBI.NewObject;

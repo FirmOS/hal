@@ -143,11 +143,11 @@ var conn : IFRE_DB_Connection;
       if halo.FieldExists(cfre_hal_service_redirect) then begin
        rd:=halo.Field(cfre_hal_service_redirect).AsObject;
   //     rd.SaveToFile('/fre/tmp/rd_'+obj.Field('ip').asstring+'.dbo',true);
-       rd.SaveToFile(dbofile,true);
+       rd.SaveToFile(dbofile);
       end;
       if halo.FieldExists(cfre_hal_service_ps) then begin
         rd:=halo.Field(cfre_hal_service_ps).AsObject;
-        rd.SaveToFile(psfile,true);
+        rd.SaveToFile(psfile);
       end;
 //      halo.SaveToFile('/fre/tmp/hal_'+obj.Field('ip').asstring+'.dbo',true);
       halo.Finalize;
