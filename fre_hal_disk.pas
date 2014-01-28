@@ -218,6 +218,13 @@ var
     if fdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_disk.DeviceIdentifier,old_obj,'') then
       begin
         old_obj.SetAllSimpleObjectFieldsFromObject(feed_disk);
+        if feed_disk.FieldExists('log') then
+          begin
+            if (old_obj.FieldExists('log')) then
+                old_obj.Field('log').AsObject.SetAllSimpleObjectFieldsFromObject(feed_disk.Field('log').AsObject)
+            else
+                old_obj.Field('log').AsObject := feed_disk.Field('log').AsObject.CloneToNewObject;
+          end;
       end
     else
       begin
