@@ -47,191 +47,12 @@ uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
   FOS_TOOL_INTERFACES,fre_zfs,fre_system;
 
-
-// ./sas2ircu 0 DISPLAY
-
-//Device is a Hard disk
-//  Enclosure #                             : 2
-//  Slot #                                  : 0
-//  SAS Address                             : 5003048-0-01ab-cc6c
-//  State                                   : Ready (RDY)
-//  Size (in MB)/(in sectors)               : 122104/250069679
-//  Manufacturer                            : ATA
-//  Model Number                            : Samsung SSD 840
-//  Firmware Revision                       : 4B0Q
-//  Serial No                               : S12PNEAD204359F
-//  GUID                                    : 50025385501cb30c
-//  Protocol                                : SATA
-//  Drive Type                              : SATA_SSD
-//
-//Device is a Enclosure services device
-//  Enclosure #                             : 2
-//  Slot #                                  : 0
-//  SAS Address                             : 5003048-0-01ab-cc7d
-//  State                                   : Standby (SBY)
-//  Manufacturer                            : LSI CORP
-//  Model Number                            : SAS2X28
-//  Firmware Revision                       : 0717
-//  Serial No                               : x36557230
-//  GUID                                    : N/A
-//  Protocol                                : SAS
-//  Device Type                             : Enclosure services device
-//
-//Device is a Hard disk
-//  Enclosure #                             : 2
-//  Slot #                                  : 1
-//  SAS Address                             : 5003048-0-01ab-cc6d
-//  State                                   : Ready (RDY)
-//  Size (in MB)/(in sectors)               : 244198/500118191
-//  Manufacturer                            : ATA
-//  Model Number                            : Samsung SSD 840
-//  Firmware Revision                       : 4B0Q
-//  Serial No                               : S12RNEACC94641Y
-//  GUID                                    : 500253855015d44d
-//  Protocol                                : SATA
-//  Drive Type                              : SATA_SSD
-//
-//Device is a Hard disk
-//  Enclosure #                             : 2
-//  Slot #                                  : 4
-//  SAS Address                             : 5000c50-0-562c-2495
-//  State                                   : Ready (RDY)
-//  Size (in MB)/(in sectors)               : 953869/1953525167
-//  Manufacturer                            : SEAGATE
-//  Model Number                            : ST1000NM0001
-//  Firmware Revision                       : 0002
-//  Serial No                               : Z1N3RMMG
-//  GUID                                    : 5000c500562c2497
-//  Protocol                                : SAS
-//  Drive Type                              : SAS_HDD
-
-//fmtopo -V
-//hc://:product-id=LSI-CORP-SAS2X28:server-id=:chassis-id=5003048001abcc7f:serial=Z1N3RMMG0000C3310LYW:part=SEAGATE-ST1000NM0001:revision=0002/ses-enclosure=0/bay=4/disk=0
-//  group: protocol                       version: 1   stability: Private/Private
-//    resource          fmri      hc://:product-id=LSI-CORP-SAS2X28:server-id=:chassis-id=5003048001abcc7f:serial=Z1N3RMMG0000C3310LYW:part=SEAGATE-ST1000NM0001:revision=0002/ses-enclosure=0/bay=4/disk=0
-//    label             string    Slot 05
-//    FRU               fmri      hc://:product-id=LSI-CORP-SAS2X28:server-id=:chassis-id=5003048001abcc7f:serial=Z1N3RMMG0000C3310LYW:part=SEAGATE-ST1000NM0001:revision=0002/ses-enclosure=0/bay=4/disk=0
-//    ASRU              fmri      dev:///:devid=id1,sd@n5000c500562c2497//scsi_vhci/disk@g5000c500562c2497
-//  group: authority                      version: 1   stability: Private/Private
-//    product-id        string    LSI-CORP-SAS2X28
-//    chassis-id        string    5003048001abcc7f
-//    server-id         string
-//  group: storage                        version: 1   stability: Private/Private
-//    logical-disk      string    c0t5000C500562C2497d0
-//    manufacturer      string    SEAGATE
-//    model             string    ST1000NM0001
-//    serial-number     string    Z1N3RMMG0000C3310LYW
-//    firmware-revision string    0002
-//    capacity-in-bytes string    1000204886016
-//    target-port-l0ids string[]  [ "w5000c500562c2495" "w5000c500562c2496" ]
-//  group: io                             version: 1   stability: Private/Private
-//    devfs-path        string    /scsi_vhci/disk@g5000c500562c2497
-//    devid             string    id1,sd@n5000c500562c2497
-//    phys-path         string[]  [ "/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f/disk@w5000c500562c2495,0" "/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0/disk@w5000c500562c2496,0" ]
-//
-//
-
-// cfgadm -alv
-//c2                             connected    configured   unknown
-//unavailable  scsi-sas     n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi
-//c2::es/ses0                    connected    configured   unknown    LSI CORP SAS2X28
-//unavailable  ESI          n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::es/ses0
-//c2::w50025385501cb30c,0        connected    configured   unknown    Client Device: /dev/dsk/c0t50025385501CB30Cd0s0(sd12)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w50025385501cb30c,0
-//c2::w5000c500562a02e1,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A02E3d0s0(sd1)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a02e1,0
-//c2::w5000c500562a02e9,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A02EBd0s0(sd10)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a02e9,0
-//c2::w5000c500562a15f9,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A15FBd0s0(sd7)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a15f9,0
-//c2::w5000c500562a015d,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A015Fd0s0(sd13)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a015d,0
-//c2::w5000c500562a0235,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A0237d0s0(sd4)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a0235,0
-//c2::w5000c500562a0299,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A029Bd0s0(sd8)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a0299,0
-//c2::w5000c500562a0329,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A032Bd0s0(sd11)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a0329,0
-//c2::w5000c500562a0641,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A0643d0s0(sd3)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562a0641,0
-//c2::w5000c500562c1b09,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C1B0Bd0s0(sd9)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562c1b09,0
-//c2::w5000c500562c17d1,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C17D3d0s0(sd2)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562c17d1,0
-//c2::w5000c500562c1825,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C1827d0s0(sd5)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562c1825,0
-//c2::w5000c500562c2495,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C2497d0s0(sd6)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w5000c500562c2495,0
-//c2::w500253855015d44d,0        connected    configured   unknown    Client Device: /dev/dsk/c0t500253855015D44Dd0s0(sd14)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f:scsi::w500253855015d44d,0
-//c3                             connected    configured   unknown
-//unavailable  scsi-sas     n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi
-//c3::es/ses1                    connected    configured   unknown    LSI CORP SAS2X28
-//unavailable  ESI          n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::es/ses1
-//c3::w5000c500562a02e2,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A02E3d0s0(sd1)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a02e2,0
-//c3::w5000c500562a02ea,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A02EBd0s0(sd10)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a02ea,0
-//c3::w5000c500562a015e,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A015Fd0s0(sd13)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a015e,0
-//c3::w5000c500562a15fa,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A15FBd0s0(sd7)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a15fa,0
-//c3::w5000c500562a029a,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A029Bd0s0(sd8)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a029a,0
-//c3::w5000c500562a032a,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A032Bd0s0(sd11)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a032a,0
-//c3::w5000c500562a0236,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A0237d0s0(sd4)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a0236,0
-//c3::w5000c500562a0642,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562A0643d0s0(sd3)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562a0642,0
-//c3::w5000c500562c1b0a,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C1B0Bd0s0(sd9)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562c1b0a,0
-//c3::w5000c500562c17d2,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C17D3d0s0(sd2)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562c17d2,0
-//c3::w5000c500562c1826,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C1827d0s0(sd5)
-//unavailable  disk-path    n        /devices/pci@0,0/pci8086,3c0a@3,2/pci1000,3020@0/iport@f0:scsi::w5000c500562c1826,0
-//c3::w5000c500562c2496,0        connected    configured   unknown    Client Device: /dev/dsk/c0t5000C500562C2497d0s0(sd6)
-//
-
-//mpathadm show lu /dev/rdsk/c0t5000C500562A02E3d0s2
-//Logical Unit:  /dev/rdsk/c0t5000C500562A02E3d0s2
-//        mpath-support:  libmpscsi_vhci.so
-//        Vendor:  SEAGATE
-//        Product:  ST1000NM0001
-//        Revision:  0002
-//        Name Type:  unknown type
-//        Name:  5000c500562a02e3
-//        Asymmetric:  no
-//        Current Load Balance:  none
-//        Logical Unit Group ID:  NA
-//        Auto Failback:  on
-//        Auto Probing:  NA
-//
-//        Paths:
-//                Initiator Port Name:  w500605b0055961c0
-//                Target Port Name:  w5000c500562a02e1
-//                Override Path:  NA
-//                Path State:  OK
-//                Disabled:  no
-//
-//                Initiator Port Name:  w500605b0055961c0
-//                Target Port Name:  w5000c500562a02e2
-//                Override Path:  NA
-//                Path State:  OK
-//                Disabled:  no
-//
-//        Target Ports:
-//                Name:  w5000c500562a02e1
-//                Relative ID:  0
-//
-//                Name:  w5000c500562a02e2
-//                Relative ID:  0
-
 var
 
    cSG3Inq : string = '/opt/local/sg3utils/bin/sg_inq';
    cSG3Ses : string = '/opt/local/sg3utils/bin/sg_ses';
    cSG3cap : string = '/opt/local/sg3utils/bin/sg_readcap';
+   cSG3logs: string = '/opt/local/sg3utils/bin/sg_logs';
    cMpathListLu : string = 'mpathadm';
 
 
@@ -307,6 +128,12 @@ type
   TFRE_DB_SAS_DISK=class(TFRE_DB_PHYS_DISK)
   public
     procedure SetTargetPorts                    (const targetport_1:string; const targetport_2:string);
+  end;
+
+  { TFRE_DB_SG_LOGS }
+
+  TFRE_DB_SG_LOGS=class(TFRE_DB_ObjectEx)
+  protected
   end;
 
   { TFRE_DB_SAS_EXPANDER }
@@ -617,6 +444,252 @@ var
   serialnr    : string;
   devicetype  : string;
 
+
+  procedure _ParseSG_Logs(const disk: IFRE_DB_Object; const parsestring:string);
+  type
+
+      TSG3LogPage = (sglNone, sglECwrite,sglECRead,sglECVerify,sglNME,sglTemp,sglStartStop,sglAppClient,sglSelftest,sglBGScan,sglProtocol,sglGeneral,sglPowerCond,sglInfoExceptions,sglCacheMisc,sgl0x38,sglFactory);
+
+  const
+      CSG3LogPageHex         : Array[TSG3LogPage] of String = ('','0x2','0x3','0x5','0x6','0xd','0xe','0xf','0x10','0x15','0x18','0x19','0x1a','0x2f','0x37','0x38','0x3e');
+      CSG3LogPageFieldPrefix : Array[TSG3LogPage] of String = ('','ec_write','ec_read','ec_verify','non_medium','temp','startstop','appclient','selftest','bgscan','protocol','general','powertr','informalex','cachemisc','x38','factory');
+
+
+      //0x00        Supported log pages        //SEAGATE
+      //0x02        Error counters (write)
+      //0x03        Error counters (read)
+      //0x05        Error counters (verify)
+      //0x06        Non-medium errors
+      //0x0d        Temperature
+      //0x0e        Start-stop cycle counter
+      //0x0f        Application client
+      //0x10        Self-test results
+      //0x15        Background scan results (sbc-3)
+      //0x18        Protocol specific port
+      //0x1a        Power condition transition
+      //0x2f        Informational exceptions (SMART)
+      //0x37        Cache (Seagate), Miscellaneous (Hitachi)
+      //0x38        [unknown vendor specific page code]
+      //0x3e        Factory (Seagate/Hitachi)
+
+      //0x00        Supported log pages       //ZEOS RAM
+      //0x02        Error counters (write)
+      //0x03        Error counters (read)
+      //0x05        Error counters (verify)
+      //0x06        Non-medium errors
+      //0x0d        Temperature
+      //0x10        Self-test results
+      //0x18        Protocol specific port
+      //0x19        General statistics and performance
+      //0x2f        Informational exceptions (SMART)
+      //0x30        Performance counters (Hitachi)
+      //0x31        [unknown vendor specific page code]
+      //0x32        [unknown vendor specific page code]
+      //0x33        [unknown vendor specific page code]
+      //0x34        [unknown vendor specific page code]
+      //0x37        Cache (Seagate), Miscellaneous (Hitachi)
+
+  var sl        : TStringList;
+      i         : NativeInt;
+      logdbo    : IFRE_DB_Object;
+      parsepage : TSG3LogPage;
+      line      : string;
+      targetport: NativeInt;
+
+  procedure _CheckParsemode;
+  var
+      ipm       : TSG3LogPage;
+  begin
+    for ipm := low(TSG3LogPage) to high(TSG3LogPage) do begin
+      if Pos('['+CSG3LogPageHex[ipm]+']',line)>0 then
+        begin
+          parsepage := ipm;
+          break;
+        end;
+    end;
+  end;
+
+  function _getValue(const idstring:string; const fieldname:string; const fieldtype:TFRE_DB_FIELDTYPE; const split_value_unit:boolean=false; const separator:string='='):boolean;
+  var svalue     : string;
+      ffieldname : string;
+  begin
+    result := false;
+    if Pos(idstring,line)>0 then
+      begin
+
+        svalue := trim(GFRE_BT.SepRight(line,separator));
+        if split_value_unit then
+          svalue := GFRE_BT.SepLeft(svalue,' ');
+        if parsepage=sglProtocol then
+          ffieldname := CSG3LogPageFieldPrefix[parsepage]+'_TP'+inttostr(targetport)+'_'+fieldname
+        else
+          ffieldname := CSG3LogPageFieldPrefix[parsepage]+'_'+fieldname;
+        case fieldtype of
+          fdbft_String : logdbo.Field(ffieldname).AsString := svalue;
+          fdbft_Int16  : logdbo.Field(ffieldname).AsInt16  := StrToIntDef(svalue,-1);
+          fdbft_Int64  : logdbo.Field(ffieldname).AsInt64  := StrToInt64Def(svalue,-1);
+          fdbft_Real32 : logdbo.Field(ffieldname).AsReal32 := StrToFloatDef(svalue,-1,DefaultFormatSettings);
+        else
+          GFRE_DBI.LogError(dblc_APPLICATION,'SG3 sg_logs undefined getValue for %s',[CFRE_DB_FIELDTYPE [fieldtype]]);
+        end;
+        result := true;
+      end;
+  end;
+
+  begin
+    logdbo := TFRE_DB_SG_LOGS.CreateForDB;
+    disk.Field('log').AsObject := logdbo;
+
+    sl  := TStringList.Create;
+    try
+      sl.Text   := outstring;
+      parsepage := sglNone;
+      for i:=0 to sl.count-1 do
+        begin
+          line := sl[i];
+          _CheckParseMode;
+          case parsepage of
+            sglNone : continue;
+            sglECwrite :
+              begin
+                if _GetValue('Errors corrected without substantial delay','ec_substantial_delay',fdbft_Int64) then continue;      //ZEOS
+                if _GetValue('Errors corrected with possible delays','ec_possible_delays',fdbft_Int64) then continue;
+                if _GetValue('Total rewrites or rereads','total_rewrites_or_rereads',fdbft_Int64) then continue;
+                if _GetValue('Total errors corrected','total_errors_corrected',fdbft_Int64) then continue;
+                if _GetValue('Total times correction algorithm processed','total_times_corr_algo_processed',fdbft_Int64) then continue;
+                if _GetValue('Total bytes processed','total_bytes_processed',fdbft_Int64) then continue;
+                if _GetValue('Total uncorrected errors','total_uncorrected_errors',fdbft_Int64) then continue;
+                if _GetValue('Reserved or vendor specific [0x8000]','vendor_0x8000',fdbft_Int64) then continue;    //ZEOS
+                if _GetValue('Reserved or vendor specific [0x8001]','vendor_0x8001',fdbft_Int64) then continue;    //ZEOS
+              end;
+            sglECRead :
+              begin
+                if _GetValue('Errors corrected without substantial delay','ec_substantial_delay',fdbft_Int64) then continue;
+                if _GetValue('Errors corrected with possible delays','ec_possible_delays',fdbft_Int64) then continue;
+                if _GetValue('Total rewrites or rereads','total_rewrites_or_rereads',fdbft_Int64) then continue;
+                if _GetValue('Total errors corrected','total_errors_corrected',fdbft_Int64) then continue;
+                if _GetValue('Total times correction algorithm processed','total_times_corr_algo_processed',fdbft_Int64) then continue;
+                if _GetValue('Total bytes processed','total_bytes_processed',fdbft_Int64) then continue;
+                if _GetValue('Total uncorrected errors','total_uncorrected_errors',fdbft_Int64) then continue;
+                if _GetValue('Reserved or vendor specific [0x8000]','vendor_0x8000',fdbft_Int64) then continue;    //ZEOS
+              end;
+            sglECVerify :
+              begin
+                if _GetValue('Errors corrected without substantial delay','ec_substantial_delay',fdbft_Int64) then continue;
+                if _GetValue('Errors corrected with possible delays','ec_possible_delays',fdbft_Int64) then continue;
+                if _GetValue('Total rewrites or rereads','total_rewrites_or_rereads',fdbft_Int64) then continue;
+                if _GetValue('Total errors corrected','total_errors_corrected',fdbft_Int64) then continue;
+                if _GetValue('Total times correction algorithm processed','total_times_corr_algo_processed',fdbft_Int64) then continue;
+                if _GetValue('Total bytes processed','total_bytes_processed',fdbft_Int64) then continue;
+                if _GetValue('Total uncorrected errors','total_uncorrected_errors',fdbft_Int64) then continue;
+              end;
+            sglNME :
+              begin
+                if _GetValue('Non-medium error count','error_count',fdbft_Int64) then continue;
+              end;
+            sglTemp :
+              begin
+                if _GetValue('Current temperature','current_temp',fdbft_Int16,true) then continue;
+                if _GetValue('Reference temperature','reference_temp',fdbft_Int16,true) then continue;
+              end;
+            sglStartStop :
+              begin
+                if _GetValue('Date of manufacture','manufacture_year_week',fdbft_String,false,',') then continue;
+                if _GetValue('Accounting date','accounting_year_week',fdbft_String,false,',') then continue;
+                if _GetValue('Specified cycle count over device lifetime','cycle_count_lifetime',fdbft_Int64) then continue;
+                if _GetValue('Accumulated start-stop cycles','accumulated_start_stop',fdbft_Int64) then continue;
+                if _GetValue('Specified load-unload count over device lifetime','load_unload_lifetime',fdbft_Int64) then continue;
+                if _GetValue('Accumulated load-unload cycles','accumulated_load_unload',fdbft_Int64) then continue;
+              end;
+            sglAppClient : continue; // no information
+            sglSelftest : continue; // no information
+            sglBGScan :
+              begin
+                if _GetValue('Accumulated power on minutes','accumulated_power_on_min',fdbft_Int64,true,':') then continue;
+                if _GetValue('Status','status',fdbft_String,false,':') then continue;
+                if _GetValue('Number of background scans performed','number_of_bg_scans',fdbft_Int64,false,':') then continue;
+                if _GetValue('Background medium scan progress','progress',fdbft_String,false,':') then continue;
+                if _GetValue('Number of background medium scans performed','number_of_bg_medium_scans',fdbft_Int64,false,':') then continue;
+              end;
+            sglProtocol :
+              begin
+                if Pos('relative target port id',line)>0 then
+                  begin
+                    targetport:=StrToIntDef(trim(GFRE_BT.SepRight(line,'=')),-1);
+                    continue;
+                  end;
+                if _GetValue('generation code','generation_code',fdbft_Int16) then continue;
+                if _GetValue('number of phys','number_phys',fdbft_Int16) then continue;
+                if _GetValue('  phy identifier','phy_identifier',fdbft_Int16) then continue;    // space intentionally
+                if _GetValue('attached device type','attached_device_type',fdbft_String,false,':') then continue;
+                if _GetValue('attached reason','attached_reason',fdbft_String,false,':') then continue;
+                if _GetValue('reason','reason',fdbft_String,false,':') then continue;
+                if _GetValue('negotiated logical link rate','neg_link_rate',fdbft_String,false,':') then continue;
+                if _GetValue('attached initiator port','attached_initiator_port',fdbft_String,false,':') then continue;
+                if _GetValue('attached target port','attached_target_port',fdbft_String,false,':') then continue;
+                if _GetValue('  SAS address','sas_address',fdbft_String) then continue;        // space intentionally
+                if _GetValue('attached SAS address','attached_sas_address',fdbft_String) then continue;
+                if _GetValue('attached phy identifier','attached_phy_identifier',fdbft_Int16) then continue;
+                if _GetValue('Invalid DWORD count','invalid_dword_count',fdbft_Int64) then continue;
+                if _GetValue('Running disparity error count =','running_disparity_ec',fdbft_Int64) then continue;  // = intenionally
+                if _GetValue('Loss of DWORD synchronization','loss_dword_sync',fdbft_Int64) then continue;
+                if _GetValue('Phy reset problem =','phy_reset_problem',fdbft_Int64) then continue;
+                if _GetValue('Invalid word count','phy_invalid_word_count',fdbft_Int64,false,':') then continue;
+                if _GetValue('Running disparity error count:','phy_invalid_word_count',fdbft_Int64,false,':') then continue; // : intentionally
+                if _GetValue('Loss of dword synchronization count','phy_loss_dword_sync_count',fdbft_Int64,false,':') then continue;
+                if _GetValue('Phy reset problem count','phy_reset_problem_count',fdbft_Int64,false,':') then continue;
+              end;
+            sglGeneral:
+              begin
+                if _GetValue('number of read commands =','read_commands',fdbft_Int64) then continue;
+                if _GetValue('number of write commands =','write_commands',fdbft_Int64) then continue;
+                if _GetValue('number of logical blocks received','logical_blocks_received',fdbft_Int64) then continue;
+                if _GetValue('number of logical blocks transmitted','logical_blocks_transmitted',fdbft_Int64) then continue;
+                if _GetValue('read command processing intervals','read_cmd_processing_intervals',fdbft_Int64) then continue;
+                if _GetValue('write command processing intervals','write_cmd_processing_intervals',fdbft_Int64) then continue;
+                if _GetValue('weighted number of read commands plus write commands','weighted_nr_reads_plus_write_cmds',fdbft_Int64) then continue;
+                if _GetValue('weighted read command processing plus write command processing','weighted_reads_plus_write_cmd_proc',fdbft_Int64) then continue;
+                if _GetValue('idle time intervals','idle_time_intervals',fdbft_Int64) then continue;
+                if _GetValue('time interval negative exponent','time_interval_negative_exponent',fdbft_Int64) then continue;
+                if _GetValue('time interval integer','time_interval_integer',fdbft_Int64) then continue;
+              end;
+            sglPowerCond :
+              begin
+                if _GetValue('Accumulated transitions to idle_a','accumulated_tr_idle_a',fdbft_Int64) then continue;
+                if _GetValue('Accumulated transitions to idle_b','accumulated_tr_idle_b',fdbft_Int64) then continue;
+                if _GetValue('Accumulated transitions to idle_c','accumulated_tr_idle_c',fdbft_Int64) then continue;
+                if _GetValue('Accumulated transitions to standby_z','accumulated_tr_standby_z',fdbft_Int64) then continue;
+                if _GetValue('Accumulated transitions to standby_y','accumulated_tr_standby_y',fdbft_Int64) then continue;
+              end;
+            sglInfoExceptions :
+              begin
+                if _GetValue('IE asc','ie',fdbft_string,false,'IE') then continue;
+                if _GetValue('Current temperature','current_temp',fdbft_string,true) then continue;
+                if _GetValue('Threshold temperature','threshold_temp',fdbft_string,true) then continue;
+              end;
+            sglCacheMisc :
+              begin
+                if _GetValue('Blocks sent to initiator','blocks_sent_initiator',fdbft_Int64) then continue;
+                if _GetValue('Blocks received from initiator','blocks_received_initiator',fdbft_Int64) then continue;
+                if _GetValue('Blocks read from cache and sent to initiator','blocks_read_cache_sent',fdbft_Int64) then continue;
+                if _GetValue('Number of read and write commands whose size <= segment size','rw_commands_leq_segsize',fdbft_Int64,false,' =') then continue;
+                if _GetValue('Number of read and write commands whose size > segment size','rw_commands_gr_segsize',fdbft_Int64) then continue;
+              end;
+            sgl0x38: continue; // hex, not decoded by sg_logs
+            sglFactory :
+              begin
+                if _GetValue('number of hours powered up','number_hours_powered_up',fdbft_Real32) then continue;
+                if _GetValue('number of minutes until next internal SMART test','min_next_smart_test',fdbft_Int64) then continue;
+              end;
+            else
+              GFRE_DBI.LogError(dblc_APPLICATION,'SG3 sg_logs undefined parsing page for %s %s',[devicepath,CSG3LogPageHex[parsepage]]);
+          end
+        end;
+    finally
+      sl.Free;
+    end;
+  end;
+
 begin
 //  writeln(devicepath);
   devicename := Copy(devicepath,11,length(devicepath));
@@ -798,6 +871,17 @@ begin
       exit(res);
     end;
 
+  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: sg_logs [%s]',[devicepath]);
+  res := _SG3GetPage(cSG3logs,outstring,errstring,TFRE_DB_StringArray.Create ('-a',devicepath));
+  if res=0 then
+    begin
+      _ParseSG_Logs(disk,outstring);
+    end
+  else
+    begin
+      GFRE_DBI.LogError(dblc_APPLICATION,'SG3 sg_logs for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
+    end;
+
   exit(0);
 end;
 
@@ -971,8 +1055,7 @@ begin
     cSG3Inq := cFRE_ToolsPath+'/sg3utils/bin/sg_inq';
     cSG3Ses := cFRE_ToolsPath+'/sg3utils/bin/sg_ses';
     cSG3cap := cFRE_ToolsPath+'/sg3utils/bin/sg_readcap';
-
-  //  writeln('SG3INQ Program:',csg3inq);
+    cSG3logs:= cFRE_ToolsPath+'/sg3utils/bin/sg_logs';
 
     scsi_structure   := GFRE_DBI.NewObject;
     scsi_structure.Field('enclosures').asObject := GFRE_DBI.NewObject;
@@ -1403,6 +1486,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SAS_EXPANDER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DRIVESLOT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ENCLOSURE);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SG_LOGS);
   GFRE_DBI.Initialize_Extension_Objects;
 end;
 
