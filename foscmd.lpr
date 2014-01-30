@@ -128,6 +128,47 @@ var
     end;
   end;
 
+  function EchoTest : integer;
+  var proc : TFRE_Process;
+      stdinstream  : TIOStream;
+      stdoutstream : TIOStream;
+      stderrstream : TIOStream;
+  begin
+    stdinstream  := TIOStream.Create(iosInput);
+    stdoutstream := TIOStream.Create(iosOutPut);
+    stderrstream := TIOStream.Create(iosError);
+    proc := TFRE_Process.Create(nil);
+    try
+      result  := proc.ExecutePipedStream('cat',nil,stdinstream,stdoutstream,stderrstream);
+    finally
+      if assigned(proc) then proc.Free;
+    end;
+  end;
+
+
+  procedure GetInlineParams;
+  var inlineparams : string;
+      stdinstream  : TIOStream;
+      c            : char;
+  begin
+    inlineparams := '';
+    stdinstream  := TIOStream.Create(iosInput);
+    try
+      while c<>LineEnding do
+        begin
+          c:=Char(stdinstream.ReadByte);
+          if c<>LineEnding then
+            inlineparams := inlineparams+c;
+        end;
+    finally
+      stdinstream.Free;
+    end;
+    mode  :=GFRE_BT.SepLeft(inlineparams,'%');
+    ds    :=GFRE_BT.SepRight(inlineparams,'%');
+  end;
+
+
+
 begin
  sshcommand := GetEnvironmentVariable('SSH_ORIGINAL_COMMAND');
  if length(sshcommand)>0 then begin
@@ -135,8 +176,15 @@ begin
    mode   := GFRE_BT.SplitString(sshcommand,' ');
    ds     := sshcommand;
  end else begin
-   mode   := uppercase(ParamStr(1));
-   ds     := ParamStr(2);
+   if Paramcount=2 then
+     begin
+       mode   := uppercase(ParamStr(1));
+       ds     := ParamStr(2);
+     end
+   else
+     begin
+       GetInlineParams;
+     end;
  end;
 
  case mode of
@@ -152,9 +200,12 @@ begin
   'GETSNAPSHOTS':begin
     halt(ZFSGetSnapshots(ds));
    end;
+  'ECHOTEST': begin
+    halt(EchoTest);
+   end;
   else begin
    writeln(GFOS_VHELP_GET_VERSION_STRING);
-   writeln('Usage: foscmd RECEIVE | RECEIVEBZ | DSEXISTS | GETSNAPSHOTS <dataset>');
+   writeln('Usage: foscmd RECEIVE | RECEIVEBZ | DSEXISTS | GETSNAPSHOTS <dataset> | ECHOTEST');
    halt(99);
   end;
  end;
