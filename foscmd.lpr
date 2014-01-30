@@ -122,7 +122,7 @@ var
     stderrstream := TIOStream.Create(iosError);
     proc := TFRE_Process.Create(nil);
     try
-      result  := proc.ExecutePipedStream('zfs',TFRE_DB_StringArray.Create('list','-r','-H','-p','-t','snapshot','-o','name,creation,used',dataset),stdinstream,stdoutstream,stderrstream);
+      result  := proc.ExecutePipedStream('zfs',TFRE_DB_StringArray.Create('list','-r','-H'b,'-t','snapshot','-o','name,creation,used',dataset),stdinstream,stdoutstream,stderrstream);
     finally
       if assigned(proc) then proc.Free;
     end;
