@@ -47,7 +47,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="../core/fos_include;$(ProjOutDir)"/>
-      <OtherUnitFiles Value="../core/fre_core;../core/fos_interfaces"/>
+      <OtherUnitFiles Value="../core/fre_core;../core/fre_db;../core/fos_interfaces;../core/fre_apps"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>

@@ -43,7 +43,7 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES, fre_testmethod, FRE_DB_COMMON;
+  FOS_TOOL_INTERFACES, fre_testmethod, FRE_DB_COMMON,fre_system;
 
 
 type
@@ -67,6 +67,21 @@ const
 type
 
   EFOS_TESTCASE_Exception=class(Exception);
+
+  { TFRE_DB_JobProgress }
+
+  TFRE_DB_JobProgress = class (TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+  public
+    procedure       ProgressCallback            (const intotal, outtotal, errortotal: Int64);
+    function        GetJobID                    : TFRE_DB_String;
+    procedure       SetOutbytes                 (const value : int64);
+    procedure       SetInbytes                  (const value : int64);
+    procedure       SetErrorbytes               (const value : int64);
+    procedure       SetTotalOutbytes            (const value : int64);
+    procedure       SetJobID                    (const value : TFRE_DB_String);
+  end;
 
   { TFRE_DB_Testcase }
 
@@ -253,6 +268,57 @@ function  GetStatusIconURI(const status:string) : string;
 function  GetSignalStatus(const status:string): TFRE_SignalStatus;
 
 implementation
+
+{ TFRE_DB_JobProgress }
+
+class procedure TFRE_DB_JobProgress.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+procedure TFRE_DB_JobProgress.ProgressCallback(const intotal, outtotal, errortotal: Int64);
+begin
+//  writeln(StdErr,'SWL: PROGRESS IN:', intotal,'OUT:',outtotal,'ERR:',errortotal);
+  SetInbytes(intotal);
+  SetOutbytes(outtotal);
+  SetErrorbytes(errortotal);
+  if GetJobID<>'' then begin
+      SaveToFile(cFRE_JOB_PROGRESS_DIR+DirectorySeparator+GetJobID+'.dbo');
+      GFRE_BT.StringToFile(cFRE_JOB_PROGRESS_DIR+DirectorySeparator+GetJobID+'.txt',DumpToString());
+    end
+  else
+    GFRE_BT.CriticalAbort('TFRE_JOB_Progress can not save without JOBID');
+end;
+
+function TFRE_DB_JobProgress.GetJobID: TFRE_DB_String;
+begin
+  result := Field('jobid').asstring;
+end;
+
+procedure TFRE_DB_JobProgress.SetOutbytes(const value: int64);
+begin
+  Field('outb').AsInt64:=value;
+end;
+
+procedure TFRE_DB_JobProgress.SetInbytes(const value: int64);
+begin
+  Field('inb').AsInt64:=value;
+end;
+
+procedure TFRE_DB_JobProgress.SetErrorbytes(const value: int64);
+begin
+  Field('errb').AsInt64:=value;
+end;
+
+procedure TFRE_DB_JobProgress.SetTotalOutbytes(const value: int64);
+begin
+  Field('totaloutb').AsInt64:=value;
+end;
+
+procedure TFRE_DB_JobProgress.SetJobID(const value: TFRE_DB_String);
+begin
+  Field('jobid').AsString:=value;
+end;
 
 { TFRE_DB_CPULoadTestcase }
 
@@ -1368,6 +1434,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DiskspaceTestcase);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HTTPTestcase);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPULoadTestcase);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_JobProgress);
   GFRE_DBI.Initialize_Extension_Objects;
 end;
 
