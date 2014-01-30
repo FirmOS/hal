@@ -83,7 +83,7 @@ var
         process2.PreparePipedStreamAsync('zfs',TFRE_DB_StringArray.Create('recv','-u','-F',ds)) ;
         process.SetStreams(StdInstream,process2.Input,stderrstream);
         process2.SetStreams(nil,stdoutstream,stderrstream);
-        process2.RegisterProgressCallback(@progress.ProgressCallback);
+        process.RegisterProgressCallback(@progress.ProgressCallback);
         process.StartAsync;
         process2.StartAsync;
         process.WaitForAsyncExecution;
@@ -116,7 +116,6 @@ var
     zfsparams    : shortstring;
     targetds     : shortstring;
     targetcmd    : shortstring;
-
   begin
     stdinstream  := TIOStream.Create(iosInput);
     stdoutstream := TIOStream.Create(iosOutPut);
@@ -146,10 +145,10 @@ var
         process   := TFRE_Process.Create(nil);
         process2  := TFRE_Process.Create(nil);
         process.PreparePipedStreamAsync('zfs send '+zfsparams,nil);
-        process2.PreparePipedStreamAsync('bzcat',nil) ;
+        process2.PreparePipedStreamAsync('bzip2 -c',nil) ;
         process.SetStreams(StdInstream,process2.Input,stderrstream);
         process2.SetStreams(nil,stdoutstream,stderrstream);
-        process2.RegisterProgressCallback(@progress.ProgressCallback);
+        process.RegisterProgressCallback(@progress.ProgressCallback);
         process.StartAsync;
         process2.StartAsync;
         process.WaitForAsyncExecution;
