@@ -45,17 +45,18 @@ interface
 uses
   Classes, SysUtils,fpcunit,testregistry,testdecorator,FRE_DB_INTERFACE,
   FOS_TOOL_INTERFACES,FRE_DBBASE,FRE_PROCESS, fre_testmethod, FRE_ZFS,
-  fre_testcase, fre_do_safejob,FRE_SYSTEM,  FRE_DBMONITORING,
+  fre_testcase, fre_do_safejob,FRE_SYSTEM,
   FRE_OPENVPN,fre_alert,fre_scsi;
 
 const
 
   cremoteuser               = 'root';
-  cremotehost               = '10.220.251.10';
+  cremotehost               = '10.1.0.89';
   cremotehosttester         = '10.220.252.130';
   cwinrmurl                 = 'https://10.4.0.234:5986/wsman';
   cwinrmuser                = 'winrmi';
   cwinrmpassword            = 'mgo54rb5A';
+  cTCPfoscmd                = '10.1.0.89';
 
  // createtestpool.sh for pool preparation on cremotehost
 
@@ -119,14 +120,19 @@ type
     procedure AlertConfig;
     procedure changeToggle;
     procedure ZPoolStatus;
-    procedure CreateDiskshelf;
     procedure ZFSDiskspace;
     procedure ProcessCheck;
     procedure ProcessFreebsdCheck;
     procedure MountDiskspace;
     procedure HTTPRequest;
-  published
     procedure CPULoad;
+
+    procedure ZTCPSendSnapshot;
+
+  published
+    procedure ZTCPCheckDataSetExists;
+    procedure ZTCPGetLastSnapShot;
+    procedure ZTCPReplicateJob;
 
   end;
 
@@ -179,37 +185,6 @@ begin
   writeln(obj.DumpToString());
 end;
 
-procedure TFRE_Tester_Tests.CreateDiskshelf;
-var po     : TFRE_DB_DISKSHELF;
-    ex2,ex3: TFRE_DB_SAS_EXPANDER;
-    error  : string;
-    res    : integer;
-    obj    : IFRE_DB_Object;
-    bay    : TFRE_DB_DISKBAY;
-    disk   : TFRE_DB_DISK;
-    i      : integer;
-begin
-  po     := TFRE_DB_DISKSHELF_SC836.create;
-//  po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
-//  res    := po.GetPoolStatus('zones',error,obj);
-  po.ChassisID:='5003048001abcc7f';
-  ex2    := po.AddSASExpander(2,'5003048001abcc7d','LSI CORP','SAS2X28','0717','x36557230');
-  ex3    := po.AddSASExpander(3,'5003048001abccfd','LSI CORP','SAS2X28','0717','x36557230');
-  for i  := 0 to 15 do begin
-    bay  := po.AddDiskBay(i);
-    if i = 0 then begin
-      bay.InsertSATADisk('5003048001abcc6c',122104,250069679,'ATA','Samsung SSD 840','4B0Q','S12PNEAD204359F','50025385501cb30c');
-    end else if i=1 then begin
-      bay.InsertSATADisk('5003048001abcc6d',244198,500118191,'ATA','Samsung SSD 840','4B0Q','S12RNEACC94641Y','500253855015d44d');
-      ex2.AddSASTarget('5003048001abcc6d');
-    end else if i>3 then begin
-      bay.InsertSASDisk('5000c500562c2495','5000c500562c2496',953869,1953525167,'SEAGATE','ST1000NM0001','0002','Z1N3RMMG','5000c500562c2497');
-      ex2.AddSASTarget('5000c500562c2495');
-      ex3.AddSASTarget('5000c500562c2496');
-    end;
-  end;
-  writeln(po.DumpToString());
-end;
 
 procedure TFRE_Tester_Tests.ZFSDiskspace;
 var po     : TFRE_DB_ZFSJob;
@@ -283,6 +258,70 @@ begin
   po.SetRemoteSSH('root', '10.220.251.10', GetRemoteKeyFilename);
   po.SetLimits(10,12);
   po.ExecuteTest;
+  writeln(po.DumpToString());
+end;
+
+procedure TFRE_Tester_Tests.ZTCPCheckDataSetExists;
+var po     : TFRE_DB_ZFS;
+    dt     : TFRE_DB_DateTime64;
+    res    : integer;
+    error  : string;
+    exists : boolean;
+
+begin
+  po     := TFRE_DB_ZFS.Create;
+//  po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
+  dt:=GFRE_DT.Now_UTC;
+  res    := po.TCPDataSetExists('rpool/repos', error, exists, cTCPfoscmd,CFRE_FOSCMD_PORT);
+//  writeln(po.DumpToString());
+  writeln('Exists:',exists);
+  AssertEquals('Result not 0',0,res);
+  AssertEquals('Error not empty','',error);
+  AssertEquals('Exists',true,exists);
+end;
+
+procedure TFRE_Tester_Tests.ZTCPGetLastSnapShot;
+var po           : TFRE_DB_ZFS;
+    dt           : TFRE_DB_DateTime64;
+    res          : integer;
+    error        : string;
+    snapshotname : string;
+    creation_ts  : TFRE_DB_DateTime64;
+begin
+  po     := TFRE_DB_ZFS.create;
+  res    := po.TCPGetLastSnapShot('rpool/repos','TEST',snapshotname, creation_ts, error,cTCPfoscmd,CFRE_FOSCMD_PORT);
+  writeln('Last Snapshot :',snapshotname);
+  writeln('Creation TS:',GFRE_DT.ToStrFOS(creation_ts));
+  writeln('res:',res);
+  AssertEquals('Result is 0',0,res);
+  AssertEquals('Last Snapshot ist wrong!',snapshotname,'TEST-1');
+end;
+
+procedure TFRE_Tester_Tests.ZTCPSendSnapshot;
+var po     : TFRE_DB_ZFS;
+    dt     : TFRE_DB_DateTime64;
+    res    : integer;
+    error  : string;
+begin
+  po     := TFRE_DB_ZFS.create;
+  po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
+  dt:=GFRE_DT.Now_UTC;
+  res    := po.TCPSendSnapshot('rpool/repos', 'TEST-1', cTCPfoscmd,CFRE_FOSCMD_PORT,'rpool/destination/repos2',error,'',zfsSendReplicated,true,'JOB1');
+//  writeln(po.DumpToString());
+  AssertEquals('Error not empty','',error);
+  AssertEquals('Result not 0,'+error,0,res);
+end;
+
+procedure TFRE_Tester_Tests.ZTCPReplicateJob;
+var po     : TFRE_DB_ZFSJob;
+    res    : integer;
+    error  : string;
+begin
+  po     := TFRE_DB_ZFSJob.create;
+  po.SetJobkeyDescription('TESTJOB','NO DESC');
+  po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
+  po.SetTCPReplicate('rpool/repos','rpool/destination/repos','AUTO',cTCPfoscmd,CFRE_FOSCMD_PORT);
+  po.ExecuteCMD;
   writeln(po.DumpToString());
 end;
 
@@ -469,7 +508,7 @@ var po     : TFRE_DB_ZFSJob;
 begin
   po     := TFRE_DB_ZFSJob.create;
   po.SetRemoteSSH(cremoteuser, '10.1.0.116', GetRemoteKeyFilename);
-  po.SetReplicate('zones/FirmOS_Data/FirmOS_Library','zones/backup/firmos/FirmOSData/FirmOS_Library','AUTO','smartstore.firmos.at','zfsback',GetBackupKeyFilename,'/zones/firmos/zfsback/.ssh/id_rsa',22,22);
+  po.SetSSHReplicate('zones/FirmOS_Data/FirmOS_Library','zones/backup/firmos/FirmOSData/FirmOS_Library','AUTO','smartstore.firmos.at','zfsback',GetBackupKeyFilename,'/zones/firmos/zfsback/.ssh/id_rsa',22,22);
   po.ExecuteCMD;
   writeln(po.DumpToString());
 end;
@@ -482,7 +521,7 @@ var po     : TFRE_DB_ZFSJob;
 begin
   po     := TFRE_DB_ZFSJob.create;
   po.SetRemoteSSH(cremoteuser, '10.1.0.116', GetRemoteKeyFilename);
-  po.SetReplicate('zones/FirmOS_Data/FirmOS_Dokumente','zones/backup/firmos/FirmOSData/FirmOS_Dokumente','AUTO','smartstore.firmos.at','zfsback',GetBackupKeyFilename,'/zones/firmos/zfsback/.ssh/id_rsa',22,22);
+  po.SetSSHReplicate('zones/FirmOS_Data/FirmOS_Dokumente','zones/backup/firmos/FirmOSData/FirmOS_Dokumente','AUTO','smartstore.firmos.at','zfsback',GetBackupKeyFilename,'/zones/firmos/zfsback/.ssh/id_rsa',22,22);
   po.ExecuteCMD;
   writeln(po.DumpToString());
 end;
@@ -494,7 +533,7 @@ var po     : TFRE_DB_ZFSJob;
 begin
   po     := TFRE_DB_ZFSJob.create;
   po.SetRemoteSSH(cremoteuser, '10.1.0.129', GetRemoteKeyFilename);
-  po.SetReplicate('zones/2cd2e934-f21e-4fea-b46e-f3098f4e3be3-disk0','zones/backup/ksm/2cd2e934-f21e-4fea-b46e-f3098f4e3be3-disk0','AUTO','smartstore.firmos.at','zfsback',GetBackupKeyFilename,'/zones/firmos/zfsback/.ssh/id_rsa',22,22);
+  po.SetSSHReplicate('zones/2cd2e934-f21e-4fea-b46e-f3098f4e3be3-disk0','zones/backup/ksm/2cd2e934-f21e-4fea-b46e-f3098f4e3be3-disk0','AUTO','smartstore.firmos.at','zfsback',GetBackupKeyFilename,'/zones/firmos/zfsback/.ssh/id_rsa',22,22);
   po.ExecuteCMD;
   writeln(po.DumpToString());
 end;
@@ -663,14 +702,13 @@ begin
   po.PrepareTest('10.1.0.1','91.114.28.41',TFRE_DB_StringArray.Create ('8.8.8.8','www.orf.at','www.google.com'));
   po.ExecuteTest;
   writeln(po.DumpToString);
-  po.SaveToFile('internet.dbo',false);
+  po.SaveToFile('internet.dbo');
 end;
 
 procedure TFRE_Tester_Tests.CreateSafeJobs;
 var job    : TFRE_DB_InternetTestcase;
     config : IFRE_DB_Object;
     jobdbo : IFRE_DB_Object;
-    scpjob : TFRE_DB_SCP_JOB;
     wm     : TFRE_DB_WinRMTestcase;
     wmt    : TFRE_DB_WinRMTarget;
     sm     : TFRE_DB_MailSendTestcase;
@@ -686,9 +724,6 @@ begin
   jobdbo   := GFRE_DBI.NewObject;
   jobdbo.Field(job.JobKey).asobject := job;
 //  DO_SaveJob(dbi);
-
-  scpjob   := TFRE_DB_SCP_JOB.create;
-  jobdbo.Field('SCPMONITORING').asobject := scpjob;
 
   wm       := TFRE_DB_WinRMTestcase.create;
   wm.Field('MAX_ALLOWED_TIME').AsInt32 := 60;

@@ -69,6 +69,8 @@ const
   CFRE_DB_DRIVESLOT_TP1_INDEX  = 'targetport1';
   CFRE_DB_DRIVESLOT_TP2_INDEX  = 'targetport2';
 
+  CFRE_FOSCMD_PORT             = 44010;
+  CFRE_FOSCMD                  = '/opt/local/fre/bin/foscmd';
 
 type
   EFOS_ZFS_Exception=class(Exception);
@@ -371,14 +373,18 @@ type
     procedure       AnalyzeSnapshots            (const proc   : TFRE_DB_Process);
     procedure       AnalyzeDataSetSpace         (const proc   : TFRE_DB_Process);
     procedure       AnalyzePoolList             (const proc   : TFRE_DB_Process);
-  protected
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     function        CreateSnapShot              (const dataset: string; const snapshotname : string; out error : string ) : integer;
     procedure       GetSnapshots                (const dataset: string; const foscmdmode: boolean);
     function        DestroySnapshot             (const dataset: string; const snapshotname : string; out error : string) : integer;
     function        SnapShotExists              (const dataset: string; const snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string ; out exists : boolean;const foscmdmode: boolean=false) : integer;
     function        GetLastSnapShot             (const dataset: string; const snapshotkey : string; out snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string;const foscmdmode: boolean=false) : integer;
+
+    procedure       TCPGetSnapshots             (const dataset: string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT);
+    function        TCPSnapShotExists           (const dataset: string; const snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string ; out exists : boolean;const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
+    function        TCPGetLastSnapShot          (const dataset: string; const snapshotkey : string; out snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
+    function        TCPDataSetExists            (const dataset: string; out error : string; out exists : boolean; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
+    function        TCPSendSnapshot             (const dataset: string; const snapshotname: string; const destinationhost: string; const destinationport: integer; const destinationdataset: string; out error: string; const incrementalsnapshot: string; const sendmode: TFRE_DB_ZFS_Sendmode; const compressed: boolean; const jobid: string): integer;
 
     function        CreateDataset               (const dataset: string; out error: string) : integer;
     function        DestroyDataset              (const dataset: string; out error: string; const recursive: boolean=false; const dependents: boolean=false ; const force : boolean=false) : integer;
@@ -397,7 +403,8 @@ type
 
   TFRE_DB_ZFSJob = class (TFRE_DB_Testcase)
   private
-    procedure       _SnapShotReplicate          (const do_replicate: boolean);
+    procedure       _SSHSnapShotReplicate       (const do_replicate: boolean);
+    procedure       _TCPSnapShotReplicate       (const do_replicate: boolean);
     procedure       _SnapShotCheck              ;
     procedure       _PoolStatus                 ;
     procedure       _DataSetSpace               ;
@@ -410,7 +417,8 @@ type
     procedure       SetScrub                    (const poolname: string);
     procedure       SetPoolStatus               (const poolname: string; const scrub_warning_days: integer; const scrub_error_days: integer);
     procedure       SetDatasetspace             (const dataset: string; const warning_percent: integer; const error_percent: integer);
-    procedure       SetReplicate                (const sourcedataset: string; const destinationdataset:string; const snapshotkey : string; const destinationhost : string; const destinationuser : string; const destinationkeyfilename : string; const replicationkeyfilename : string; const destinationport: integer=22; const replicationport: integer=22);
+    procedure       SetSSHReplicate             (const sourcedataset: string; const destinationdataset:string; const snapshotkey : string; const destinationhost : string; const destinationuser : string; const destinationkeyfilename : string; const replicationkeyfilename : string; const destinationport: integer=22; const replicationport: integer=22);
+    procedure       SetTCPReplicate             (const sourcedataset: string; const destinationdataset:string; const snapshotkey : string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT);
     procedure       SetSnapshot                 (const dataset: string; const snapshotkey : string);
     procedure       SetSnapshotCheck            (const dataset:string; const snapshotkey : string; const warning_seconds: integer; const error_seconds: integer);
   published
@@ -1536,7 +1544,7 @@ end;
 
 { TFRE_DB_ZFSJob }
 
-procedure TFRE_DB_ZFSJob._SnapShotReplicate(const do_replicate: boolean);
+procedure TFRE_DB_ZFSJob._SSHSnapShotReplicate(const do_replicate: boolean);
 var res                     : integer;
     error                   : string;
     exists                  : boolean;
@@ -1548,7 +1556,7 @@ var res                     : integer;
 
   function SourceZFS : TFRE_DB_ZFS;
   begin
-    result   := TFRE_DB_ZFS.CreateForDB;
+    result   := TFRE_DB_ZFS.Create;
     if Field('remotehost').AsString<>'' then begin
       result.SetRemoteSSH (Field('remoteuser').asstring, Field('remotehost').asstring, Field('remotekeyfilename').asstring);
     end;
@@ -1556,7 +1564,7 @@ var res                     : integer;
 
   function DestinationZFS : TFRE_DB_ZFS;
   begin
-    result   := TFRE_DB_ZFS.CreateForDB;
+    result   := TFRE_DB_ZFS.Create;
     result.SetRemoteSSH(config.Field('destinationuser').AsString,config.Field('destinationhost').AsString, config.Field('destinationkeyfilename').AsString, config.Field('destinationport').AsInt32);
   end;
 
@@ -1606,6 +1614,87 @@ begin
     end;
 
     res           := DestinationZFS.SnapShotExists(config.Field('destinationdataset').AsString,snapshotname,destination_ts,error,exists,true);            // Check if destination snapshot exists
+    if ResultCheck('CAN NOT CHECK IF DESTINATION SNAPSHOT EXISTS AFTER RECEIVE') then exit;
+    if exists then begin
+      if source_ts=destination_ts then begin                                                                                                             // Check matching timestamp
+        SetStatus(statusOK, 'REPLICATION OF SNAPSHOT '+snapshotname+ ' SUCCESSFUL');
+      end else begin
+        SetStatus(statusFailure, 'CREATION TIME OF SNAPSHOTS '+snapshotname+' NOT IDENTICAL SOURCE:'+ GFRE_DT.ToStrFOS(source_ts)+' DESTINATION:'+GFRE_DT.ToStrFOS(destination_ts));
+      end;
+    end;
+  end else begin
+    SetStatus(statusOK, 'CREATION OF SNAPSHOT '+snapshotname+ ' SUCCESSFUL');
+  end;
+end;
+
+procedure TFRE_DB_ZFSJob._TCPSnapShotReplicate(const do_replicate: boolean);
+var res                     : integer;
+    error                   : string;
+    exists                  : boolean;
+    snapshotname            : string;
+    snapshotkey             : string;
+    incrementalsnapshotname : string;
+    source_ts               : TFRE_DB_DateTime64;
+    destination_ts          : TFRE_DB_DateTime64;
+
+  function SourceZFS : TFRE_DB_ZFS;
+  begin
+    result   := TFRE_DB_ZFS.Create;
+    if Field('remotehost').AsString<>'' then begin
+      result.SetRemoteSSH (Field('remoteuser').asstring, Field('remotehost').asstring, Field('remotekeyfilename').asstring);
+    end;
+  end;
+
+  function DestinationZFS : TFRE_DB_ZFS;
+  begin
+    result   := TFRE_DB_ZFS.Create;
+  end;
+
+  function ResultCheck(const msg: string):boolean;
+  begin
+    result := false;
+    if res<>0 then begin
+      SetStatus(statusFailure,msg+':'+error);
+      result := true;
+    end;
+  end;
+
+begin
+  snapshotkey   := config.Field('snapshotkey').AsString;
+
+  res           := SourceZFS.GetLastSnapShot(config.Field('sourcedataset').AsString, snapshotkey, snapshotname,source_ts,error);
+  if res = 0 then begin
+    snapshotname := GFRE_BT.SepRight(snapshotname,'-');
+    snapshotname := snapshotkey+'-'+inttostr(strtoint(snapshotname)+1);
+  end else begin
+    snapshotname := snapshotkey+'-'+'1';
+  end;
+  res           := SourceZFS.CreateSnapShot(config.Field('sourcedataset').AsString,snapshotname,error);
+  if ResultCheck('CAN NOT CREATE SOURCE SNAPSHOT') then exit;
+  res           := SourceZFS.SnapShotExists(config.Field('sourcedataset').AsString,snapshotname,source_ts,error,exists);           // Check if source snapshot exists, get source_ts
+  if ResultCheck('CAN NOT GET SOURCE SNAPSHOT CREATION TIME') then exit;
+
+  if do_replicate then begin
+    res           := DestinationZFS.TCPDataSetExists(config.Field('destinationdataset').AsString,error,exists,config.Field('destinationhost').AsString,config.Field('destinationport').AsInt32);  // Check if destination dataset exists
+    if ResultCheck('CAN NOT CHECK IF DESTINATION DATASET EXISTS') then exit;
+    if not exists then begin
+      incrementalsnapshotname := '';
+    end else begin
+      //    ICECREMENTAL :-)
+      res         := DestinationZFS.TCPGetLastSnapShot(config.Field('destinationdataset').AsString,'',incrementalsnapshotname,destination_ts,error,config.Field('destinationhost').AsString,config.Field('destinationport').AsInt32);
+      if ResultCheck('CAN NOT GET LAST SNAPSHOT FOR DESTINATION DATASET') then exit;
+      writeln(incrementalsnapshotname);
+    end;
+
+    res         := SourceZFS.TCPSendSnapshot(config.Field('sourcedataset').AsString,snapshotname,config.Field('destinationhost').AsString,config.Field('destinationport').AsInt32,config.Field('destinationdataset').AsString, error, incrementalsnapshotname, zfsSendReplicated,true,config.Field('jobid').asstring);   // Send Snapshotname to Destination
+    if ResultCheck('ERROR ON SENDING SNAPSHOT') then exit;
+    writeln(error);
+    if error<>'' then begin                                                                                                                // Result was OK, write Warning
+      SetStatus(statusWarning,'WARNING ON ZFS SEND/RECEIVE');
+      report.Field('STATUSDETAIL').asstring := error;
+    end;
+
+    res           := DestinationZFS.TCPSnapShotExists(config.Field('destinationdataset').AsString,snapshotname,destination_ts,error,exists,config.Field('destinationhost').AsString,config.Field('destinationport').AsInt32);            // Check if destination snapshot exists
     if ResultCheck('CAN NOT CHECK IF DESTINATION SNAPSHOT EXISTS AFTER RECEIVE') then exit;
     if exists then begin
       if source_ts=destination_ts then begin                                                                                                             // Check matching timestamp
@@ -1795,11 +1884,14 @@ begin
       Field('exitstatus').asint32   := zfs.Scrub(config.Field('poolname').asstring,errors);
       Field('errorstring').asstring := errors;
     end;
-    'replicate': begin
-      _SnapShotReplicate(true);
+    'sshreplicate': begin
+      _SSHSnapShotReplicate(true);
+    end;
+    'tcpreplicate': begin
+      _TCPSnapShotReplicate(true);
     end;
     'snapshot': begin
-      _SnapShotReplicate(false);
+      _SSHSnapShotReplicate(false);
     end;
     'snapshotcheck': begin
       _Snapshotcheck;
@@ -1909,11 +2001,6 @@ begin
 end;
 
 
-class procedure TFRE_DB_ZFS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-end;
-
 function TFRE_DB_ZFS.CreateSnapShot(const dataset: string; const snapshotname: string; out error: string): integer;
 var
   proc  : TFRE_DB_Process;
@@ -1954,6 +2041,113 @@ begin
   error  := proc.Field('errorstring').AsString;
 end;
 
+function TFRE_DB_ZFS.TCPDataSetExists(const dataset: string; out error: string; out exists: boolean; const destinationhost: string; const destinationport: integer): integer;
+var
+  proc     : TFRE_DB_Process;
+  ststream : TFRE_DB_Stream;
+begin
+  ClearProcess;
+  exists   := false;
+  ststream := TFRE_DB_Stream.Create;
+  ststream.SetFromRawByteString('DSEXISTS%'+dataset+'%0%0'+LineEnding);
+  ststream.Position:=0;
+  ststream.SaveToFile('teststream');
+  proc     := TFRE_DB_Process.create;
+  try
+    proc.SetupInput('nc',TFRE_DB_StringArray.Create(destinationhost,inttostr(destinationport)),ststream);
+//    proc.SetupInput('nc',TFRE_DB_StringArray.Create('test'));
+    AddProcess(proc);
+    ExecuteMulti;
+    result := proc.Field('exitstatus').AsInt32;
+    if result = 0 then begin
+     if Pos(dataset,proc.OutputToString)=1 then begin
+       exists := true;
+     end;
+    end else begin
+       exists := false;
+    end;
+    error  := proc.Field('errorstring').AsString;
+  finally
+    proc.Free;
+  end;
+end;
+
+function TFRE_DB_ZFS.TCPSendSnapshot(const dataset: string; const snapshotname: string; const destinationhost: string; const destinationport: integer; const destinationdataset: string; out error: string; const incrementalsnapshot: string; const sendmode: TFRE_DB_ZFS_Sendmode; const compressed: boolean;const jobid:string): integer;
+var
+  proc       : TFRE_DB_Process;
+  zcommand   : string;
+  zparameter : string;
+  totalsize  : int64;
+  sl         : TStringList;
+  s          : string;
+begin
+  totalsize:=0;
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+
+  case sendmode of
+    zfsSend                     : ; // no additional options
+    zfsSendReplicated           : zparameter := '-R ';
+    zfsSendRecursive            : zparameter := '-r ';
+    zfsSendRecursiveProperties  : zparameter := '-r -p ';
+   else
+    raise EFOS_ZFS_Exception.Create('INVALID ZFS SEND MODE');
+  end;
+  if length(incrementalsnapshot)>0 then begin
+    zparameter := zparameter+'-I '+dataset+'@'+incrementalsnapshot+' ';
+  end;
+  zparameter := zparameter +dataset+'@'+snapshotname;
+
+  // get totalsize
+  zcommand := 'zfs send -n -P '+zparameter;
+  proc.SetupInput(zcommand,nil);
+  writeln('SWL:',zcommand);
+  AddProcess(proc);
+  ExecuteMulti;
+  result := proc.Field('exitstatus').AsInt32;
+  if result<>0 then
+    begin
+      error  := proc.ErrorToString;
+      halt(result);
+    end
+  else
+    begin
+      sl:=TstringList.Create;
+      try
+        sl.Text:=proc.ErrorToString;   //output is in error
+        s:=sl[sl.count-1];
+        if Pos('size',s)=1 then
+          begin
+            s:=trim(GFRE_BT.SepRight(s,#9));
+            totalsize:=strtointdef(s,-1);
+            writeln('SWL: TOTAL',totalsize);
+          end;
+      finally
+        sl.free;
+      end;
+    end;
+
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+
+  zcommand :=  CFRE_FOSCMD;
+  if compressed then
+    zcommand := zcommand +' SENDBZ '
+  else
+    zcommand := zcommand +' SEND ';
+  if Field ('remotehost').AsString<>'' then
+    zcommand := zcommand +'"'''+zparameter+'*'+destinationdataset+''' '+jobid+' '+inttostr(totalsize)+' | nc '+destinationhost+' '+inttostr(destinationport)+'"'
+  else
+    zcommand := zcommand +'"'+zparameter+'*'+destinationdataset+'" '+jobid+' '+inttostr(totalsize)+' | nc '+destinationhost+' '+inttostr(destinationport);
+
+  writeln('SWL:',zcommand);
+  proc.SetupInput(zcommand,nil);
+  AddProcess(proc);
+  ExecuteMulti;
+  result := proc.Field('exitstatus').AsInt32;
+  error  := proc.OutputToString;
+end;
+
 function TFRE_DB_ZFS.SnapShotExists(const dataset: string; const snapshotname: string; out creation_ts: TFRE_DB_DateTime64; out error: string; out exists: boolean; const foscmdmode: boolean): integer;
 var
   isnap      : integer;
@@ -1979,6 +2173,31 @@ begin
   error        := proc.ErrorToString;
 end;
 
+function TFRE_DB_ZFS.TCPSnapShotExists(const dataset: string; const snapshotname: string; out creation_ts: TFRE_DB_DateTime64; out error: string; out exists: boolean; const destinationhost: string; const destinationport: integer): integer;
+var
+  isnap      : integer;
+  proc       : TFRE_DB_Process;
+  snapo      : IFRE_DB_Object;
+begin
+  exists       := false;
+  creation_ts  := 0;
+  TCPGetSnapshots(dataset,destinationhost,destinationport);
+  proc         := GetProcess(0);
+  if FieldExists('snapshots') then begin
+    for isnap  := 0 to Field('snapshots').ValueCount-1 do begin
+      snapo    := Field('snapshots').AsObjectItem[isnap];
+      if snapo.Field('name').asstring = snapshotname then begin
+        creation_ts  := snapo.Field('creation').AsDateTimeUTC;
+        exists       := true;
+        break;
+      end;
+    end;
+  end;
+//  writeln('Exitstatus:',proc.ExitStatus);
+  result       := proc.ExitStatus;
+  error        := proc.ErrorToString;
+end;
+
 function TFRE_DB_ZFS.GetLastSnapShot(const dataset: string; const snapshotkey: string; out snapshotname: string; out creation_ts: TFRE_DB_DateTime64; out error: string; const foscmdmode: boolean): integer;
 var
   isnap      : integer;
@@ -1986,6 +2205,32 @@ var
   snapo      : IFRE_DB_Object;
 begin
   GetSnapshots(dataset,foscmdmode);
+  creation_ts  := 0;
+  snapshotname := '';
+  proc         := GetProcess(0);
+  result       := proc.ExitStatus;
+  error        := proc.ErrorToString;
+  if FieldExists('snapshots') then begin
+    for isnap    := Field('snapshots').ValueCount-1 downto 0 do begin
+      snapo      := Field('snapshots').AsObjectItem[isnap];
+      if (snapshotkey='') or (Pos(snapshotkey,snapo.Field('name').asstring)=1) then begin
+        snapshotname := snapo.Field('name').asstring;
+        creation_ts  := snapo.Field('creation').AsDateTimeUTC;
+        exit;
+      end;
+    end;
+  end;
+  // not found
+  result       := -1;
+end;
+
+function TFRE_DB_ZFS.TCPGetLastSnapShot(const dataset: string; const snapshotkey: string; out snapshotname: string; out creation_ts: TFRE_DB_DateTime64; out error: string; const destinationhost: string; const destinationport: integer): integer;
+var
+  isnap      : integer;
+  proc       : TFRE_DB_Process;
+  snapo      : IFRE_DB_Object;
+begin
+  TCPGetSnapshots(dataset,destinationhost,destinationport);
   creation_ts  := 0;
   snapshotname := '';
   proc         := GetProcess(0);
@@ -2055,6 +2300,23 @@ begin
   end else begin
     proc.SetupInput('foscmd',TFRE_DB_StringArray.Create('GETSNAPSHOTS',dataset));
   end;
+  proc.Field('dataset').AsString:=dataset;
+  AddProcess(proc);
+  ExecuteMulti;
+  AnalyzeSnapshots(proc);
+end;
+
+procedure TFRE_DB_ZFS.TCPGetSnapshots(const dataset: string; const destinationhost: string; const destinationport: integer);
+var
+  proc  : TFRE_DB_Process;
+  ststream : TFRE_DB_Stream;
+begin
+  ClearProcess;
+  ststream := TFRE_DB_Stream.Create;
+  ststream.SetFromRawByteString('GETSNAPSHOTS%'+dataset+'%0%0'+LineEnding);
+  ststream.Position:=0;
+  proc := TFRE_DB_Process.create;
+  proc.SetupInput('nc',TFRE_DB_StringArray.Create(destinationhost,inttostr(destinationport)),ststream);
   proc.Field('dataset').AsString:=dataset;
   AddProcess(proc);
   ExecuteMulti;
@@ -2322,10 +2584,10 @@ begin
  config.Field('error_percent').AsByte     := error_percent;
 end;
 
-procedure TFRE_DB_ZFSJob.SetReplicate(const sourcedataset: string; const destinationdataset: string; const snapshotkey: string; const destinationhost: string; const destinationuser: string; const destinationkeyfilename: string; const replicationkeyfilename: string; const destinationport: integer; const replicationport: integer);
+procedure TFRE_DB_ZFSJob.SetSSHReplicate(const sourcedataset: string; const destinationdataset: string; const snapshotkey: string; const destinationhost: string; const destinationuser: string; const destinationkeyfilename: string; const replicationkeyfilename: string; const destinationport: integer; const replicationport: integer);
 begin
   Field('MAX_ALLOWED_TIME').AsInt32 := 86400*14;
-  config.Field('cmd').AsString                    :='replicate';
+  config.Field('cmd').AsString                    :='sshreplicate';
   config.Field('sourcedataset').AsString          :=sourcedataset;
   config.Field('destinationdataset').AsString     :=destinationdataset;
   config.Field('snapshotkey').AsString            :=snapshotkey;
@@ -2335,6 +2597,18 @@ begin
   config.Field('replicationkeyfilename').AsString :=replicationkeyfilename;
   config.Field('destinationport').AsInt32         :=destinationport;
   config.Field('replicationport').AsInt32        :=replicationport;
+end;
+
+procedure TFRE_DB_ZFSJob.SetTCPReplicate(const sourcedataset: string; const destinationdataset: string; const snapshotkey: string; const destinationhost: string; const destinationport: integer);
+begin
+  Field('MAX_ALLOWED_TIME').AsInt32 := 86400*14;
+  config.Field('cmd').AsString                    :='tcpreplicate';
+  config.Field('sourcedataset').AsString          :=sourcedataset;
+  config.Field('destinationdataset').AsString     :=destinationdataset;
+  config.Field('snapshotkey').AsString            :=snapshotkey;
+  config.Field('destinationhost').AsString        :=destinationhost;
+  config.Field('destinationport').AsInt32         :=destinationport;
+  config.Field('jobid').AsString                  :=JobKey;
 end;
 
 procedure TFRE_DB_ZFSJob.SetSnapshot(const dataset: string; const snapshotkey: string);
