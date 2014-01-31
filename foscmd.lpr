@@ -82,7 +82,7 @@ var
         process.PreparePipedStreamAsync('bzcat',nil);
         process2.PreparePipedStreamAsync('zfs',TFRE_DB_StringArray.Create('recv','-u','-F',ds)) ;
         process.SetStreams(StdInstream,process2.Input,stderrstream);
-        process2.SetStreams(nil,stdoutstream,stderrstream);
+        process2.SetStreams(nil,stdoutstream,stdoutstream);
         process.RegisterProgressCallback(@progress.ProgressCallback);
         process.StartAsync;
         process2.StartAsync;
@@ -92,7 +92,7 @@ var
       end else begin
         process   := TFRE_Process.Create(nil);
         process.PreparePipedStreamAsync('zfs',TFRE_DB_StringArray.Create('recv','-u','-F',ds));
-        process.SetStreams(StdInstream,StdOutStream,stderrstream);
+        process.SetStreams(StdInstream,StdOutStream,stdoutstream);
         process.RegisterProgressCallback(@progress.ProgressCallback);
         process.StartAsync;
         res      := process.WaitForAsyncExecution;
@@ -180,7 +180,7 @@ var
     stderrstream := TIOStream.Create(iosError);
     proc := TFRE_Process.Create(nil);
     try
-      result  := proc.ExecutePipedStream('zfs',TFRE_DB_StringArray.Create('list','-H','-o','name',dataset),stdinstream,stdoutstream,stderrstream);
+      result  := proc.ExecutePipedStream('zfs',TFRE_DB_StringArray.Create('list','-H','-o','name',dataset),stdinstream,stdoutstream,stdoutstream);
     finally
       if assigned(proc) then proc.Free;
     end;
@@ -197,7 +197,7 @@ var
     stderrstream := TIOStream.Create(iosError);
     proc := TFRE_Process.Create(nil);
     try
-      result  := proc.ExecutePipedStream('zfs',TFRE_DB_StringArray.Create('list','-r','-H','-t','snapshot','-o','name,creation,used',dataset),stdinstream,stdoutstream,stderrstream);
+      result  := proc.ExecutePipedStream('zfs',TFRE_DB_StringArray.Create('list','-r','-H','-p','-t','snapshot','-o','name,creation,used',dataset),stdinstream,stdoutstream,stdoutstream);
     finally
       if assigned(proc) then proc.Free;
     end;
