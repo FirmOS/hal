@@ -127,6 +127,8 @@ begin
     SetParam;
     GetSDStructure;
     PrintSDStructure;
+    Terminate;
+    Exit;
   end;
 
   { add your program here }
