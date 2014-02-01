@@ -83,7 +83,7 @@ var
   ErrorMsg: String;
 begin
   // quick check parameters
-  ErrorMsg:=CheckOptions('hlocr:t:R:',['help','listsd','other','comstar','remotehost:','timeout:','retry:']);
+  ErrorMsg:=CheckOptions('hlocH:t:r:',['help','listsd','other','comstar','remotehost:','timeout:','retry:']);
   if ErrorMsg<>'' then begin
     ShowException(Exception.Create(ErrorMsg));
     Terminate;
@@ -102,8 +102,8 @@ begin
   fre_dbbase.Register_DB_Extensions;
   Initialize_Read_FRE_CFG_Parameter;
 
-  if HasOption('r','remotehost') then begin
-    cFRE_REMOTE_HOST := GetOptionValue('r','remotehost');
+  if HasOption('H','remotehost') then begin
+    cFRE_REMOTE_HOST := GetOptionValue('H','remotehost');
     cFRE_REMOTE_USER := 'root';
     fremote_key      := SetDirSeparators(cFRE_SERVER_DEFAULT_DIR+'/ssl/user/id_rsa');
   end;
@@ -121,7 +121,7 @@ begin
     Exit;
   end;
 
-  if HasOption('t','timeout') or HasOption('R','retry') then begin
+  if HasOption('t','timeout') or HasOption('r','retry') then begin
     GetSDStructure;
     PrintSDStructure;
     SetParam;
@@ -292,8 +292,8 @@ begin
   cs_rtr := 0;
   if HasOption('t','timeout') then
     cs_to := StrToIntDef(GetOptionValue('t','timeout'),0);
-  if HasOption('R','retry') then
-    cs_rtr := StrToIntDef(GetOptionValue('R','retry'),0);
+  if HasOption('r','retry') then
+    cs_rtr := StrToIntDef(GetOptionValue('r','retry'),0);
   sd_structure.ForAllObjects(@_SetComstar);
 end;
 
@@ -342,7 +342,14 @@ procedure TFRE_SolarisKernel.WriteHelp;
 begin
   { add your help code here }
   writeln(GFOS_VHELP_GET_VERSION_STRING);
-  writeln('Usage: ',ExeName,' -h');
+  writeln('Usage:');
+  writeln('-h   --help               : print help');
+  writeln('-l   --listsd             : list sd devices and parameter');
+  writeln('-t   --timeout=<value>    : set cmd timeout for sd devices');
+  writeln('-r   --retry=<value>      : set retry count for sd devices');
+  writeln('-H   --remotehost=<value> : set remotehost');
+  writeln('-c   --comstar            : set only COMSTAR devices');
+  writeln('-o   --other              : set only non-COMSTAR devices');
 end;
 
 var
