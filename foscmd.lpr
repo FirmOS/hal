@@ -56,6 +56,22 @@ var
   totalsize  : Int64;
   sshcommand : string;
 
+type
+
+  { TAsyncWrite_Thread }
+
+  TAsyncWrite_Thread=class(TThread)
+  private
+    FLock : IFOS_LOCK;
+    FPO   : TFRE_DB_JobProgress;
+    FTE   : IFOS_TE;
+  public
+    constructor Create         ;
+    procedure   ProgressCallback (const intotal, outtotal, errortotal: Int64);
+    procedure   Execute          ; override;
+    procedure   TerminateNow     ;
+  end;
+
   procedure ZFSReceive(const dataset:string; const compressed:boolean);
   var
     process      : TFRE_Process;
@@ -65,6 +81,7 @@ var
     stdoutstream : TIOStream;
     stderrstream : TIOStream;
     progress     : TFRE_DB_JobProgress;
+    asyncwriter  : TAsyncWrite_Thread;
 
   begin
     stdinstream  := TIOStream.Create(iosInput);
@@ -283,6 +300,53 @@ var
     totalsize := StrtoInt64Def(inlineparams,0);
 //    writeln('SWL:',mode,',', ds, ',', job, ',', totalsize);
   end;
+
+{ TAsyncWrite_Thread }
+
+constructor TAsyncWrite_Thread.Create;
+begin
+  GFRE_TF.Get_Lock(FLock);
+  GFRE_TF.Get_TimedEvent(FTE);
+  FPO := TFRE_DB_JobProgress.CreateForDB;
+  inherited Create(false);
+end;
+
+procedure TAsyncWrite_Thread.ProgressCallback(const intotal, outtotal, errortotal: Int64);
+begin
+  FLock.Acquire;
+  try
+    //job dbo ...
+  finally
+    FLock.Release;
+  end;
+end;
+
+procedure TAsyncWrite_Thread.Execute;
+var FLocalCopy : TFRE_DB_JobProgress;
+begin
+  try
+    repeat
+      FTE.WaitFor(5000);
+      if Terminated then
+        exit;
+      FLock.Acquire;
+//      FLocalCopy ... copy;
+      FLock.Release;
+//      ..write
+    until terminated;
+  except
+    on e : Exception do
+      begin
+
+      end;
+  end;
+end;
+
+procedure TAsyncWrite_Thread.TerminateNow;
+begin
+  Terminate;
+  FTE.SetEvent;
+end;
 
 
 
