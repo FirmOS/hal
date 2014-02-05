@@ -38,12 +38,13 @@ unit fre_testmethod;
 } 
 
 {$mode objfpc}{$H+}
+{$modeswitch nestedprocvars}
 
 interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS,  FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES;
+  FOS_TOOL_INTERFACES,snmpsend;
 
 
 const
@@ -81,6 +82,16 @@ type
     class procedure RegisterSystemScheme  (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure       GetMachineStates      ;
+  end;
+
+  { TFRE_DB_TestMethod_SNMP }
+
+  TFRE_DB_TestMethod_SNMP = class (TFRE_DB_Testmethod)
+  protected
+    class procedure RegisterSystemScheme  (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+  public
+    procedure       AddSNMPRequest        (const oid : string; const host : string; const version: byte=1; const community: string='public');
+    procedure       SendRequests;
   end;
 
   { TFRE_DB_Testmethod_Process }
@@ -167,9 +178,11 @@ type
     function        MountSMBandTest       (const host : string; const user : string; const password: string; const fileshare: string; const mountpoint: string; out error:string) : integer;
   end;
 
-  { TFRE_DB_Testmethod_SNMP }
 
-  TFRE_DB_Testmethod_SNMP =class (TFRE_DB_Testmethod)
+
+  { TFRE_DB_Testmethod_SNMPProc }
+
+  TFRE_DB_Testmethod_SNMPProc =class (TFRE_DB_Testmethod)
   private
     procedure       AnalyzeResult         (const proc   : TFRE_DB_Process);
   protected
@@ -344,7 +357,7 @@ end;
 
 { TFRE_DB_Testmethod_SNMP }
 
-procedure TFRE_DB_Testmethod_SNMP.AnalyzeResult(const proc: TFRE_DB_Process);
+procedure TFRE_DB_Testmethod_SNMPProc.AnalyzeResult(const proc: TFRE_DB_Process);
 var s : string;
     t : string;
     v : string;
@@ -366,12 +379,46 @@ begin
   end;
 end;
 
+class procedure TFRE_DB_Testmethod_SNMPProc.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
 class procedure TFRE_DB_Testmethod_SNMP.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-procedure TFRE_DB_Testmethod_SNMP.AddSNMPRequest(const oid: string; const host: string; const version: integer; const community: string);
+procedure TFRE_DB_TestMethod_SNMP.AddSNMPRequest(const oid: string; const host: string; const version: byte; const community: string);
+var req: IFRE_DB_Object;
+begin
+  req := GFRE_DBI.NewObject;
+  req.Field('oid').AsString       := oid;
+  req.Field('host').asstring      := host;
+  req.Field('version').AsByte     := version;
+  req.Field('community').asstring := community;
+  if not FieldExists('requests') then
+    Field('requests').asobject := GFRE_DBI.NewObject;
+
+  Field('requests').AsObject.Field(req.UID_String).AsObject:=req;
+end;
+
+procedure TFRE_DB_TestMethod_SNMP.SendRequests;
+
+ procedure _SendRequests(const obj:IFRE_DB_OBject);
+ var res       : boolean;
+     resstring : string;
+ begin
+   res := SNMPGet(obj.Field('oid').AsString,obj.Field('community').asstring,obj.Field('host').asstring,resstring);
+   writeln('SWL:',res,' ',resstring);
+ end;
+
+
+begin
+ Field('requests').AsObject.ForAllObjects(@_SendRequests);
+end;
+
+procedure TFRE_DB_Testmethod_SNMPProc.AddSNMPRequest(const oid: string; const host: string; const version: integer; const community: string);
 var
   proc  : TFRE_DB_Process;
 //  snmpget -v1 -cpublic 10.4.0.234 HOST-RESOURCES-MIB::hrProcessorLoad.2
@@ -383,7 +430,7 @@ begin
   AddProcess(proc);
 end;
 
-procedure TFRE_DB_Testmethod_SNMP.SendRequests;
+procedure TFRE_DB_Testmethod_SNMPProc.SendRequests;
 var
   iproc : integer;
 begin

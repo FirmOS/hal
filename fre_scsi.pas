@@ -54,7 +54,7 @@ var
    cSG3cap : string = '/opt/local/sg3utils/bin/sg_readcap';
    cSG3logs: string = '/opt/local/sg3utils/bin/sg_logs';
    cMpathListLu : string = 'mpathadm';
-
+   cSG3LogPages : Array [0..5] of String = ('0x2','0x3','0x5','0x6','0xd','0x18');
 
 type
 
@@ -224,12 +224,12 @@ type
 
     function        getrdskDevices                     (const iostat_devices: IFRE_DB_Object): IFRE_DB_Object;
     function        getexpanderDevices                 : IFRE_DB_Object;
-    function        SG3DiskInquiry                     (const devicepath : TFRE_DB_String; out disk: IFRE_DB_Object) : integer;
+    function        SG3DiskInquiry                     (const devicepath : TFRE_DB_String; out disk: IFRE_DB_Object; const read_logs:boolean=false) : integer;
     function        SG3SESInquiry                      (const devicepath : TFRE_DB_String; var scsi_structure: IFRE_DB_Object) : integer;
   protected
     class procedure RegisterSystemScheme               (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
-    function        GetSG3DiskandEnclosureInformation  (const iostat_devices: IFRE_DB_Object; out error: string; out scsi_structure:IFRE_DB_Object) : integer;
+    function        GetSG3DiskandEnclosureInformation  (const iostat_devices: IFRE_DB_Object; out error: string; out scsi_structure:IFRE_DB_Object;const read_logs:boolean=false) : integer;
     function        GetMpathAdmLUInformation           (out error: string; out mpathinfo:IFRE_DB_Object) : integer;
 
   end;
@@ -420,7 +420,7 @@ begin
 //    abort; //Implement local Find for devices
 end;
 
-function TFRE_DB_SCSI.SG3DiskInquiry(const devicepath: TFRE_DB_String; out disk: IFRE_DB_Object): integer;
+function TFRE_DB_SCSI.SG3DiskInquiry(const devicepath: TFRE_DB_String; out disk: IFRE_DB_Object; const read_logs: boolean): integer;
 
 type
   TFRE_DB_SCSI_DEVICEIDENTIFICATION_PARSE = (di_none,di_address_loc,di_target);
@@ -871,17 +871,22 @@ begin
       exit(res);
     end;
 
-  GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: sg_logs [%s]',[devicepath]);
-  res := _SG3GetPage(cSG3logs,outstring,errstring,TFRE_DB_StringArray.Create ('-a',devicepath));
-  if res=0 then
-    begin
-      _ParseSG_Logs(disk,outstring);
-    end
-  else
-    begin
-      GFRE_DBI.LogError(dblc_APPLICATION,'SG3 sg_logs for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
-    end;
-
+  if read_logs then begin
+    GFRE_DBI.LogDebug(dblc_APPLICATION,'SG3GetPage: sg_logs [%s]',[devicepath]);
+    for i := low(cSG3LogPages) to high(cSG3LogPages) do
+      begin
+//        res := _SG3GetPage(cSG3logs,outstring,errstring,TFRE_DB_StringArray.Create ('-a',devicepath));    // all pages
+        res := _SG3GetPage(cSG3logs,outstring,errstring,TFRE_DB_StringArray.Create ('-p',cSG3LogPages[i],devicepath));
+        if res=0 then
+          begin
+            _ParseSG_Logs(disk,outstring);
+          end
+        else
+          begin
+            GFRE_DBI.LogError(dblc_APPLICATION,'SG3 sg_logs for %s page %s failed with resultcode %d, %s',[devicepath,cSG3LogPages[i],res,errstring]);
+          end;
+      end;
+  end;
   exit(0);
 end;
 
@@ -1045,7 +1050,7 @@ begin
 end;
 
 
-function TFRE_DB_SCSI.GetSG3DiskandEnclosureInformation(const iostat_devices: IFRE_DB_Object; out error: string; out scsi_structure: IFRE_DB_Object): integer;
+function TFRE_DB_SCSI.GetSG3DiskandEnclosureInformation(const iostat_devices: IFRE_DB_Object; out error: string; out scsi_structure: IFRE_DB_Object; const read_logs: boolean): integer;
 var devices : IFRE_DB_Object;
     disk    : IFRE_DB_Object;
     i       : NativeInt;
@@ -1074,7 +1079,7 @@ begin
     try
       for i := 0 to devices.Field('device').ValueCount-1 do
         begin
-          if SG3DiskInquiry(devices.Field('device').AsStringItem[i],disk)=0 then
+          if SG3DiskInquiry(devices.Field('device').AsStringItem[i],disk,read_logs)=0 then
             scsi_structure.Field('disks').asObject.Field(disk.Field('DEVICEIDENTIFIER').asstring).asobject:=disk;
         end;
     finally

@@ -94,8 +94,260 @@ type
     procedure REM_CreateDiskpool        (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
   end;
 
+procedure InitDiskDataCollections       (const conn: IFRE_DB_COnnection);
+function  Common_Disk_DataFeed          (const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+
+
 implementation
 
+procedure InitDiskDataCollections(const conn: IFRE_DB_Connection);
+var
+     unassigned_disks: TFRE_DB_ZFS_UNASSIGNED;
+     collection      : IFRE_DB_COLLECTION;
+
+begin
+  collection  := conn.Collection(CFRE_DB_ZFS_POOL_COLLECTION);  // ZFS GUID for pool => zdb
+  if not collection.IndexExists('def') then
+    begin
+      collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+      unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
+      unassigned_disks.setZFSGuid('UNASSIGNED');
+      unassigned_disks.caption:= 'Unassigned disks';  //FIXXME: should be a languge key ?!?
+      unassigned_disks.poolId := unassigned_disks.UID;
+      CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
+    end;
+
+  collection  := conn.Collection(CFRE_DB_ZFS_VDEV_COLLECTION);  // ZFS GUID for VDEV => zdb
+  if not collection.IndexExists('def') then
+    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+
+  collection  := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);  // ZFS GUID / WWN
+  if not collection.IndexExists('def') then
+    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+  if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX) then
+    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX,true);
+  if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX) then
+    collection.DefineIndexOnField('devicename',fdbft_String,true,true,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX,false);
+
+  collection  := conn.Collection(CFRE_DB_ENCLOSURE_COLLECTION);
+  if not collection.IndexExists(CFRE_DB_ENCLOSURE_ID_INDEX) then
+    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
+
+  collection  := conn.Collection(CFRE_DB_SAS_EXPANDER_COLLECTION);
+  if not collection.IndexExists(CFRE_DB_EXPANDER_ID_INDEX) then
+    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
+
+  collection  := conn.Collection(CFRE_DB_DRIVESLOT_COLLECTION);
+  if not collection.IndexExists(CFRE_DB_DRIVESLOT_ID_INDEX) then
+    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
+  if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP1_INDEX) then
+    collection.DefineIndexOnField('targetport_1',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP1_INDEX,false);
+  if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP2_INDEX) then
+    collection.DefineIndexOnField('targetport_2',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP2_INDEX,false);
+
+end;
+
+function Common_Disk_DataFeed(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+
+var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
+    ua_obj               : IFRE_DB_Object;
+    poolcollection       : IFRE_DB_COLLECTION;
+    blockdevicecollection: IFRE_DB_COLLECTION;
+    enclosurecollection  : IFRE_DB_COLLECTION;
+    expandercollection   : IFRE_DB_COLLECTION;
+    driveslotcollection  : IFRE_DB_COLLECTION;
+
+    unassigned_uid       : TGUID;
+    devices              : IFRE_DB_Object;
+    enclosures           : IFRE_DB_Object;
+    pools                : IFRE_DB_Object;
+
+    procedure            _UpdateEnclosures(const obj:IFRE_DB_Object);
+    var enclosure        : TFRE_DB_ENCLOSURE;
+        db_enclosure     : TFRE_DB_ENCLOSURE;
+        dbo              : IFRE_DB_Object;
+
+      procedure _UpdateDriveSlots(const obj:IFRE_DB_Object);
+      var driveslot      : TFRE_DB_DRIVESLOT;
+          db_driveslot   : TFRE_DB_DRIVESLOT;
+      begin
+        driveslot        := (obj.Implementor_HC as TFRE_DB_DRIVESLOT);
+        if driveslotcollection.GetIndexedObj(driveslot.DeviceIdentifier,dbo,CFRE_DB_DRIVESLOT_ID_INDEX) then
+          begin
+            db_driveslot.SetAllSimpleObjectFieldsFromObject(driveslot);
+            db_driveslot.ParentInEnclosureUID  := enclosure.UID;
+            CheckDbResult(driveslotcollection.Update(db_driveslot),'could not update driveslot');
+          end
+        else
+          begin
+            db_driveslot                      := driveslot.CloneToNewObject(false).Implementor_HC as TFRE_DB_DRIVESLOT;
+            db_driveslot.ParentInEnclosureUID := enclosure.UID;
+            CheckDbResult(driveslotcollection.Store(db_driveslot),'could not store driveslot');
+          end;
+      end;
+
+      procedure _UpdateExpanders(const obj:IFRE_DB_Object);
+      var expander       : TFRE_DB_SAS_EXPANDER;
+          db_expander    : TFRE_DB_SAS_EXPANDER;
+      begin
+        expander         := (obj.Implementor_HC as TFRE_DB_SAS_EXPANDER);
+        if expandercollection.GetIndexedObj(expander.DeviceIdentifier,dbo,CFRE_DB_EXPANDER_ID_INDEX) then
+          begin
+            db_expander.SetAllSimpleObjectFieldsFromObject(expander);
+            db_expander.ParentInEnclosureUID  := enclosure.UID;
+            CheckDbResult(expandercollection.Update(db_expander),'could not update expander');
+          end
+        else
+          begin
+            db_expander                       := expander.CloneToNewObject(false).Implementor_HC as TFRE_DB_SAS_EXPANDER;
+            db_expander.ParentInEnclosureUID  := enclosure.UID;
+            CheckDbResult(expandercollection.Store(db_expander),'could not store expander');
+          end;
+      end;
+
+    begin
+      enclosure      := (obj.Implementor_HC as TFRE_DB_ENCLOSURE);
+      if enclosurecollection.GetIndexedObj(enclosure.DeviceIdentifier,dbo,CFRE_DB_ENCLOSURE_ID_INDEX) then
+        begin
+          db_enclosure := dbo.Implementor_HC as TFRE_DB_ENCLOSURE;
+          db_enclosure.SetAllSimpleObjectFieldsFromObject(enclosure);
+          CheckDbResult(enclosurecollection.Update(db_enclosure),'could not update enclosure');
+        end
+      else
+        begin
+          db_enclosure := TFRE_DB_ENCLOSURE.CreateForDB;
+          db_enclosure.Field('UID').asGuid := enclosure.UID;
+          db_enclosure.SetAllSimpleObjectFieldsFromObject(enclosure);
+          CheckDbResult(enclosurecollection.Store(db_enclosure),'could not store enclosure');
+        end;
+      enclosure.Field('slots').AsObject.ForAllObjects(@_UpdateDriveSlots);
+      enclosure.Field('expanders').AsObject.ForAllObjects(@_UpdateExpanders);
+    end;
+
+
+    procedure            _UpdateDisks(const obj:IFRE_DB_Object);
+    var  disk               : TFRE_DB_ZFS_BLOCKDEVICE;
+         db_disk            : TFRE_DB_ZFS_BLOCKDEVICE;
+         dbo                : IFRE_DB_Object;
+    begin
+      disk := (obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+      if blockdevicecollection.GetIndexedObj(disk.DeviceIdentifier,dbo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX) then
+        begin
+          db_disk  := dbo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE;
+          db_disk.SetAllSimpleObjectFieldsFromObject(disk);
+          if db_disk.FieldExists('target_port') then
+            db_disk.Field('target_port').AsStringArr := disk.Field('target_port').asstringArr;
+          CheckDbResult(blockdevicecollection.Update(db_disk),'could not update disk');
+        end
+      else
+        begin
+          dbo      := disk.CloneToNewObject;
+          db_disk  := dbo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE;
+          db_disk.caption :=  disk.Devicename; // device.WWN+' ('+device.Manufacturer+' '+device.Model_number+' '+device.Serial_number+')';
+          unassigned_disks.addBlockdevice(db_disk);
+          CheckDbResult(blockdevicecollection.Store(db_disk),'store blockdevice in disk');
+        end;
+    end;
+
+    procedure _InsertDisksIntoSlots(const obj:IFRE_DB_Object);
+    var disk           : TFRE_DB_PHYS_DISK;
+        targetports    : TFRE_DB_StringArray;
+        i              : integer;
+        guida          : TFRE_DB_GUIDArray;
+        slotguid       : TGUID;
+        index_name     : string;
+        dbo            : IFRE_DB_Object;
+        db_disk        : TFRE_DB_PHYS_DISK;
+        sdbo           : IFRE_DB_Object;
+        db_slot        : TFRE_DB_DRIVESLOT;
+
+        procedure _CheckSlot;
+        begin
+          if slotguid=CFRE_DB_NullGUID then
+            begin
+              if length(guida)<>1 then
+                raise EFRE_DB_Exception.Create(edb_ERROR,'index for driveslot delivered more than on driveslot for targetport '+targetports[i])
+              else
+                begin
+                  slotguid := guida[0];
+                end;
+            end
+          else
+            begin
+              if length(guida)<>1 then
+                raise EFRE_DB_Exception.Create(edb_ERROR,'index for driveslot delivered more than on driveslot for targetport '+targetports[i]);
+              if slotguid <> guida[0] then
+                raise EFRE_DB_Exception.Create(edb_ERROR,'index for driveslot delivered different driveslots for targetport '+targetports[i]);
+            end;
+        end;
+
+    begin
+//      writeln('SWL',    obj.SchemeClass);
+      if (obj.Implementor_HC is TFRE_DB_PHYS_DISK) then
+        begin
+          disk        := (obj.Implementor_HC as TFRE_DB_PHYS_DISK);
+          targetports := disk.GetTargetPorts;
+          slotguid    := CFRE_DB_NullGUID;
+          for i:=low(targetports) to high(targetports) do
+            begin
+              if driveslotcollection.GetIndexedUIDs(targetports[i],guida,CFRE_DB_DRIVESLOT_TP1_INDEX) then
+                _CheckSlot
+              else
+                if driveslotcollection.GetIndexedUIDs(targetports[i],guida,CFRE_DB_DRIVESLOT_TP2_INDEX) then
+                  _CheckSlot;
+            end;
+          if slotguid<>CFRE_DB_NullGUID then
+            begin
+              if not blockdevicecollection.Fetch(disk.UID,dbo) then
+                 raise EFRE_DB_Exception.Create(edb_ERROR,'could not fetch disk '+disk.UID_String);
+              if not driveslotcollection.Fetch(slotguid,sdbo) then
+                 raise EFRE_DB_Exception.Create(edb_ERROR,'could not fetch driveslot '+GFRE_BT.GUID_2_HexString(slotguid));
+              db_slot := sdbo.Implementor_HC as TFRE_DB_DRIVESLOT;
+              db_disk := dbo.Implementor_HC as TFRE_DB_PHYS_DISK;
+              db_disk.ParentInEnclosureUID:= slotguid;
+              db_disk.EnclosureUID        := db_slot.ParentInEnclosureUID;
+              db_disk.EnclosureNr         := db_slot.EnclosureNr;
+              db_disk.SlotNr              := db_slot.SlotNr;
+              CheckDbResult(blockdevicecollection.Update(dbo),'update blockdevice with slot information');
+              sdbo.Finalize;
+            end;
+        end;
+    end;
+
+    procedure _UpdatePools(const obj:IFRE_DB_Object);
+    var pool : TFRE_DB_ZFS_POOL;
+    begin
+      pool := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
+      pool.FlatEmbeddedAndStoreInCollections(conn);
+    end;
+
+begin
+  poolcollection         := conn.Collection(CFRE_DB_ZFS_POOL_COLLECTION);
+  blockdevicecollection  := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
+  enclosurecollection    := conn.Collection(CFRE_DB_ENCLOSURE_COLLECTION);
+  expandercollection     := conn.Collection(CFRE_DB_SAS_EXPANDER_COLLECTION);
+  driveslotcollection    := conn.Collection(CFRE_DB_DRIVESLOT_COLLECTION);
+//  blockdevicecollection.ClearCollection;
+//  driveslotcollection.ClearCollection;
+
+  enclosures             := input.Field('enclosures').AsObject;
+  enclosures.ForAllObjects(@_UpdateEnclosures);
+
+  poolcollection.GetIndexedObj('UNASSIGNED',ua_obj);
+  unassigned_disks := (ua_obj.Implementor_HC as TFRE_DB_ZFS_UNASSIGNED);
+
+  devices := input.Field('disks').AsObject;
+  devices.ForAllObjects(@_UpdateDisks);
+
+  // assign disks to driveslots
+
+  blockdevicecollection.ForAll(@_InsertDisksIntoSlots);
+
+  pools := input.Field('pools').AsObject;
+  pools.ForAllObjects(@_UpdatePools);
+
+  result := GFRE_DB_NIL_DESC;
+end;
 
 { TFRE_HAL_DISK }
 

@@ -1389,7 +1389,7 @@ var poolcolletion        : IFRE_DB_COLLECTION;
         begin
           if disk.Field('STATE').asstring<>'INUSE' then
             begin
-              blockcollection.GetIndexedObj(devicename,dbblockdevice_uo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX);
+              assert(blockcollection.GetIndexedObj(devicename,dbblockdevice_uo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX)=true,'kacka');
               dbblockdevice_obj := (dbblockdevice_uo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
               _SetPoolParameter;
               CheckDbResult(blockcollection.Update(dbblockdevice_obj),'could not update blockdevice');

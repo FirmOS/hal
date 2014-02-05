@@ -92,7 +92,7 @@ type
     procedure SafeJobWinRMSBS;
     procedure SMBTestMethod;
     procedure VPNTest;
-    procedure SNMPTest;
+    procedure SNMPProcTest;
     procedure SafeJobSMB;
     procedure ZPoolPrepare;
     procedure ZCreateSnapShot;
@@ -128,12 +128,11 @@ type
     procedure CPULoad;
 
     procedure ZTCPSendSnapshot;
-
-  published
     procedure ZTCPCheckDataSetExists;
     procedure ZTCPGetLastSnapShot;
     procedure ZTCPReplicateJob;
-
+  published
+    procedure SNMPTest;
   end;
 
 
@@ -323,6 +322,17 @@ begin
   po.SetTCPReplicate('rpool/repos','rpool/destination/repos','AUTO',cTCPfoscmd,CFRE_FOSCMD_PORT);
   po.ExecuteCMD;
   writeln(po.DumpToString());
+end;
+
+procedure TFRE_Tester_Tests.SNMPTest;
+var po      : TFRE_DB_Testmethod_SNMP;
+begin
+  po      := TFRE_DB_Testmethod_SNMP.Create;
+  po.AddSNMPRequest('1.3.6.1.2.1.1.1.0','10.54.0.1',2,'srnemapdx8');
+  po.AddSNMPRequest('1.3.6.1.2.1.1.3.0','10.54.0.1',2,'srnemapdx8');
+//  po.AddSNMPRequest('HOST-RESOURCES-MIB::hrStorageSize.1','10.4.0.234',1,'public');
+  po.SendRequests;
+  writeln(po.DumpToString);
 end;
 
 procedure TFRE_Tester_Tests.ZCreateSnapShot;
@@ -884,10 +894,10 @@ begin
   writeln(po.DumpToString());
 end;
 
-procedure TFRE_Tester_Tests.SNMPTest;
-var po      : TFRE_DB_Testmethod_SNMP;
+procedure TFRE_Tester_Tests.SNMPProcTest;
+var po      : TFRE_DB_Testmethod_SNMPProc;
 begin
-  po      := TFRE_DB_Testmethod_SNMP.Create;
+  po      := TFRE_DB_Testmethod_SNMPProc.Create;
   po.SetRemoteSSH(cremoteuser, cremotehosttester, GetRemoteKeyFilename);
   po.AddSNMPRequest('HOST-RESOURCES-MIB::hrProcessorLoad.2','10.4.0.234',1,'public');
   po.AddSNMPRequest('HOST-RESOURCES-MIB::hrStorageSize.1','10.4.0.234',1,'public');
