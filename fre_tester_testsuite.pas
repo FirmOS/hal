@@ -127,12 +127,13 @@ type
     procedure HTTPRequest;
     procedure CPULoad;
 
+    procedure SNMPTest;
+
     procedure ZTCPSendSnapshot;
     procedure ZTCPCheckDataSetExists;
     procedure ZTCPGetLastSnapShot;
-    procedure ZTCPReplicateJob;
   published
-    procedure SNMPTest;
+    procedure ZTCPReplicateJob;
   end;
 
 

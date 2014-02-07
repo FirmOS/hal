@@ -66,7 +66,7 @@ type
     FPO   : TFRE_DB_JobProgress;
     FTE   : IFOS_TE;
   public
-    constructor Create         ;
+    constructor Create           (const jobid: string; const totalsize : int64);
     procedure   ProgressCallback (const intotal, outtotal, errortotal: Int64);
     procedure   Execute          ; override;
     procedure   TerminateNow     ;
@@ -80,18 +80,13 @@ type
     stdinstream  : TIOStream;
     stdoutstream : TIOStream;
     stderrstream : TIOStream;
-    progress     : TFRE_DB_JobProgress;
     asyncwriter  : TAsyncWrite_Thread;
 
   begin
     stdinstream  := TIOStream.Create(iosInput);
     stdoutstream := TIOStream.Create(iosOutPut);
     stderrstream := TIOStream.Create(iosError);
-
-    progress     := TFRE_DB_JobProgress.CreateForDB;
-    progress.SetJobID(job);
-    progress.SetTotalOutbytes(totalsize);
-
+    asyncwriter  := TAsyncWrite_Thread.Create(job,totalsize);
     try
       if compressed then begin
         process   := TFRE_Process.Create(nil);
@@ -100,7 +95,7 @@ type
         process2.PreparePipedStreamAsync('zfs',TFRE_DB_StringArray.Create('recv','-u','-F',ds)) ;
         process.SetStreams(StdInstream,process2.Input,stderrstream);
         process2.SetStreams(nil,stdoutstream,stdoutstream);
-        process.RegisterProgressCallback(@progress.ProgressCallback);
+        process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
         process.StartAsync;
         process2.StartAsync;
         process.WaitForAsyncExecution;
@@ -110,15 +105,18 @@ type
         process   := TFRE_Process.Create(nil);
         process.PreparePipedStreamAsync('zfs',TFRE_DB_StringArray.Create('recv','-u','-F',ds));
         process.SetStreams(StdInstream,StdOutStream,stdoutstream);
-        process.RegisterProgressCallback(@progress.ProgressCallback);
+        process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
         process.StartAsync;
         res      := process.WaitForAsyncExecution;
       end;
     finally
       if assigned(process) then process.Free;
       if assigned(process2) then process2.Free;
-      progress.Finalize;
+      asyncwriter.TerminateNow;
+      asyncwriter.WaitFor;
+      asyncwriter.Free;
     end;
+
   end;
 
   procedure ZFSSend(const dataset:string; const compressed:boolean);
@@ -129,18 +127,14 @@ type
     stdinstream  : TIOStream;
     stdoutstream : TIOStream;
     stderrstream : TIOStream;
-    progress     : TFRE_DB_JobProgress;
     zfsparams    : shortstring;
     targetds     : shortstring;
     targetcmd    : shortstring;
+    asyncwriter  : TAsyncWrite_Thread;
   begin
     stdinstream  := TIOStream.Create(iosInput);
     stdoutstream := TIOStream.Create(iosOutPut);
     stderrstream := TIOStream.Create(iosError);
-
-    progress     := TFRE_DB_JobProgress.CreateForDB;
-    progress.SetJobID(job);
-    progress.SetTotalOutbytes(totalsize);
 
     zfsparams    := GFRE_BT.SplitString(ds,'*');
     targetds     := ds;
@@ -157,6 +151,7 @@ type
 //    writeln(Stderr,'SWL: targetds ',targetds);
 //    writeln(Stderr,'SWL: targetcmd ',targetcmd);
 
+    asyncwriter  := TAsyncWrite_Thread.Create(job,totalsize);
     try
       if compressed then begin
         process   := TFRE_Process.Create(nil);
@@ -165,7 +160,7 @@ type
         process2.PreparePipedStreamAsync('bzip2 -c',nil) ;
         process.SetStreams(StdInstream,process2.Input,stderrstream);
         process2.SetStreams(nil,stdoutstream,stderrstream);
-        process.RegisterProgressCallback(@progress.ProgressCallback);
+        process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
         process.StartAsync;
         process2.StartAsync;
         process.WaitForAsyncExecution;
@@ -175,14 +170,16 @@ type
         process   := TFRE_Process.Create(nil);
         process.PreparePipedStreamAsync('zfs send '+zfsparams,nil);
         process.SetStreams(StdInstream,StdOutStream,stderrstream);
-        process.RegisterProgressCallback(@progress.ProgressCallback);
+        process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
         process.StartAsync;
         res      := process.WaitForAsyncExecution;
       end;
     finally
       if assigned(process) then process.Free;
       if assigned(process2) then process2.Free;
-      progress.Finalize;
+      asyncwriter.TerminateNow;
+      asyncwriter.WaitFor;
+      asyncwriter.Free;
     end;
   end;
 
@@ -225,25 +222,25 @@ type
       stdinstream  : TIOStream;
       stdoutstream : TIOStream;
       stderrstream : TIOStream;
-      progress     : TFRE_DB_JobProgress;
+      asyncwriter  : TAsyncWrite_Thread;
   begin
     stdinstream  := TIOStream.Create(iosInput);
     stdoutstream := TIOStream.Create(iosOutPut);
     stderrstream := TIOStream.Create(iosError);
-    progress     := TFRE_DB_JobProgress.CreateForDB;
-    progress.SetJobID(job);
-    progress.SetTotalOutbytes(totalsize);
 
+    asyncwriter  := TAsyncWrite_Thread.Create(job,totalsize);
     process      := TFRE_Process.Create(nil);
     try
       process.PreparePipedStreamAsync('cat',nil);
       process.SetStreams(StdInstream,StdOutStream,stderrstream);
-      process.RegisterProgressCallback(@progress.ProgressCallback);
+      process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
       process.StartAsync;
       result  := process.WaitForAsyncExecution;
     finally
       process.Free;
-      progress.Finalize;
+      asyncwriter.TerminateNow;
+      asyncwriter.WaitFor;
+      asyncwriter.Free;
     end;
   end;
 
@@ -252,27 +249,28 @@ type
       stdinstream  : TIOStream;
       stdoutstream : TIOStream;
       stderrstream : TIOStream;
-      progress     : TFRE_DB_JobProgress;
+      asyncwriter  : TAsyncWrite_Thread;
       targetcmd    : ShortString;
   begin
     stdinstream  := TIOStream.Create(iosInput);
     stdoutstream := TIOStream.Create(iosOutPut);
     stderrstream := TIOStream.Create(iosError);
-    progress     := TFRE_DB_JobProgress.CreateForDB;
-    progress.SetJobID(job);
-    progress.SetTotalOutbytes(totalsize);
     targetcmd    := 'ECHOTEST%DS%E'+job+'%'+inttostr(totalsize)+LineEnding;
     stdoutstream.WriteBuffer(targetcmd[1],byte(targetcmd[0]));
+
+    asyncwriter  := TAsyncWrite_Thread.Create(job,totalsize);
     process      := TFRE_Process.Create(nil);
     try
       process.PreparePipedStreamAsync('cat',TFRE_DB_StringArray.Create(ds));   // send testfile
       process.SetStreams(StdInstream,StdOutStream,stderrstream);
-      process.RegisterProgressCallback(@progress.ProgressCallback);
+      process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
       process.StartAsync;
       result  := process.WaitForAsyncExecution;
     finally
       process.Free;
-      progress.Finalize;
+      asyncwriter.TerminateNow;
+      asyncwriter.WaitFor;
+      asyncwriter.Free;
     end;
   end;
 
@@ -303,11 +301,13 @@ type
 
 { TAsyncWrite_Thread }
 
-constructor TAsyncWrite_Thread.Create;
+constructor TAsyncWrite_Thread.Create(const jobid: string; const totalsize: int64);
 begin
   GFRE_TF.Get_Lock(FLock);
   GFRE_TF.Get_TimedEvent(FTE);
   FPO := TFRE_DB_JobProgress.CreateForDB;
+  FPO.SetJobID(jobid);
+  FPO.SetTotalOutbytes(totalsize);
   inherited Create(false);
 end;
 
@@ -315,7 +315,9 @@ procedure TAsyncWrite_Thread.ProgressCallback(const intotal, outtotal, errortota
 begin
   FLock.Acquire;
   try
-    //job dbo ...
+    FPO.SetInbytes(intotal);
+    FPO.SetOutbytes(outtotal);
+    FPO.SetErrorbytes(errortotal);
   finally
     FLock.Release;
   end;
@@ -327,17 +329,25 @@ begin
   try
     repeat
       FTE.WaitFor(5000);
+      FLock.Acquire;
+      try
+        FLocalCopy:=FPO.CloneToNewObject.Implementor_HC as TFRE_DB_JobProgress;
+        if FLocalCopy.GetJobID<>'' then begin
+            FLocalCopy.SaveToFile(cFRE_JOB_PROGRESS_DIR+DirectorySeparator+FLocalCopy.GetJobID+'.dbo');
+            GFRE_BT.StringToFile(cFRE_JOB_PROGRESS_DIR+DirectorySeparator+FLocalCopy.GetJobID+'.txt',FLocalCopy.DumpToString());
+          end
+        else
+          GFRE_BT.CriticalAbort('Async Job Progress Writer can not save without JOBID');
+      finally
+        FLock.Release;
+      end;
       if Terminated then
         exit;
-      FLock.Acquire;
-//      FLocalCopy ... copy;
-      FLock.Release;
-//      ..write
     until terminated;
   except
     on e : Exception do
       begin
-
+        GFRE_BT.CriticalAbort('Async Job Progress Writer Exception:'+E.Message);
       end;
   end;
 end;

@@ -74,7 +74,6 @@ type
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
-    procedure       ProgressCallback            (const intotal, outtotal, errortotal: Int64);
     function        GetJobID                    : TFRE_DB_String;
     procedure       SetOutbytes                 (const value : int64);
     procedure       SetInbytes                  (const value : int64);
@@ -276,19 +275,6 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-procedure TFRE_DB_JobProgress.ProgressCallback(const intotal, outtotal, errortotal: Int64);
-begin
-//  writeln(StdErr,'SWL: PROGRESS IN:', intotal,'OUT:',outtotal,'ERR:',errortotal);
-  SetInbytes(intotal);
-  SetOutbytes(outtotal);
-  SetErrorbytes(errortotal);
-  if GetJobID<>'' then begin
-      SaveToFile(cFRE_JOB_PROGRESS_DIR+DirectorySeparator+GetJobID+'.dbo');
-      GFRE_BT.StringToFile(cFRE_JOB_PROGRESS_DIR+DirectorySeparator+GetJobID+'.txt',DumpToString());
-    end
-  else
-    GFRE_BT.CriticalAbort('TFRE_JOB_Progress can not save without JOBID');
-end;
 
 function TFRE_DB_JobProgress.GetJobID: TFRE_DB_String;
 begin
