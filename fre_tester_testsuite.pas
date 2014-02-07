@@ -319,7 +319,7 @@ var po     : TFRE_DB_ZFSJob;
 begin
   po     := TFRE_DB_ZFSJob.create;
   po.SetJobkeyDescription('TESTJOB','NO DESC');
-  po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
+//  po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
   po.SetTCPReplicate('rpool/repos','rpool/destination/repos','AUTO',cTCPfoscmd,CFRE_FOSCMD_PORT);
   po.ExecuteCMD;
   writeln(po.DumpToString());

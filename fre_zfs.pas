@@ -2136,9 +2136,9 @@ begin
   else
     zcommand := zcommand +' SEND ';
   if Field ('remotehost').AsString<>'' then
-    zcommand := zcommand +'"'''+zparameter+'*'+destinationdataset+''' '+jobid+' '+inttostr(totalsize)+' | nc '+destinationhost+' '+inttostr(destinationport)+'"'
+    zcommand := zcommand +'"'''+destinationhost+'*'+inttostr(destinationport)+'*'+zparameter+'*'+destinationdataset+''' '+jobid+' '+inttostr(totalsize)+'"'
   else
-    zcommand := zcommand +'"'+zparameter+'*'+destinationdataset+'" '+jobid+' '+inttostr(totalsize)+' | nc '+destinationhost+' '+inttostr(destinationport);
+    zcommand := zcommand +'"'+destinationhost+'*'+inttostr(destinationport)+'*'+zparameter+'*'+destinationdataset+'" '+jobid+' '+inttostr(totalsize);
 
   writeln('SWL:',zcommand);
   proc.SetupInput(zcommand,nil);

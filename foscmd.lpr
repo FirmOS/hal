@@ -72,11 +72,10 @@ type
     procedure   TerminateNow     ;
   end;
 
-  procedure ZFSReceive(const dataset:string; const compressed:boolean);
+  function ZFSReceive(const dataset:string; const compressed:boolean):integer;
   var
     process      : TFRE_Process;
     process2     : TFRE_Process;
-    res          : integer;
     stdinstream  : TIOStream;
     stdoutstream : TIOStream;
     stderrstream : TIOStream;
@@ -100,14 +99,14 @@ type
         process2.StartAsync;
         process.WaitForAsyncExecution;
         process2.CloseINput;
-        res       := process2.WaitForAsyncExecution;
+        result       := process2.WaitForAsyncExecution;
       end else begin
         process   := TFRE_Process.Create(nil);
         process.PreparePipedStreamAsync('zfs',TFRE_DB_StringArray.Create('recv','-u','-F',ds));
         process.SetStreams(StdInstream,StdOutStream,stdoutstream);
         process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
         process.StartAsync;
-        res      := process.WaitForAsyncExecution;
+        result      := process.WaitForAsyncExecution;
       end;
     finally
       if assigned(process) then process.Free;
@@ -119,12 +118,11 @@ type
 
   end;
 
-  procedure ZFSSend(const dataset:string; const compressed:boolean);
+  function ZFSSend(const dataset:string; const compressed:boolean):integer;
   var
     process      : TFRE_Process;
     process2     : TFRE_Process;
     process3     : TFRE_Process;
-    res          : integer;
     stdinstream  : TIOStream;
     stdoutstream : TIOStream;
     stderrstream : TIOStream;
@@ -151,14 +149,11 @@ type
       targetcmd := 'RECEIVE';
 
     targetcmd    := targetcmd+'%'+targetds+'%R'+job+'%'+inttostr(totalsize)+LineEnding;
-    stdoutstream.WriteBuffer(targetcmd[1],byte(targetcmd[0]));
-
 //    writeln(Stderr,'SWL: ZFSPARAMS ',zfsparams);
 //    writeln(Stderr,'SWL: targetds ',targetds);
 //    writeln(Stderr,'SWL: targetcmd ',targetcmd);
-    writeln(Stderr,'SWL: targethost ',targethost);
-    writeln(Stderr,'SWL: targetport ',targetport);
-
+//    writeln(Stderr,'SWL: targethost ',targethost);
+//    writeln(Stderr,'SWL: targetport ',targetport);
     asyncwriter  := TAsyncWrite_Thread.Create(job,totalsize);
     try
       if compressed then begin
@@ -172,10 +167,13 @@ type
         process2.SetStreams(nil,process3.Input,stderrstream);
         process3.SetStreams(nil,StdoutStream,stderrstream);
         process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
+
+        process3.Input.WriteBuffer(targetcmd[1],byte(targetcmd[0]));
+
         process.StartAsync;
         process2.StartAsync;
         process3.StartAsync;
-        res     := process.WaitForAsyncExecution;
+        result     := process.WaitForAsyncExecution;
         process2.CloseINput;
         process2.WaitForAsyncExecution;
         process3.CloseINput;
@@ -183,15 +181,18 @@ type
       end else begin
         process   := TFRE_Process.Create(nil);
         process2  := TFRE_Process.Create(nil);
+        process3  := nil;
         process.PreparePipedStreamAsync('zfs send '+zfsparams,nil);
         process2.PreparePipedStreamAsync('nc '+targethost+' '+targetport,nil) ;
-        process.SetStreams(StdInstream,StdOutStream,stderrstream);
         process.SetStreams(StdInstream,process2.Input,stderrstream);
         process2.SetStreams(nil,StdoutStream,stderrstream);
         process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
+
+        process2.Input.WriteBuffer(targetcmd[1],byte(targetcmd[0]));
+
         process.StartAsync;
         process2.StartAsync;
-        res      := process.WaitForAsyncExecution;
+        result      := process.WaitForAsyncExecution;
         process2.CloseINput;
         process2.WaitForAsyncExecution;
       end;
@@ -314,11 +315,12 @@ type
     finally
       stdinstream.Free;
     end;
+//    writeln('INLINEPARAMS [',inlineparams,']');
     mode      := GFRE_BT.SplitString(inlineparams,'%');
     ds        := GFRE_BT.SplitString(inlineparams,'%');
     job       := GFRE_BT.SplitString(inlineparams,'%');
     totalsize := StrtoInt64Def(inlineparams,0);
-//    writeln('SWL:',mode,',', ds, ',', job, ',', totalsize);
+//    writeln(Stdout,'SWL INLINE:',mode,',', ds, ',', job, ',', totalsize);
   end;
 
 { TAsyncWrite_Thread }
@@ -416,10 +418,10 @@ begin
 
  case mode of
   'RECEIVE': begin
-    ZFSReceive(ds,false);
+    halt(ZFSReceive(ds,false));
   end;
   'RECEIVEBZ':begin
-    ZFSReceive(ds,true);
+    halt(ZFSReceive(ds,true));
    end;
   'DSEXISTS':begin
     halt(ZFSDSExists(ds));
@@ -436,10 +438,10 @@ begin
    end;
   'SEND': begin
      // ./foscmd SEND "rpool/downloads@test1*drsdisk/drssnapshots/test2" JOB1 1000000 | nc 127.0.0.1 44010
-     ZFSSend(ds,false);
+     halt(ZFSSend(ds,false));
    end;
   'SENDBZ': begin
-     ZFSSend(ds,true);
+     halt(ZFSSend(ds,true));
    end;
   else begin
    writeln(GFOS_VHELP_GET_VERSION_STRING);
