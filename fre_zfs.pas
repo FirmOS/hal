@@ -44,7 +44,7 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,fre_testcase;
+  FOS_TOOL_INTERFACES,fre_testcase,fre_system;
 
 type
 
@@ -70,7 +70,7 @@ const
   CFRE_DB_DRIVESLOT_TP2_INDEX  = 'targetport2';
 
   CFRE_FOSCMD_PORT             = 44010;
-  CFRE_FOSCMD                  = '/opt/local/fre/bin/foscmd';
+  CFRE_FOSCMD                  = 'foscmd';
 
 type
   EFOS_ZFS_Exception=class(Exception);
@@ -2130,7 +2130,7 @@ begin
   ClearProcess;
   proc := TFRE_DB_Process.create;
 
-  zcommand :=  CFRE_FOSCMD;
+  zcommand :=  cFRE_SERVER_DEFAULT_DIR+DirectorySeparator+'bin'+DirectorySeparator+CFRE_FOSCMD;
   if compressed then
     zcommand := zcommand +' SENDBZ '
   else

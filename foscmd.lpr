@@ -123,6 +123,7 @@ type
   var
     process      : TFRE_Process;
     process2     : TFRE_Process;
+    process3     : TFRE_Process;
     res          : integer;
     stdinstream  : TIOStream;
     stdoutstream : TIOStream;
@@ -130,12 +131,17 @@ type
     zfsparams    : shortstring;
     targetds     : shortstring;
     targetcmd    : shortstring;
+    targethost   : shortstring;
+    targetport   : shortstring;
+
     asyncwriter  : TAsyncWrite_Thread;
   begin
     stdinstream  := TIOStream.Create(iosInput);
     stdoutstream := TIOStream.Create(iosOutPut);
     stderrstream := TIOStream.Create(iosError);
 
+    targethost   := GFRE_BT.SplitString(ds,'*');
+    targetport   := GFRE_BT.SplitString(ds,'*');
     zfsparams    := GFRE_BT.SplitString(ds,'*');
     targetds     := ds;
 
@@ -150,33 +156,49 @@ type
 //    writeln(Stderr,'SWL: ZFSPARAMS ',zfsparams);
 //    writeln(Stderr,'SWL: targetds ',targetds);
 //    writeln(Stderr,'SWL: targetcmd ',targetcmd);
+    writeln(Stderr,'SWL: targethost ',targethost);
+    writeln(Stderr,'SWL: targetport ',targetport);
 
     asyncwriter  := TAsyncWrite_Thread.Create(job,totalsize);
     try
       if compressed then begin
         process   := TFRE_Process.Create(nil);
         process2  := TFRE_Process.Create(nil);
+        process3  := TFRE_Process.Create(nil);
         process.PreparePipedStreamAsync('zfs send '+zfsparams,nil);
         process2.PreparePipedStreamAsync('bzip2 -c',nil) ;
+        process3.PreparePipedStreamAsync('nc '+targethost+' '+targetport,nil) ;
         process.SetStreams(StdInstream,process2.Input,stderrstream);
-        process2.SetStreams(nil,stdoutstream,stderrstream);
+        process2.SetStreams(nil,process3.Input,stderrstream);
+        process3.SetStreams(nil,StdoutStream,stderrstream);
         process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
         process.StartAsync;
         process2.StartAsync;
-        process.WaitForAsyncExecution;
+        process3.StartAsync;
+        res     := process.WaitForAsyncExecution;
         process2.CloseINput;
-        res       := process2.WaitForAsyncExecution;
+        process2.WaitForAsyncExecution;
+        process3.CloseINput;
+        process3.WaitForAsyncExecution;
       end else begin
         process   := TFRE_Process.Create(nil);
+        process2  := TFRE_Process.Create(nil);
         process.PreparePipedStreamAsync('zfs send '+zfsparams,nil);
+        process2.PreparePipedStreamAsync('nc '+targethost+' '+targetport,nil) ;
         process.SetStreams(StdInstream,StdOutStream,stderrstream);
+        process.SetStreams(StdInstream,process2.Input,stderrstream);
+        process2.SetStreams(nil,StdoutStream,stderrstream);
         process.RegisterProgressCallback(@asyncwriter.ProgressCallback);
         process.StartAsync;
+        process2.StartAsync;
         res      := process.WaitForAsyncExecution;
+        process2.CloseINput;
+        process2.WaitForAsyncExecution;
       end;
     finally
       if assigned(process) then process.Free;
       if assigned(process2) then process2.Free;
+      if assigned(process3) then process3.Free;
       asyncwriter.TerminateNow;
       asyncwriter.WaitFor;
       asyncwriter.Free;
@@ -409,9 +431,11 @@ begin
      halt(EchoTest);
    end;
   'SENDTEST': begin
+     // ./foscmd SENDTEST /Users/schramml/Downloads/x.zip JOB1 100000 | ./foscmd > testdata3
      halt(SendTest);
    end;
   'SEND': begin
+     // ./foscmd SEND "rpool/downloads@test1*drsdisk/drssnapshots/test2" JOB1 1000000 | nc 127.0.0.1 44010
      ZFSSend(ds,false);
    end;
   'SENDBZ': begin
