@@ -53,6 +53,7 @@ type
 const
 
   CFRE_DB_ZFS_RAID_LEVEL      : array [TFRE_DB_ZFS_RAID_LEVEL] of string        = ('rl_stripe','rl_mirror','rl_z1','rl_z2','rl_z3','rl_undefined');
+  CFRE_DB_MACHINE_COLLECTION             = 'machine';
   CFRE_DB_ZFS_POOL_COLLECTION            = 'pool';
   CFRE_DB_ZFS_VDEV_COLLECTION            = 'vdev';
   CFRE_DB_ENCLOSURE_COLLECTION       = 'enclosure';
@@ -167,8 +168,10 @@ type
   private
     function  getIsOffline          : Boolean;
     function  getisUnassigned       : Boolean;
+    function  getMachineID          : TGUID;
     procedure setIsOffline          (AValue: Boolean);
     procedure setIsUnassgined       (AValue: Boolean);
+    procedure SetMachineID          (AValue: TGUID);
   protected
     function  getDeviceIdentifier               : TFRE_DB_String;
     function  getDeviceName                     : TFRE_DB_String;
@@ -190,6 +193,7 @@ type
     property  DeviceIdentifier  : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
     property  IsUnassigned      : Boolean read getisUnassigned write setIsUnassgined;
+    property  MachineID         : TGUID read GetMachineID write SetMachineID;
   end;
 
   TFRE_DB_ZFS_DISKREPLACECONTAINER=class;
@@ -332,7 +336,9 @@ type
   TFRE_DB_ZFS_POOL=class(TFRE_DB_ZFS_ROOTOBJ)
   private
     function  getCaption       : TFRE_DB_String; override;
+    function  GetMachineID     : TGUID;
     procedure setCaption       (avalue: TFRE_DB_String); override;
+    procedure SetMachineID     (AValue: TGUID);
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -352,6 +358,7 @@ type
     function  createSpare               : TFRE_DB_ZFS_SPARE;
     function  createSpareEmbedded       : TFRE_DB_ZFS_SPARE;
     procedure FlatEmbeddedAndStoreInCollections (const conn: IFRE_DB_CONNECTION);
+    property  MachineID                 : TGUID read GetMachineID write SetMachineID;
   end;
 
   { TFRE_DB_ZFS_UNASSIGNED }
@@ -1073,6 +1080,11 @@ begin
   result:=(FieldExists('isUnassigned') and Field('isUnassigned').AsBoolean);
 end;
 
+function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineID: TGUID;
+begin
+  result := Field('machineid').AsObjectLink;
+end;
+
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceName(AValue: TFRE_DB_String);
 begin
   Field('devicename').AsString := AValue;
@@ -1132,6 +1144,11 @@ end;
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setIsUnassgined(AValue: Boolean);
 begin
   Field('isUnassigned').AsBoolean:=AValue;
+end;
+
+procedure TFRE_DB_ZFS_BLOCKDEVICE.SetMachineID(AValue: TGUID);
+begin
+ Field('machineid').AsObjectLink := AValue;
 end;
 
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceIdentifier(AValue: TFRE_DB_String);
@@ -1284,9 +1301,19 @@ begin
   Result:=Field('pool').AsString;
 end;
 
+function TFRE_DB_ZFS_POOL.GetMachineID: TGUID;
+begin
+  result:=Field('machineid').AsGUID;
+end;
+
 procedure TFRE_DB_ZFS_POOL.setCaption(avalue: TFRE_DB_String);
 begin
   Field('pool').AsString:=avalue;
+end;
+
+procedure TFRE_DB_ZFS_POOL.SetMachineID(AValue: TGUID);
+begin
+ Field('machineid').AsGUID:=avalue;
 end;
 
 function TFRE_DB_ZFS_POOL.createDatastorage: TFRE_DB_ZFS_DATASTORAGE;
@@ -1479,11 +1506,11 @@ begin
    vdevcollection  := conn.Collection(CFRE_DB_ZFS_VDEV_COLLECTION,false);
    blockcollection := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION,false);
 
+   setZFSGuid(FREDB_G2H(MachineID)+Field('pool').asstring);
 
    if poolcolletion.ExistsIndexed(getZFSGuid) then      // FIXME UPDATE CASE
      exit;
 
-//   writeln('SWL: DUMPING POOL',DumpToString);
    // Add to DB
    dbpool_obj        := CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_POOL;
    dbpool_obj.DeleteField('vdev');

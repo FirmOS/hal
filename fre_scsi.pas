@@ -195,9 +195,11 @@ type
     function  getDeviceIdentifier               : TFRE_DB_String;
     function  GetDriveSlots                     : UInt16;
     function  GetEnclosureNr                    : Uint16;
+    function  GetMachineID                      : TGUID;
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure SetDriveSlots                     (AValue: UInt16);
     procedure SetEnclosureNr                    (AValue: Uint16);
+    procedure SetMachineID                      (AValue: TGUID);
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
@@ -213,6 +215,7 @@ type
     property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DriveSlots       : UInt16 read GetDriveSlots write SetDriveSlots;
     property  EnclosureNr      : Uint16 read GetEnclosureNr write SetEnclosureNr;
+    property  MachineID        : TGUID read GetMachineID write SetMachineID;
   end;
 
   { TFRE_DB_SCSI }
@@ -263,6 +266,11 @@ begin
   Result:=Field('enclosurenr').AsUInt16;
 end;
 
+function TFRE_DB_ENCLOSURE.GetMachineID: TGUID;
+begin
+  result:=Field('machineid').AsObjectLink;
+end;
+
 procedure TFRE_DB_ENCLOSURE.setDeviceIdentifier(AValue: TFRE_DB_String);
 begin
   Field('deviceIdentifier').AsString := AValue;
@@ -276,6 +284,11 @@ end;
 procedure TFRE_DB_ENCLOSURE.SetEnclosureNr(AValue: Uint16);
 begin
   Field('enclosurenr').AsUInt16 := AValue;
+end;
+
+procedure TFRE_DB_ENCLOSURE.SetMachineID(AValue: TGUID);
+begin
+  Field('machineid').AsObjectLink :=Avalue;
 end;
 
 class procedure TFRE_DB_ENCLOSURE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -537,8 +550,13 @@ var
   end;
 
   begin
-    logdbo := TFRE_DB_SG_LOGS.CreateForDB;
-    disk.Field('log').AsObject := logdbo;
+    if not disk.FieldExists('log') then
+      begin
+       logdbo := TFRE_DB_SG_LOGS.CreateForDB;
+       disk.Field('log').AsObject := logdbo;
+      end
+    else
+      logdbo:=disk.Field('log').AsObject;
 
     sl  := TStringList.Create;
     try
