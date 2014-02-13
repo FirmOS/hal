@@ -117,7 +117,7 @@ begin
     end;
     dc_crt := session.NewDerivedCollection('crt_grid');
     with dc_crt do begin
-      SetReferentialLinkMode(['TFRE_DB_CERTIFICATE<CA']);
+      SetReferentialLinkMode(['TFRE_DB_CERTIFICATE<CA'],'uids',conn.Collection('certificate'));
 //            SetDeriveParent           (conn.Collection('certificate'));
       SetDeriveTransformation(crt_Grid);
       SetDisplayType(cdt_Listview,[],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
@@ -574,6 +574,8 @@ begin
 
   if (currentVersionId='') then
     begin
+      currentVersionId:='1.0';
+
       CreateAppText(conn,'$caption','Certificate','Certificate','Certificate');
       CreateAppText(conn,'$sitemap_main','Certificate','Certificate','Certificate');
       CreateAppText(conn,'$sitemap_ca','Certificate Authorities','Certificate Authorities','Certificate Authorities');
@@ -604,8 +606,6 @@ begin
       CreateAppText(conn,'$ca_import_diag_cap','Import CA');
 
       CreateAppText(conn,'$button_save','Save');
-
-      currentVersionId:='1.0';
     end;
   if (currentVersionId='1.0') then
     begin
@@ -617,28 +617,38 @@ class procedure TFRE_CERTIFICATE_APP.InstallDBObjects4Domain(const conn: IFRE_DB
 begin
   inherited InstallDBObjects4Domain(conn, currentVersionId, domainUID);
 
-  CheckDbResult(conn.AddGroup('CERTIFICATEADMIN','Group for Certificate Administrators','Certificate admin',domainUID),'could not create certificate admin group');
-  CheckDbResult(conn.AddGroup('CERTIFICATEVIEWER','Group for Certificate Viewers','Certificate viewer',domainUID),'could not create certificate viewer group');
+  if (currentVersionId='') then
+    begin
+      currentVersionId:='1.0';
+      CheckDbResult(conn.AddGroup('CAADMIN','Group for Certificate Authority Administrators','CA admin',domainUID),'could not create CA admin group');
+      CheckDbResult(conn.AddGroup('CERTIFICATEADMIN','Group for Certificate Administrators','Certificate admin',domainUID),'could not create certificate admin group');
+      CheckDbResult(conn.AddGroup('CERTIFICATEVIEWER','Group for Certificate Viewers','Certificate viewer',domainUID),'could not create certificate viewer group');
 
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID,TFRE_DB_StringArray.Create(
-    TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
-     TFRE_CERTIFICATE_CA_MOD.GetClassRoleNameFetch
-    )),'could not add roles for group CERTIFICATEADMIN');
-
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID, TFRE_DB_CA.GetClassStdRoles(true,true,true,true)),'could not add roles of TFRE_DB_CA to group CERTIFICATEADMIN');
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID, TFRE_DB_CERTIFICATE.GetClassStdRoles),'could not add roles of TFRE_DB_CERTIFICATE to group CERTIFICATEADMIN');
-
-
-
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID,TFRE_DB_StringArray.Create(
-    TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
-     TFRE_CERTIFICATE_CA_MOD.GetClassRoleNameFetch
-    )),'could not add roles for group CERTIFICATEVIEWER');
-
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID, TFRE_DB_CA.GetClassStdRoles(false,false,false,true)),'could not add roles of TFRE_DB_CA to group CERTIFICATEVIEWER');
-  CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID, TFRE_DB_CERTIFICATE.GetClassStdRoles(false,false,false,true)),'could not add roles of TFRE_DB_CERTIFICATE to group CERTIFICATEVIEWER');
+      CheckDbResult(conn.AddRolesToGroup('CAADMIN',domainUID,TFRE_DB_StringArray.Create(
+        TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
+         TFRE_CERTIFICATE_CA_MOD.GetClassRoleNameFetch
+        )),'could not add roles for group CAADMIN');
+      CheckDbResult(conn.AddRolesToGroup('CAADMIN',domainUID, TFRE_DB_CA.GetClassStdRoles(true,true,true,true)),'could not add roles of TFRE_DB_CA to group CAADMIN');
+      CheckDbResult(conn.AddRolesToGroup('CAADMIN',domainUID, TFRE_DB_CERTIFICATE.GetClassStdRoles),'could not add roles of TFRE_DB_CERTIFICATE to group CAADMIN');
 
 
+      CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID,TFRE_DB_StringArray.Create(
+        TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
+         TFRE_CERTIFICATE_CA_MOD.GetClassRoleNameFetch
+        )),'could not add roles for group CERTIFICATEADMIN');
+      CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID, TFRE_DB_CA.GetClassStdRoles(false,true,false,true)),'could not add roles of TFRE_DB_CA to group CERTIFICATEADMIN');
+      CheckDbResult(conn.AddRolesToGroup('CERTIFICATEADMIN',domainUID, TFRE_DB_CERTIFICATE.GetClassStdRoles),'could not add roles of TFRE_DB_CERTIFICATE to group CERTIFICATEADMIN');
+
+
+
+      CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID,TFRE_DB_StringArray.Create(
+        TFRE_CERTIFICATE_APP.GetClassRoleNameFetch ,
+         TFRE_CERTIFICATE_CA_MOD.GetClassRoleNameFetch
+        )),'could not add roles for group CERTIFICATEVIEWER');
+
+      CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID, TFRE_DB_CA.GetClassStdRoles(false,false,false,true)),'could not add roles of TFRE_DB_CA to group CERTIFICATEVIEWER');
+      CheckDbResult(conn.AddRolesToGroup('CERTIFICATEVIEWER',domainUID, TFRE_DB_CERTIFICATE.GetClassStdRoles(false,false,false,true)),'could not add roles of TFRE_DB_CERTIFICATE to group CERTIFICATEVIEWER');
+    end;
 end;
 
 procedure Register_DB_Extensions;
