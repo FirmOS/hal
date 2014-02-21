@@ -103,13 +103,13 @@ var
 
 begin
 
-  collection  := conn.Collection(CFRE_DB_MACHINE_COLLECTION);
+  collection  := conn.GetCollection(CFRE_DB_MACHINE_COLLECTION);
   if not collection.IndexExists('def') then
     begin
       collection.DefineIndexOnField('objname',fdbft_String,true,true);
     end;
 
-  collection  := conn.Collection(CFRE_DB_ZFS_POOL_COLLECTION);  // ZFS GUID for pool => zdb
+  collection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);  // ZFS GUID for pool => zdb
   if not collection.IndexExists('def') then
     begin
       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
@@ -120,11 +120,11 @@ begin
       CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
     end;
 
-  collection  := conn.Collection(CFRE_DB_ZFS_VDEV_COLLECTION);  // ZFS GUID for VDEV => zdb
+  collection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);  // ZFS GUID for VDEV => zdb
   if not collection.IndexExists('def') then
     collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
 
-  collection  := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);  // ZFS GUID / WWN
+  collection  := conn.GetCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);  // ZFS GUID / WWN
   if not collection.IndexExists('def') then
     collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
   if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX) then
@@ -132,15 +132,15 @@ begin
   if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX) then
     collection.DefineIndexOnField('devicename',fdbft_String,true,true,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX,false);
 
-  collection  := conn.Collection(CFRE_DB_ENCLOSURE_COLLECTION);
+  collection  := conn.GetCollection(CFRE_DB_ENCLOSURE_COLLECTION);
   if not collection.IndexExists(CFRE_DB_ENCLOSURE_ID_INDEX) then
     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
 
-  collection  := conn.Collection(CFRE_DB_SAS_EXPANDER_COLLECTION);
+  collection  := conn.GetCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
   if not collection.IndexExists(CFRE_DB_EXPANDER_ID_INDEX) then
     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
 
-  collection  := conn.Collection(CFRE_DB_DRIVESLOT_COLLECTION);
+  collection  := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION);
   if not collection.IndexExists(CFRE_DB_DRIVESLOT_ID_INDEX) then
     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
   if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP1_INDEX) then
@@ -424,12 +424,12 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
     end;
 
 begin
-  machinecollection      := conn.Collection(CFRE_DB_MACHINE_COLLECTION);
-  poolcollection         := conn.Collection(CFRE_DB_ZFS_POOL_COLLECTION);
-  blockdevicecollection  := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
-  enclosurecollection    := conn.Collection(CFRE_DB_ENCLOSURE_COLLECTION);
-  expandercollection     := conn.Collection(CFRE_DB_SAS_EXPANDER_COLLECTION);
-  driveslotcollection    := conn.Collection(CFRE_DB_DRIVESLOT_COLLECTION);
+  machinecollection      := conn.GetCollection(CFRE_DB_MACHINE_COLLECTION);
+  poolcollection         := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
+  blockdevicecollection  := conn.GetCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
+  enclosurecollection    := conn.GetCollection(CFRE_DB_ENCLOSURE_COLLECTION);
+  expandercollection     := conn.GetCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
+  driveslotcollection    := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION);
 
 //  writeln('SWL: ENCLOSURECOUNT:',enclosurecollection.Count);
 

@@ -254,7 +254,7 @@ var coll:IFRE_DB_COLLECTION;
 
 begin
  found:=false;
- coll:=conn.Collection('servicegroup');
+ coll:=conn.GetCollection('servicegroup');
  coll.ForAll(@_find);
 end;
 
@@ -316,7 +316,7 @@ var coll:IFRE_DB_Collection;
 
 begin
  ro  :=GFRE_DBI.NewObject;
- coll:=Conn.Collection('service');
+ coll:=Conn.GetCollection('service');
  coll.ForAll(@_find);
  result:=ro;
 end;

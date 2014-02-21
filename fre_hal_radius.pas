@@ -218,7 +218,7 @@ var ca    :IFRE_DB_Object;
    end;
 
  begin
-  coll:=Conn.Collection('certificate');
+  coll:=Conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION);
   coll.ForAll(@_findUser);
  end;
 

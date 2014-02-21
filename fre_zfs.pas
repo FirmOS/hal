@@ -59,8 +59,8 @@ const
   CFRE_DB_ENCLOSURE_COLLECTION       = 'enclosure';
   CFRE_DB_SAS_EXPANDER_COLLECTION    = 'expander';
   CFRE_DB_DRIVESLOT_COLLECTION       = 'driveslot';
-
   CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION     = 'blockdevice';
+
   CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX   = 'deviceId';
   CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX = 'deviceName';
 
@@ -1273,9 +1273,9 @@ var
     resobj               : IFRE_DB_Object;
 
 begin
-   poolcolletion  := conn.Collection(CFRE_DB_ZFS_POOL_COLLECTION,false);
-   vdevcollection  := conn.Collection(CFRE_DB_ZFS_VDEV_COLLECTION,false);
-   blockcollection := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION,false);
+   poolcolletion  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
+   vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
+   blockcollection := conn.GetCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
 
    if poolcolletion.Fetch(db_zfs_pool_id,obj)=false then
      raise EFRE_DB_Exception.Create(edb_NOT_FOUND,'Could not find pool for CreateEmbeddedPoolObjectfromCollection');
@@ -1502,9 +1502,9 @@ var poolcolletion        : IFRE_DB_COLLECTION;
    end;
 
 begin
-   poolcolletion  := conn.Collection(CFRE_DB_ZFS_POOL_COLLECTION,false);
-   vdevcollection  := conn.Collection(CFRE_DB_ZFS_VDEV_COLLECTION,false);
-   blockcollection := conn.Collection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION,false);
+   poolcolletion  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
+   vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
+   blockcollection := conn.GetCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
 
    setZFSGuid(FREDB_G2H(MachineID)+Field('pool').asstring);
 

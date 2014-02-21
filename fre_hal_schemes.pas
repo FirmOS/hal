@@ -57,6 +57,11 @@ uses
   fre_zfs,
   fre_openssl_interface;
 
+const
+
+  CFRE_DB_CA_COLLECTION          = 'ca';
+  CFRE_DB_CERTIFICATE_COLLECTION = 'certificate';
+
 type
 
     { TFRE_DB_HALCONFIG }
@@ -487,7 +492,7 @@ type
     class procedure RegisterSystemScheme     (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    class procedure RestoreCA                (const conn:IFRE_DB_CONNECTION; const filename:string);
+    class procedure RestoreCA                (const conn:IFRE_DB_CONNECTION; const filename:string; const domainName: string='');
   published
     function        Create_SSL_CA            : boolean;
     function        Import_SSL_CA            (const ca_crt_file,serial_file,ca_key_file,random_file,index_file,crl_number_file:TFRE_DB_String;out import_error: TFRE_DB_String) : boolean;
@@ -641,7 +646,7 @@ implementation
 
  begin
    writeln('GET SERVICE');
-   coll   := dbc.Collection('service');
+   coll   := dbc.GetCollection('service');
    hlt    := false;
    coll.ForAllBreak(@_get,hlt);
    result := id;
@@ -728,7 +733,7 @@ implementation
   highest := cp_ip._bytes[2];
   writeln (highest);
 
-  colln   :=dbc.Collection('network');
+  colln   :=dbc.GetCollection('network');
   colln.ForAll(@_getnets);
 
   writeln (highest);
@@ -791,7 +796,7 @@ implementation
    SplitCIDR (new_net,ip,mask);
    check_net := StringtoIP4(ip);
 
-   colln   := dbc.Collection('network');
+   colln   := dbc.GetCollection('network');
    colln.ForAll(@_checknets);
 
    result   := gresult;
@@ -1163,7 +1168,7 @@ begin
     inc(highest);
     // create new dhcp_fixed
     writeln('NOW ADD DHCP');
-    collf          := conn .Collection('dhcp_fixed');
+    collf          := conn .GetCollection('dhcp_fixed');
     dhcp_fixed_obj := GFRE_DBI.NewObjectScheme(TFRE_DB_DHCP_Fixed);
     dhcp_fixed_obj.Field('ip').AsString      := GetIPDots(dhcp_obj.Field('fixed_start').AsString,3)+inttostr(highest);
     dhcp_fixed_obj.Field('mac').AsString     := lowercase (mac);
@@ -1999,7 +2004,7 @@ begin
   VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
-class procedure TFRE_DB_CA.RestoreCA(const conn: IFRE_DB_CONNECTION; const filename: string);
+class procedure TFRE_DB_CA.RestoreCA(const conn: IFRE_DB_CONNECTION; const filename: string; const domainName: string);
 var
   coll  : IFRE_DB_COLLECTION;
   collc : IFRE_DB_COLLECTION;
@@ -2049,8 +2054,8 @@ var
   end;
 
 begin
-  COLL  := CONN.Collection('ca');
-  COLLC := CONN.Collection('certificate');
+  COLL  := CONN.GetDomainCollection(CFRE_DB_CA_COLLECTION,domainName);
+  COLLC := CONN.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION,domainName);
   halo   := GFRE_DBI.CreateFromFile(filename);
   caobj  := halo.Field('ca').AsObject;
   caobj.ForAllFields(@_allCA);
@@ -2126,7 +2131,7 @@ begin
             import_error := import_error+#13+#10+crt_error;
             result       := false;
           end;
-        CheckDbResult(conn.Collection('certificate').Store(crt),'could not store certificate');
+        CheckDbResult(conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION).Store(crt),'could not store certificate');
       until FindNext(info)<>0;
     FindClose(info);
   except on E:Exception do begin
@@ -2340,7 +2345,7 @@ begin
         _setfields;
         CheckDbResult(dbc.Update(dhcp_subnet_obj),'failure on cloned/update');
       end else begin
-        colls          := dbc.Collection('dhcp_subnet');
+        colls          := dbc.GetCollection('dhcp_subnet');
         dhcp_subnet_obj:= GFRE_DBI.NewObjectScheme(TFRE_DB_DHCP_Subnet);
         _setfields;
         dhcp_subnet_obj.Field('dhcp').AsObjectLink:=dhcp_id;

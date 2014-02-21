@@ -33,6 +33,7 @@ type
     class procedure RegisterSystemScheme          (const scheme:IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects              (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure InstallDBObjects4Domain       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TGUID); override;
+    class procedure InstallUserDBObjects4Domain   (const conn: IFRE_DB_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TGUID); override;
   end;
 
   { TFRE_CERTIFICATE_CA_MOD }
@@ -103,7 +104,7 @@ begin
      end;
     DC_CA := session.NewDerivedCollection('ca_grid');
     with DC_CA do begin
-      SetDeriveParent           (conn.Collection('ca'));
+      SetDeriveParent           (conn.GetDomainCollection(CFRE_DB_CA_COLLECTION));
       SetDeriveTransformation   (ca_Grid);
       SetDisplayType            (cdt_Listview,[],'',nil,'',CWSF(@WEB_CAMenu),nil,CWSF(@WEB_CAContent));
     end;
@@ -117,8 +118,7 @@ begin
     end;
     dc_crt := session.NewDerivedCollection('crt_grid');
     with dc_crt do begin
-      SetReferentialLinkMode(['TFRE_DB_CERTIFICATE<CA'],'uids',conn.Collection('certificate'));
-//            SetDeriveParent           (conn.Collection('certificate'));
+      SetReferentialLinkMode(['TFRE_DB_CERTIFICATE<CA'],'uids',conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION));
       SetDeriveTransformation(crt_Grid);
       SetDisplayType(cdt_Listview,[],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
     end;
@@ -220,7 +220,7 @@ begin
 
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
     sel_guid := input.Field('SELECTED').AsGUID;
-    coll     := conn.Collection('ca');
+    coll     := conn.GetDomainCollection(CFRE_DB_CA_COLLECTION);
     if coll.Fetch(sel_guid,ca) then begin
       GFRE_DBI.GetSystemSchemeByName(ca.SchemeClass,scheme);
       panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$ca_content_header'));
@@ -253,7 +253,7 @@ var
 begin
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
     sel_guid := input.Field('SELECTED').AsGUID;
-    coll     := conn.Collection('certificate');
+    coll     := conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION);
     if coll.Fetch(sel_guid,crt) then begin
       GFRE_DBI.GetSystemSchemeByName(crt.SchemeClass,scheme);
       panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$crt_content_header'));
@@ -320,7 +320,7 @@ begin
 
   if (caob.Implementor_HC as TFRE_DB_CA).Create_SSL_CA then
     begin
-      if conn.Collection('ca').Store(caob)=edb_OK then
+      if conn.GetDomainCollection(CFRE_DB_CA_COLLECTION).Store(caob)=edb_OK then
         Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
       else
         raise EFRE_DB_Exception.Create('could not store created ca object');
@@ -377,7 +377,7 @@ begin
 
   if (caob.Implementor_HC as TFRE_DB_CA).Import_SSL_CA(ca_crt_file,serial_file,ca_key_file,random_file,index_file,crl_number_file,import_status) then
     begin
-      if conn.Collection('ca').Store(caob)=edb_OK then
+      if conn.GetDomainCollection(CFRE_DB_CA_COLLECTION).Store(caob)=edb_OK then
         Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
       else
         raise EFRE_DB_Exception.Create('could not store created ca object');
@@ -444,7 +444,7 @@ begin
 
   if crtob.Create_SSL_Certificate(conn) then
     begin
-      if conn.Collection('certificate').Store(crtob)=edb_OK then
+      if conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION).Store(crtob)=edb_OK then
         Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
       else
         raise EFRE_DB_Exception.Create('could not store created certificate object');
@@ -505,7 +505,7 @@ begin
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then
     begin
       ca_uid := input.Field('SELECTED').AsGUID;
-      if conn.Collection('ca').Fetch(ca_uid,caobj) then
+      if conn.GetDomainCollection(CFRE_DB_CA_COLLECTION).Fetch(ca_uid,caobj) then
         begin
           (caobj.Implementor_HC as TFRE_DB_CA).BackupCA(conn,'/fre/hal/ca_backup.cfg');
           Result:=GFRE_DB_NIL_DESC;
@@ -651,62 +651,25 @@ begin
     end;
 end;
 
+class procedure TFRE_CERTIFICATE_APP.InstallUserDBObjects4Domain(const conn: IFRE_DB_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TGUID);
+var
+  coll: IFRE_DB_COLLECTION;
+begin
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    coll := conn.CreateDomainCollection(CFRE_DB_CA_COLLECTION,false,'',FREDB_G2H(domainUID));
+    //coll.DefineIndexOnField('name',fdbft_String,true,true);
+    coll := conn.CreateDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION,false,'',FREDB_G2H(domainUID));
+    //coll.DefineIndexOnField('name',fdbft_String,true,true);
+  end;
+end;
+
 procedure Register_DB_Extensions;
 begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_CERTIFICATE_CA_MOD);
   GFRE_DBI.RegisterObjectClassEx(TFRE_CERTIFICATE_APP);
   GFRE_DBI.Initialize_Extension_Objects;
 end;
-
-
-procedure InitializeCertificateExtension(const dbname: string; const user, pass: string);
-
-  procedure InitAppDB;
-    var conn  : IFRE_DB_CONNECTION;
-        coll  : IFRE_DB_COLLECTION;
-        collc : IFRE_DB_COLLECTION;
-        ca    : IFRE_DB_Object;
-        crt   : IFRE_DB_Object;
-        caid  : TGuid;
-        name  : string;
-    begin
-      CONN  := GFRE_DBI.NewConnection;
-      try
-        CONN.Connect(dbname,'admin'+'@'+CFRE_DB_SYS_DOMAIN_NAME,'admin');
-        COLL  := CONN.Collection('ca');
-        COLLC := CONN.Collection('certificate');
-      finally
-        CONN.Finalize;
-      end;
-    end;
-
-begin
-
-  InitAppDB;
-
-end;
-
-
-procedure CERTIFICATE_MetaRegister;
-begin
-  FRE_DBBASE.Register_DB_Extensions;
-  fre_testcase.Register_DB_Extensions;
-  fre_hal_schemes.Register_DB_Extensions;
-  fre_certificate_app.Register_DB_Extensions;
-end;
-
-procedure CERTIFICATE_MetaInitializeDatabase(const dbname: string; const user, pass: string);
-begin
-  InitializeCertificateExtension(dbname,user,pass);
-end;
-
-procedure CERTIFICATE_MetaRemove(const dbname: string; const user, pass: string);
-begin
-end;
-
-initialization
-
-GFRE_DBI_REG_EXTMGR.RegisterNewExtension('CERTIFICATE',@CERTIFICATE_MetaRegister,@CERTIFICATE_MetaInitializeDatabase,@CERTIFICATE_MetaRemove);
 
 end.
 
