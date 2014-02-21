@@ -128,9 +128,9 @@ begin
   if not collection.IndexExists('def') then
     collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
   if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX) then
-    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX,true);
+    collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX,true);
   if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX) then
-    collection.DefineIndexOnField('devicename',fdbft_String,true,true,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX,false);
+    collection.DefineIndexOnField('machinedevicename',fdbft_String,true,true,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX,false);
 
   collection  := conn.GetCollection(CFRE_DB_ENCLOSURE_COLLECTION);
   if not collection.IndexExists(CFRE_DB_ENCLOSURE_ID_INDEX) then
@@ -239,11 +239,9 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
     var  disk               : TFRE_DB_ZFS_BLOCKDEVICE;
          db_disk            : TFRE_DB_ZFS_BLOCKDEVICE;
          dbo                : IFRE_DB_Object;
-         diski              : string;
     begin
       disk := (obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
-      diski := disk.DeviceIdentifier;
-      if blockdevicecollection.GetIndexedObj(disk.DeviceIdentifier,dbo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX) then
+      if blockdevicecollection.GetIndexedObj(TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(machine_uid,disk.DeviceIdentifier),dbo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX) then
         begin
           db_disk  := dbo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE;
           db_disk.SetAllSimpleObjectFieldsFromObject(disk);
@@ -281,7 +279,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
           db_disk.MachineID :=  machine_uid;
           db_disk.caption   :=  disk.Devicename; // device.WWN+' ('+device.Manufacturer+' '+device.Model_number+' '+device.Serial_number+')';
           unassigned_disks.addBlockdevice(db_disk);
-          CheckDbResult(blockdevicecollection.Store(db_disk),'store blockdevice in disk');
+          CheckDbResult(blockdevicecollection.Store(db_disk),'store blockdevice in disk machine ['+FREDB_G2H(db_disk.MachineID)+'] deviceidentifier ['+db_disk.DeviceIdentifier+'] devicename ['+db_disk.DeviceName+']');
         end;
     end;
 

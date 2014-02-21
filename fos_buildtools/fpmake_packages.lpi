@@ -62,7 +62,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="../../../../fosbuild/src/fpc/packages/fpmkunit/src;../fre_core"/>
+      <OtherUnitFiles Value="../../../../fosbuild/src/fpc/packages/fpmkunit/src;../fre_core;../../core/fos_buildtools"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>

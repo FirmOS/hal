@@ -58,6 +58,7 @@ type
     function        WEB_addImportCertificateAuthority  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function        WEB_importCertificateAuthority     (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function        WEB_delCertificateAuthority        (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function        WEB_delCertificateAuthorityConfirmed(const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function        WEB_addCertificate                 (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function        WEB_newCertificate                 (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function        WEB_revokeCertificate              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -159,16 +160,16 @@ begin
     grid_ca.AddButton.Describe(CWSF(@WEB_DelCertificateAuthority),'images_apps/certificate/delete_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
-  //if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
-  //  txt:=app.FetchAppTextFull(ses,'$backup_ca');
-  //  grid_ca.AddButton.Describe(CWSF(@WEB_backupCertificateAuthority),'images_apps/certificate/backup_ca.png',txt.Getshort,txt.GetHint);
-  //  txt.Finalize;
-  //end;
-  //if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
-  //  txt:=app.FetchAppTextFull(ses,'$restore_ca');
-  //  grid_ca.AddButton.Describe(CWSF(@WEB_restoreCertificateAuthority),'images_apps/certificate/restore_ca.png',txt.Getshort,txt.GetHint);
-  //  txt.Finalize;
-  //end;
+  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+    txt:=app.FetchAppTextFull(ses,'$backup_ca');
+    grid_ca.AddButton.Describe(CWSF(@WEB_backupCertificateAuthority),'images_apps/certificate/backup_ca.png',txt.Getshort,txt.GetHint);
+    txt.Finalize;
+  end;
+  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+    txt:=app.FetchAppTextFull(ses,'$restore_ca');
+    grid_ca.AddButton.Describe(CWSF(@WEB_restoreCertificateAuthority),'images_apps/certificate/restore_ca.png',txt.Getshort,txt.GetHint);
+    txt.Finalize;
+  end;
 
   dc_crt       := ses.FetchDerivedCollection('crt_grid');
   grid_ca.AddFilterEvent(dc_crt.getDescriptionStoreId(),'uids');
@@ -394,8 +395,42 @@ begin
 end;
 
 function TFRE_CERTIFICATE_CA_MOD.WEB_delCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  sf     : TFRE_DB_SERVER_FUNC_DESC;
+  cap,msg: String;
 begin
-  result := GFRE_DB_NIL_DESC;
+  if not conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_CA) then
+    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+  sf:=CWSF(@WEB_delCertificateAuthorityConfirmed);
+  sf.AddParam.Describe('selected',input.Field('selected').AsStringArr);
+  if input.Field('selected').ValueCount=1 then begin
+    cap:=app.FetchAppTextShort(ses,'$ca_delete_diag_cap');
+    msg:=app.FetchAppTextShort(ses,'$ca_delete_diag_msg');
+    Result:=TFRE_DB_MESSAGE_DESC.create.Describe(cap,msg,fdbmt_confirm,sf);
+  end else begin
+    result :=GFRE_DB_NIL_DESC;
+  end;
+end;
+
+function TFRE_CERTIFICATE_CA_MOD.WEB_delCertificateAuthorityConfirmed(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  coll       : IFRE_DB_COLLECTION;
+  ca         : IFRE_DB_Object;
+  refs_array : TFRE_DB_GUIDArray;
+  i          : NativeInt;
+begin
+  if not conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_CA) then
+    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+
+  if input.field('confirmed').AsBoolean then begin
+    refs_array  := conn.GetReferences(input.Field('selected').AsGUID,false,TFRE_DB_CERTIFICATE.ClassName);
+    for i:= 0 to High(refs_array) do
+      begin
+        CheckDbResult(conn.Delete(refs_array[i]),'could not delete crt id '+FREDB_G2H(refs_array[i]));
+      end;
+    CheckDbResult(conn.Delete(input.Field('selected').AsGUID),'could not delete ca id '+FREDB_G2H(input.Field('selected').AsGUID));
+  end;
+  Result:=GFRE_DB_NIL_DESC;
 end;
 
 function TFRE_CERTIFICATE_CA_MOD.WEB_addCertificate(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -604,6 +639,8 @@ begin
       CreateAppText(conn,'$ca_add_no_ca_msg','Please select a Certificate Authority first.');
       CreateAppText(conn,'$ca_add_import_cap','Import CA');
       CreateAppText(conn,'$ca_import_diag_cap','Import CA');
+      CreateAppText(conn,'$ca_delete_diag_cap','Delete CA');
+      CreateAppText(conn,'$ca_delete_diag_msg','Do you really want to delete the Certificate Authority ?');
 
       CreateAppText(conn,'$button_save','Save');
     end;

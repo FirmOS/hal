@@ -178,15 +178,19 @@ type
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure setDeviceName                     (AValue: TFRE_DB_String);
 
-    procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-
+    procedure _getDnDClass                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getDisableDrag             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getDisableDrop             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getMachineDevicename       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getMachineDeviceIdentifier (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
 
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+    class function  GetMachineDeviceIdentifier  (const vmachine_uid: TGUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
+    class function  GetMachineDeviceName        (const vmachine_uid: TGUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
+
     function  mayHaveZFSChildren: Boolean; override;
     function  canIdentify       : Boolean; override;
     property  isOffline         : Boolean read getIsOffline write setIsOffline;
@@ -1082,7 +1086,10 @@ end;
 
 function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineID: TGUID;
 begin
-  result := Field('machineid').AsObjectLink;
+  if FieldExists('machineid') then
+    result := Field('machineid').AsObjectLink
+  else
+    result := CFRE_DB_NullGUID;
 end;
 
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceName(AValue: TFRE_DB_String);
@@ -1130,6 +1137,16 @@ begin
   end;
 end;
 
+procedure TFRE_DB_ZFS_BLOCKDEVICE._getMachineDevicename(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+ calcfieldsetter.SetAsString(TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceName(MachineID,DeviceName));
+end;
+
+procedure TFRE_DB_ZFS_BLOCKDEVICE._getMachineDeviceIdentifier(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+ calcfieldsetter.SetAsString(TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(MachineID,DeviceIdentifier));
+end;
+
 function TFRE_DB_ZFS_BLOCKDEVICE.getDeviceIdentifier: TFRE_DB_String;
 begin
  result := Field('deviceIdentifier').AsString;
@@ -1159,11 +1176,29 @@ end;
 class procedure TFRE_DB_ZFS_BLOCKDEVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName('TFRE_DB_ZFS_OBJ');
+
+  scheme.AddSchemeField('machineid',fdbft_String).SetupFieldDef(true);
+  scheme.AddSchemeField('deviceidentifier',fdbft_String).SetupFieldDef(true);
+  scheme.AddSchemeField('devicename',fdbft_String).SetupFieldDef(true);
+
+  scheme.AddCalcSchemeField('machinedevicename',fdbft_String,@_getMachineDevicename);
+  scheme.AddCalcSchemeField('machinedeviceidentifier',fdbft_String,@_getMachineDeviceidentifier);
 end;
 
 class procedure TFRE_DB_ZFS_BLOCKDEVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+end;
+
+class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(const vmachine_uid: TGUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
+begin
+  result := FREDB_G2H(vmachine_uid)+'_'+uppercase(vDeviceIdentifier);
+end;
+
+class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceName(const vmachine_uid: TGUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
+begin
+ result := FREDB_G2H(vmachine_uid)+'_'+uppercase(vdeviceName);
 end;
 
 function TFRE_DB_ZFS_BLOCKDEVICE.mayHaveZFSChildren: Boolean;
@@ -1394,7 +1429,7 @@ var poolcolletion        : IFRE_DB_COLLECTION;
     var
       dbblockdevice_obj    : TFRE_DB_ZFS_BLOCKDEVICE;
       dbblockdevice_uo     : IFRE_DB_Object;
-      devicename           : TFRE_DB_String;
+      machinedevicename    : TFRE_DB_String;
 
       procedure _SetPoolParameter;
       begin
@@ -1402,21 +1437,22 @@ var poolcolletion        : IFRE_DB_COLLECTION;
         dbblockdevice_obj.parentInZFSId :=  parent_id;
         dbblockdevice_obj.poolId        :=  db_pool_uid;
         dbblockdevice_obj.IsUnassigned  :=  false;
+        dbblockdevice_obj.MachineID     :=  MachineID;
       end;
 
     begin
-      devicename := (disk.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE).DeviceName;
-      if not blockcollection.ExistsIndexed(devicename,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX) then
+      machinedevicename := TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceName(MachineID,(disk.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE).DeviceName);
+      if not blockcollection.ExistsIndexed(machinedevicename,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX) then
         begin
           dbblockdevice_obj   := disk.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE;
           _SetPoolParameter;
-          CheckDbResult(blockcollection.Store(dbblockdevice_obj),'could not store blockdevice');
+          CheckDbResult(blockcollection.Store(dbblockdevice_obj),'could not store blockdevice ');
         end
       else
         begin
           if disk.Field('STATE').asstring<>'INUSE' then
             begin
-              assert(blockcollection.GetIndexedObj(devicename,dbblockdevice_uo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX)=true,'kacka');
+              assert(blockcollection.GetIndexedObj(machinedevicename,dbblockdevice_uo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX)=true,'could not get indexed blockdevice machinedevicename ['+machinedevicename+']');
               dbblockdevice_obj := (dbblockdevice_uo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
               _SetPoolParameter;
               CheckDbResult(blockcollection.Update(dbblockdevice_obj),'could not update blockdevice');

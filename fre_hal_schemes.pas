@@ -50,7 +50,6 @@ uses
   FRE_DB_COMMON,
   FRE_DBBUSINESS,
   FRE_DB_INTERFACE,
-  FRE_HAL_TRANSPORT,
   fre_system,
   fre_testcase,
   fre_alert,
@@ -64,7 +63,24 @@ const
 
 type
 
-    { TFRE_DB_HALCONFIG }
+   { TFRE_DB_UPDATE_TRANSPORT }
+
+   TFRE_DB_UPDATE_TRANSPORT = class (TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+   public
+     class function CreateUpdateObject(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field) : TFRE_DB_UPDATE_TRANSPORT;
+
+     function GetTargetID : TGUID;
+     function GetIsChild  : boolean;
+     function GetType     : TFRE_DB_ObjCompareEventType;
+     function GetNewField : IFRE_DB_Field;
+     function GetOldField : IFRE_DB_Field;
+     function GetNewFieldName : TFRE_DB_NameType;
+     function GetOldFieldName : TFRE_DB_NameType;
+   end;
+
+   { TFRE_DB_HALCONFIG }
 
     TFRE_DB_HALCONFIG=class(TFRE_DB_ObjectEx)
     protected
@@ -801,6 +817,68 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_UPDATE_TRANSPORT }
+
+class procedure TFRE_DB_UPDATE_TRANSPORT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+class function TFRE_DB_UPDATE_TRANSPORT.CreateUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field): TFRE_DB_UPDATE_TRANSPORT;
+begin
+  result := TFRE_DB_UPDATE_TRANSPORT.CreateForDB;
+  result.Field('UO_ID').AsGUID       := update_obj.UID;
+  result.Field('UO_C').AsBoolean := is_child_update;
+  result.Field('UO_T').AsByte     := Ord(update_type);
+  if assigned(new_field) then
+    begin
+      result.Field('UO_NFN').asstring := new_field.FieldName;
+      result.Field('UO_N').CloneFromField(new_field);
+    end;
+  if assigned(old_field) then
+    begin
+      if update_type=cev_FieldDeleted then
+        result.Field('UO_OFN').asstring := old_field.FieldName;
+      if (old_field.FieldType=fdbft_Object) then
+        result.Field('UO_O').CloneFromField(old_field);
+    end;
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetTargetID: TGUID;
+begin
+  result := Field('UO_ID').AsGUID;
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetIsChild: boolean;
+begin
+  result :=  Field('UO_C').AsBoolean;
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetType: TFRE_DB_ObjCompareEventType;
+begin
+  result := TFRE_DB_ObjCompareEventType(Field('UO_T').AsByte);
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetNewField: IFRE_DB_Field;
+begin
+  result := Field('UO_N');
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetOldField: IFRE_DB_Field;
+begin
+  result := Field('UO_O');
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetNewFieldName: TFRE_DB_NameType;
+begin
+  result := Field('UO_NFN').asstring;
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetOldFieldName: TFRE_DB_NameType;
+begin
+  result := Field('UO_OFN').asstring;
+end;
 
 { TFRE_DB_ZIP_STATUS }
 
@@ -3434,6 +3512,8 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_REDIRECTION_FLOW);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HALCONFIG);
    GFRE_DBI.RegisterObjectClassEx(TFRE_ZIP_STATUS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_UPDATE_TRANSPORT);
+
 
 
    GFRE_DBI.Initialize_Extension_Objects;

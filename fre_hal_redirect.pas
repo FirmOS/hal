@@ -287,7 +287,7 @@ begin
 begin
  cmsob:=nil;
 
- coll:=Conn.Collection('service');
+ coll:=Conn.GetCollection('service');
  hlt:=false;
  coll.ForAllBreak(@_findcms,hlt);
 
@@ -302,12 +302,12 @@ begin
  baseurl:=cmsob.Field('baseurl').AsString;
  _getbasedata;
 
- coll:=Conn.Collection('sitecaptiveextension');
+ coll:=Conn.GetCollection('sitecaptiveextension');
  coll.ForAll(@_findsitecap);
 
  ads:=GFRE_DBI.NewObject;
  result_obj.Field('ads').AsObject:=ads;
- coll:=Conn.Collection('cmspage');
+ coll:=Conn.GetCollection('cmspage');
  coll.ForAll(@_getcmspage);
 
  writeln(result_obj.DumpToString());
