@@ -114,6 +114,7 @@ type
   TFRE_DB_TestcaseResult = class (TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_TestcaseStatus }
@@ -121,6 +122,7 @@ type
   TFRE_DB_TestcaseStatus = class (TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
     function        IMI_ClearStatus             (const input:IFRE_DB_Object):IFRE_DB_Object;
     function        WEB_UpdateActualStatus      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -679,12 +681,40 @@ class procedure TFRE_DB_TestcaseStatus.RegisterSystemScheme(const scheme: IFRE_D
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
-  scheme.AddSchemeField('status',fdbft_String).SetupFieldDef(true,false,'signal_status');
+  scheme.AddSchemeField('status',fdbft_String).SetupFieldDef(true,false,'tcs_signal_status');
   scheme.AddSchemeField('statusupdatetime',fdbft_DateTimeUTC);
   scheme.AddSchemeField('statussummary',fdbft_String);
   scheme.AddSchemeField('testcase',fdbft_Objlink).required:=true;
   scheme.AddSchemeField('actual',fdbft_Boolean);
   scheme.AddCalcSchemeField('status_icon',fdbft_String,@CALC_StatusIcon);
+end;
+
+class procedure TFRE_DB_TestcaseStatus.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+var
+  enum: IFRE_DB_Enum;
+begin
+ newVersionId:='1.0';
+
+ if (currentVersionId='') then begin
+   currentVersionId:='1.0';
+
+   StoreTranslateableText(conn,'enum_tcs_signal_status_warning','Warning');
+   StoreTranslateableText(conn,'enum_tcs_signal_status_failure','Failure');
+   StoreTranslateableText(conn,'enum_tcs_signal_status_unknown','Unknown');
+
+   enum:=GFRE_DBI.NewEnum('tcs_signal_status').Setup(GFRE_DBI.CreateText('$enum_tcs_signal_status','signal status Enum'));
+   enum.addEntry('ok',GFRE_DBI.CreateText('$enum_signal_status_ok','Ok'));
+   enum.addEntry('warning',GetTranslateableTextKey('enum_tcs_signal_status_warning'));
+   enum.addEntry('failure',GetTranslateableTextKey('enum_tcs_signal_status_failure'));
+   enum.addEntry('unknown',GetTranslateableTextKey('enum_tcs_signal_status_unknown'));
+   GFRE_DBI.RegisterSysEnum(enum);
+
+ end;
+ if (currentVersionId='1.0') then begin
+ //next update code
+ end;
+
+ VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 function TFRE_DB_TestcaseStatus.IMI_ClearStatus(const input: IFRE_DB_Object): IFRE_DB_Object;
@@ -749,10 +779,38 @@ class procedure TFRE_DB_TestcaseResult.RegisterSystemScheme(const scheme: IFRE_D
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
-  scheme.AddSchemeField('status',fdbft_String).SetupFieldDef(true,false,'signal_status');
+  scheme.AddSchemeField('status',fdbft_String).SetupFieldDef(true,false,'tcr_signal_status');
   scheme.AddSchemeField('statussummary',fdbft_String);
   scheme.AddSchemeField('starttime',fdbft_DateTimeUTC);
   scheme.AddSchemeField('endtime',fdbft_DateTimeUTC);
+end;
+
+class procedure TFRE_DB_TestcaseResult.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+var
+  enum: IFRE_DB_Enum;
+begin
+ newVersionId:='1.0';
+
+ if (currentVersionId='') then begin
+   currentVersionId:='1.0';
+
+   StoreTranslateableText(conn,'enum_tcr_signal_status_warning','Warning');
+   StoreTranslateableText(conn,'enum_tcr_signal_status_failure','Failure');
+   StoreTranslateableText(conn,'enum_tcr_signal_status_unknown','Unknown');
+
+   enum:=GFRE_DBI.NewEnum('tcr_signal_status').Setup(GFRE_DBI.CreateText('$enum_tcr_signal_status','signal status Enum'));
+   enum.addEntry('ok',GFRE_DBI.CreateText('$enum_signal_status_ok','Ok'));
+   enum.addEntry('warning',GetTranslateableTextKey('enum_tcr_signal_status_warning'));
+   enum.addEntry('failure',GetTranslateableTextKey('enum_tcr_signal_status_failure'));
+   enum.addEntry('unknown',GetTranslateableTextKey('enum_tcr_signal_status_unknown'));
+   GFRE_DBI.RegisterSysEnum(enum);
+
+ end;
+ if (currentVersionId='1.0') then begin
+ //next update code
+ end;
+
+ VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 
@@ -1395,17 +1453,7 @@ end;
 
 
 procedure Register_DB_Extensions;
-var
-  enum      : IFRE_DB_Enum;
-
 begin
-  enum:=GFRE_DBI.NewEnum('signal_status').Setup(GFRE_DBI.CreateText('$enum_signal_status','signal status Enum'));
-  enum.addEntry('ok',GFRE_DBI.CreateText('$enum_signal_status_ok','Ok'));
-  enum.addEntry('warning',GFRE_DBI.CreateText('$enum_signal_status_warning','Warning'));
-  enum.addEntry('failure',GFRE_DBI.CreateText('$enum_signal_status_failure','Failure'));
-  enum.addEntry('unknown',GFRE_DBI.CreateText('$enum_signal_status_unknown','Unknown'));
-  GFRE_DBI.RegisterSysEnum(enum);
-
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Testcase);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_TestcaseResult);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_TestcaseStatus);

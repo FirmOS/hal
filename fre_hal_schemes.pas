@@ -927,7 +927,6 @@ class procedure TFRE_DB_Monitoring_Status.RegisterSystemScheme(const scheme: IFR
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
-//  scheme.AddSchemeField         ('status',fdbft_String).SetupFieldDef(true,false,'signal_status');
   scheme.AddSchemeField         ('provisioned_time',fdbft_DateTimeUTC);
   scheme.AddSchemeField         ('online_time',fdbft_DateTimeUTC);
   scheme.AddCalcSchemeField     ('status_icon',fdbft_String,@CALC_GetStatusIcon);
@@ -1066,6 +1065,8 @@ begin
 end;
 
 class procedure TFRE_DB_AP_Linksys.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+var
+  enum: IFRE_DB_Enum;
 begin
   newVersionId:='1.0';
   newVersionId:='1.0';
@@ -1074,6 +1075,16 @@ begin
     StoreTranslateableText(conn,'scheme_options_group','Device Options');
     StoreTranslateableText(conn,'scheme_routing','Routing');
     StoreTranslateableText(conn,'scheme_vpn_cert','VPN Certificate');
+
+    StoreTranslateableText(conn,'enum_routing_enabled','Enabled');
+    StoreTranslateableText(conn,'enum_routing_disabled','Disabled');
+    StoreTranslateableText(conn,'enum_routing_nat','NAT');
+
+    enum:=GFRE_DBI.NewEnum('routing').Setup(GFRE_DBI.CreateText('$enum_routing','Routing Enum'));
+    enum.addEntry('enabled',GetTranslateableTextKey('enum_routing_enabled'));
+    enum.addEntry('disabled',GetTranslateableTextKey('enum_routing_disabled'));
+    enum.addEntry('nat',GetTranslateableTextKey('enum_routing_nat'));
+    GFRE_DBI.RegisterSysEnum(enum);
   end;
   VersionInstallCheck(currentVersionId,newVersionId);
 end;
@@ -3449,16 +3460,7 @@ end;
  end;
 
  procedure Register_DB_Extensions;
- var
-   enum      : IFRE_DB_Enum;
  begin
-   enum:=GFRE_DBI.NewEnum('routing').Setup(GFRE_DBI.CreateText('$enum_routing','Routing Enum'));
-   enum.addEntry('enabled',GFRE_DBI.CreateText('$enum_routing_enabled','Enabled'));
-   enum.addEntry('disabled',GFRE_DBI.CreateText('$enum_routing_disabled','Disabled'));
-   enum.addEntry('nat',GFRE_DBI.CreateText('$enum_routing_nat','NAT'));
-   GFRE_DBI.RegisterSysEnum(enum);
-
-
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_POWER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_MAIL);
