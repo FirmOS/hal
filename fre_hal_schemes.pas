@@ -1050,9 +1050,19 @@ end;
 
 
 class procedure TFRE_DB_AP_Linksys.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-var group : IFRE_DB_InputGroupSchemeDefinition;
+var
+  group : IFRE_DB_InputGroupSchemeDefinition;
+  enum: IFRE_DB_Enum;
 begin
   inherited RegisterSystemScheme(scheme);
+
+  enum:=GFRE_DBI.NewEnum('tcr_signal_status').Setup(GFRE_DBI.CreateText('$enum_tcr_signal_status','signal status Enum'));
+  enum.addEntry('ok',GFRE_DBI.CreateText('$enum_signal_status_ok','Ok'));
+  enum.addEntry('warning',GetTranslateableTextKey('enum_tcr_signal_status_warning'));
+  enum.addEntry('failure',GetTranslateableTextKey('enum_tcr_signal_status_failure'));
+  enum.addEntry('unknown',GetTranslateableTextKey('enum_tcr_signal_status_unknown'));
+  GFRE_DBI.RegisterSysEnum(enum);
+
   scheme.SetParentSchemeByName('TFRE_DB_ACCESSPOINT');
 
   scheme.AddSchemeField('routing',fdbft_String).SetupFieldDef(true,false,'routing');
@@ -1061,12 +1071,9 @@ begin
   group:=scheme.AddInputGroup('options').Setup(GetTranslateableTextKey('scheme_options_group'));
   group.AddInput('routing',GetTranslateableTextKey('scheme_routing'));
   group.AddInput('vpn_crtid',GetTranslateableTextKey('scheme_vpn_cert'),false,false,'certificate');
-
 end;
 
 class procedure TFRE_DB_AP_Linksys.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-var
-  enum: IFRE_DB_Enum;
 begin
   newVersionId:='1.0';
   newVersionId:='1.0';
@@ -1079,12 +1086,6 @@ begin
     StoreTranslateableText(conn,'enum_routing_enabled','Enabled');
     StoreTranslateableText(conn,'enum_routing_disabled','Disabled');
     StoreTranslateableText(conn,'enum_routing_nat','NAT');
-
-    enum:=GFRE_DBI.NewEnum('routing').Setup(GFRE_DBI.CreateText('$enum_routing','Routing Enum'));
-    enum.addEntry('enabled',GetTranslateableTextKey('enum_routing_enabled'));
-    enum.addEntry('disabled',GetTranslateableTextKey('enum_routing_disabled'));
-    enum.addEntry('nat',GetTranslateableTextKey('enum_routing_nat'));
-    GFRE_DBI.RegisterSysEnum(enum);
   end;
   VersionInstallCheck(currentVersionId,newVersionId);
 end;
