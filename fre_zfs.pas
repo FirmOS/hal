@@ -439,8 +439,9 @@ type
 
   procedure Register_DB_Extensions;
 
-  function String2DBZFSRaidLevelType(const fts: string): TFRE_DB_ZFS_RAID_LEVEL;
-  function ParseZpool               (const pooltxt: string; out pool: TFRE_DB_ZFS_POOL): boolean;
+  function  String2DBZFSRaidLevelType(const fts: string): TFRE_DB_ZFS_RAID_LEVEL;
+  function  ParseZpool               (const pooltxt: string; out pool: TFRE_DB_ZFS_POOL): boolean;
+  procedure CreateDiskDataCollections(const conn: IFRE_DB_COnnection);
 
 implementation
 
@@ -793,6 +794,7 @@ begin
   scheme.AddCalcSchemeField('dndclass',fdbft_String,@_getDnDClass);
   scheme.AddCalcSchemeField('icon',fdbft_String,@_getIcon);
   scheme.AddCalcSchemeField('caption',fdbft_String,@_getCaption);
+  scheme.AddCalcSchemeField('caption_mos',fdbft_String,@_getCaption);
   scheme.AddCalcSchemeField('children',fdbft_String,@_getChildrenString);
   scheme.AddCalcSchemeField('_disabledrop_',fdbft_Boolean,@_getDisableDrop);
   scheme.AddCalcSchemeField('_disabledrag_',fdbft_Boolean,@_getDisableDrag);
@@ -837,6 +839,7 @@ end;
 procedure TFRE_DB_ZFS_OBJ.SetParentInZFSId(AValue: TGuid);
 begin
   Field('parent_in_zfs_uid').AsObjectLink:=AValue;
+  Field('mosparentIds').AddObjectLink(AValue);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.SetPoolId(AValue: TGuid);
@@ -916,7 +919,7 @@ var
   obj : IFRE_DB_Object;
   i   : Integer;
 begin
-  refs:=conn.GetReferences(Self.UID,false,''); //get refs of spezific field (parent_in_zfs_uid)
+  refs:=conn.GetReferences(Self.UID,false,'','parent_in_zfs_uid');
   SetLength(Result,Length(refs));
   for i := 0 to Length(refs) - 1 do begin
     CheckDbResult(conn.Fetch(refs[i],obj),'TFRE_DB_ZFS_OBJ.getChildren');
@@ -2906,6 +2909,58 @@ begin
  finally
    slist.Free;
  end;
+end;
+
+procedure CreateDiskDataCollections(const conn: IFRE_DB_COnnection);
+var
+  unassigned_disks: TFRE_DB_ZFS_UNASSIGNED;
+  collection      : IFRE_DB_COLLECTION;
+
+begin
+
+  if not conn.CollectionExists(CFRE_DB_MACHINE_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_MACHINE_COLLECTION);
+    collection.DefineIndexOnField('objname',fdbft_String,true,true);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_ZFS_POOL_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_ZFS_POOL_COLLECTION);  // ZFS GUID for pool => zdb
+    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+    unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
+    unassigned_disks.setZFSGuid('UNASSIGNED');
+    unassigned_disks.caption:= 'Unassigned disks';  //FIXXME: should be a languge key ?!?
+    unassigned_disks.poolId := unassigned_disks.UID;
+    CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_ZFS_VDEV_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_ZFS_VDEV_COLLECTION);  // ZFS GUID for VDEV => zdb
+    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);  // ZFS GUID / WWN
+    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+    collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX,true);
+    collection.DefineIndexOnField('machinedevicename',fdbft_String,true,true,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX,false);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_ENCLOSURE_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_ENCLOSURE_COLLECTION);
+    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_SAS_EXPANDER_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
+    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_DRIVESLOT_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_DRIVESLOT_COLLECTION);
+    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
+    collection.DefineIndexOnField('targetport_1',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP1_INDEX,false);
+    collection.DefineIndexOnField('targetport_2',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP2_INDEX,false);
+  end;
 end;
 
 

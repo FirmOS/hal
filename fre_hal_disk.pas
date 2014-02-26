@@ -90,65 +90,10 @@ type
     procedure REM_CreateDiskpool        (const command_id : Qword ; const input : IFRE_DB_Object ; const cmd_type : TFRE_DB_COMMANDTYPE);
   end;
 
-procedure InitDiskDataCollections       (const conn: IFRE_DB_COnnection);
 function  Common_Disk_DataFeed          (const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 
 
 implementation
-
-procedure InitDiskDataCollections(const conn: IFRE_DB_Connection);
-var
-     unassigned_disks: TFRE_DB_ZFS_UNASSIGNED;
-     collection      : IFRE_DB_COLLECTION;
-
-begin
-
-  collection  := conn.GetCollection(CFRE_DB_MACHINE_COLLECTION);
-  if not collection.IndexExists('def') then
-    begin
-      collection.DefineIndexOnField('objname',fdbft_String,true,true);
-    end;
-
-  collection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);  // ZFS GUID for pool => zdb
-  if not collection.IndexExists('def') then
-    begin
-      collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-      unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
-      unassigned_disks.setZFSGuid('UNASSIGNED');
-      unassigned_disks.caption:= 'Unassigned disks';  //FIXXME: should be a languge key ?!?
-      unassigned_disks.poolId := unassigned_disks.UID;
-      CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
-    end;
-
-  collection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);  // ZFS GUID for VDEV => zdb
-  if not collection.IndexExists('def') then
-    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-
-  collection  := conn.GetCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);  // ZFS GUID / WWN
-  if not collection.IndexExists('def') then
-    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-  if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX) then
-    collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX,true);
-  if not collection.IndexExists(CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX) then
-    collection.DefineIndexOnField('machinedevicename',fdbft_String,true,true,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX,false);
-
-  collection  := conn.GetCollection(CFRE_DB_ENCLOSURE_COLLECTION);
-  if not collection.IndexExists(CFRE_DB_ENCLOSURE_ID_INDEX) then
-    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
-
-  collection  := conn.GetCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
-  if not collection.IndexExists(CFRE_DB_EXPANDER_ID_INDEX) then
-    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
-
-  collection  := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION);
-  if not collection.IndexExists(CFRE_DB_DRIVESLOT_ID_INDEX) then
-    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
-  if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP1_INDEX) then
-    collection.DefineIndexOnField('targetport_1',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP1_INDEX,false);
-  if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP2_INDEX) then
-    collection.DefineIndexOnField('targetport_2',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP2_INDEX,false);
-
-end;
 
 function Common_Disk_DataFeed(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 
