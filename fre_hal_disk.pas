@@ -119,6 +119,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
     begin
       pool := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
       pool.MachineID := machine_uid;
+      pool.Field('mosparentIds').AddObjectLink(machine_uid);
       pool.FlatEmbeddedAndStoreInCollections(conn);
     end;
 
@@ -483,9 +484,11 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
     end;
 
     procedure _updateAddMachine(const machine:TFRE_DB_MACHINE);
-    var machinename : TFRE_DB_NameType;
-        db_machine  : IFRE_DB_Object;
-        dbo         : IFRE_DB_Object;
+    var machinename  : TFRE_DB_NameType;
+        db_machine   : IFRE_DB_Object;
+        dbo          : IFRE_DB_Object;
+        mosparentids : TFRE_DB_GUIDArray;
+
 
        procedure __insertmachine;
        begin
@@ -493,12 +496,16 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
          db_machine  := dbo.Implementor_HC as TFRE_DB_MACHINE;
          db_machine.Field('UID').asGuid := machine.UID;
          db_machine.SetAllSimpleObjectFieldsFromObject(machine);
+         db_machine.Field('mosparentIds').AsObjectLinkArray := mosparentids;
+         db_machine.Field('caption_mos').AsString:=machinename;
+
          CheckDbResult(machinecollection.Store(db_machine),'store machine in machinecollection');
          GFRE_DBI.LogInfo(dblc_APPLICATION,'Added Machine [%s] uid [%s] to db', [machinename,machine.UID_String]);
        end;
 
        procedure __deletemachine;
        begin
+         mosparentids := dbo.Field('mosparentIds').AsObjectLinkArray;
          (dbo.Implementor_HC as TFRE_DB_MACHINE).DeleteReferencingToMe(conn);
          CheckDbResult(conn.Delete(dbo.UID),'could not delete machine uid ['+dbo.UID_String+']');
        end;

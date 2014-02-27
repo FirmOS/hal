@@ -1721,7 +1721,9 @@ begin
          begin
            db_pool_uid := obj.UID;
            dbpool_obj  := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
+           dbpool_obj.Field('mosparentIds').AsObjectLinkArray := self.Field('mosparentIds').AsObjectLinkArray;
            dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
+//           writeln('SWL: POOOL UPDATE',dbpool_obj.DumpToString());
            CheckDbResult(poolcollection.Update(dbpool_obj),'could not update pool');
            __updatepoolVdevs;
          end;
@@ -1732,6 +1734,7 @@ begin
        dbpool_obj        := TFRE_DB_ZFS_POOL.CreateForDB;
        dbpool_obj.Field('UID').AsGUID := UID;
        dbpool_obj.MachineID           := MachineID;
+       dbpool_obj.Field('mosparentIds').AsObjectLinkArray := self.Field('mosparentIds').AsObjectLinkArray;
        dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
        db_pool_uid       := dbpool_obj.UID;
        CheckDbResult(poolcollection.Store(dbpool_obj),'could not store pool');
@@ -1743,11 +1746,16 @@ procedure TFRE_DB_ZFS_POOL.DeleteReferencingVdevToMe(const conn: IFRE_DB_CONNECT
 var refs: TFRE_DB_ObjectReferences;
        i: NativeInt;
     obj : IFRE_DB_Object;
+    res : TFRE_DB_Errortype;
 begin
   refs := conn.GetReferencesDetailed(Uid,false);
   for i:=0 to high(refs) do
     begin
-      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),'could not fetch vdev sub for update referencing ['+FREDB_G2H(refs[i].linked_uid)+']');
+      res := conn.Fetch(refs[i].linked_uid,obj);
+      if (res=edb_NOT_FOUND) then   // already deleted
+        continue;
+      if not (res=edb_NOT_FOUND) then
+        CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),'could not fetch sub for pool for update referencing ['+FREDB_G2H(refs[i].linked_uid)+']');
       if (obj.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
         begin
           (obj.Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).DeleteReferencingVdevToMe(conn);

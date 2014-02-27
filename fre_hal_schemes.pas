@@ -69,6 +69,7 @@ type
    TFRE_DB_UPDATE_TRANSPORT = class (TFRE_DB_ObjectEx)
    protected
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
      class function CreateUpdateObject(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field) : TFRE_DB_UPDATE_TRANSPORT;
 
@@ -108,6 +109,9 @@ type
    { TFRE_DB_MACHINE }
 
    TFRE_DB_MACHINE=class(TFRE_DB_ObjectEx)
+   private
+     function  GetName: TFRE_DB_String;
+     procedure SetName(AValue: TFRE_DB_String);
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -116,6 +120,7 @@ type
    published
      procedure       CALC_GetDisplayAddress  (const setter:IFRE_DB_CALCFIELD_SETTER);
      procedure       CALC_GetDisplayName     (const setter:IFRE_DB_CALCFIELD_SETTER);
+     property        Name                    : TFRE_DB_String read GetName write SetName;
    end;
 
    { TFRE_DB_MACHINE_SETTING }
@@ -828,6 +833,12 @@ implementation
 class procedure TFRE_DB_UPDATE_TRANSPORT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+end;
+
+class procedure TFRE_DB_UPDATE_TRANSPORT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionID:='1.0';
 end;
 
 class function TFRE_DB_UPDATE_TRANSPORT.CreateUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field): TFRE_DB_UPDATE_TRANSPORT;
@@ -3380,6 +3391,15 @@ end;
    setter.SetAsString('VM '+Field('objname').AsString);
  end;
 
+function TFRE_DB_MACHINE.GetName: TFRE_DB_String;
+begin
+  result := Field('objname').asstring;
+end;
+
+procedure TFRE_DB_MACHINE.SetName(AValue: TFRE_DB_String);
+begin
+  Field('objname').asstring := AValue;
+end;
 
  class procedure TFRE_DB_MACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  var group : IFRE_DB_InputGroupSchemeDefinition;
