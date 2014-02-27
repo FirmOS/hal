@@ -141,31 +141,31 @@ var
   txt                 : IFRE_DB_TEXT;
 
 begin
-  CheckClassVisibility(ses);
+  CheckClassVisibility4MyDomain(ses);
 
   dc_ca        := ses.FetchDerivedCollection('ca_grid');
   grid_ca      := dc_ca.GetDisplayDescription as TFRE_DB_VIEW_LIST_DESC;
-  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+  if conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then begin
     txt:=app.FetchAppTextFull(ses,'$create_ca');
     grid_ca.AddButton.Describe(CWSF(@WEB_addCertificateAuthority),'images_apps/certificate/create_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
-  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+  if conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then begin
     txt:=app.FetchAppTextFull(ses,'$import_ca');
     grid_ca.AddButton.Describe(CWSF(@WEB_addimportCertificateAuthority),'images_apps/certificate/import_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
-  if conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_CA) then begin
+  if conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_CA) then begin
     txt:=app.FetchAppTextFull(ses,'$delete_ca');
     grid_ca.AddButton.Describe(CWSF(@WEB_DelCertificateAuthority),'images_apps/certificate/delete_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
-  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+  if conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then begin
     txt:=app.FetchAppTextFull(ses,'$backup_ca');
     grid_ca.AddButton.Describe(CWSF(@WEB_backupCertificateAuthority),'images_apps/certificate/backup_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
-  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then begin
+  if conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then begin
     txt:=app.FetchAppTextFull(ses,'$restore_ca');
     grid_ca.AddButton.Describe(CWSF(@WEB_restoreCertificateAuthority),'images_apps/certificate/restore_ca.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
@@ -192,16 +192,16 @@ var
   txt                 : IFRE_DB_TEXT;
 
 begin
-  CheckClassVisibility(ses);
+  CheckClassVisibility4MyDomain(ses);
 
   dc_crt       := ses.FetchDerivedCollection('crt_grid');
   grid_crt     := dc_crt.GetDisplayDescription as TFRE_DB_VIEW_LIST_DESC;
-  if conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_Certificate) then begin
+  if conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_Certificate) then begin
     txt:=app.FetchAppTextFull(ses,'$create_crt');
     grid_crt.AddButton.Describe(CWSF(@WEB_addCertificate),'images_apps/certificate/create_crt.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
   end;
-  if conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_Certificate) then begin
+  if conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_Certificate) then begin
     txt:=app.FetchAppTextFull(ses,'$revoke_crt');
     grid_crt.AddButton.Describe(CWSF(@WEB_revokeCertificate),'images_apps/certificate/revoke_crt.png',txt.Getshort,txt.GetHint);
     txt.Finalize;
@@ -291,7 +291,7 @@ var
   scheme     : IFRE_DB_SchemeObject;
   res        : TFRE_DB_DIALOG_DESC;
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   GFRE_DBI.GetSystemScheme(TFRE_DB_CA,scheme);
@@ -309,7 +309,7 @@ var caob_id          : TGUID;
     res              : TFRE_DB_Errortype;
 
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   data             := input.Field('DATA').asobject;
@@ -335,7 +335,7 @@ var
   scheme     : IFRE_DB_SchemeObject;
   res        : TFRE_DB_DIALOG_DESC;
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   GFRE_DBI.GetSystemScheme(TFRE_DB_CA,scheme);
@@ -356,7 +356,7 @@ var caob_id          : TGUID;
     import_status    : TFRE_DB_String;
 
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   data             := input.Field('DATA').asobject;
@@ -399,7 +399,7 @@ var
   sf     : TFRE_DB_SERVER_FUNC_DESC;
   cap,msg: String;
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_CA) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
   sf:=CWSF(@WEB_delCertificateAuthorityConfirmed);
   sf.AddParam.Describe('selected',input.Field('selected').AsStringArr);
@@ -419,7 +419,7 @@ var
   refs_array : TFRE_DB_GUIDArray;
   i          : NativeInt;
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_CA) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   if input.field('confirmed').AsBoolean then begin
@@ -441,7 +441,7 @@ var
   dependend  : TFRE_DB_StringArray;
 begin
 
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_Certificate) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_Certificate) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   dependend  := GetDependencyFiltervalues(input,'uids_ref');
@@ -466,7 +466,7 @@ var crtob            : TFRE_DB_CERTIFICATE;
     res              : TFRE_DB_Errortype;
 
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CERTIFICATE) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CERTIFICATE) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   data             := input.Field('DATA').asobject;
@@ -493,7 +493,7 @@ var
   sel_guid   : TGUID;
   crt        : IFRE_DB_Object;
 begin
-  if not conn.sys.CheckClassRight4AnyDomain(sr_DELETE,TFRE_DB_Certificate) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_Certificate) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
@@ -518,7 +518,7 @@ var
   res        : TFRE_DB_DIALOG_DESC;
 begin
 
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_Certificate) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_Certificate) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   TFRE_DB_CA.RestoreCA(conn,'/fre/hal/ca_backup.cfg');
@@ -534,7 +534,7 @@ var
 
 begin
 
-  if not conn.sys.CheckClassRight4AnyDomain(sr_STORE,TFRE_DB_CA) then
+  if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then
@@ -569,8 +569,8 @@ var
 begin
   conn:=session.GetDBConnection;
   SiteMapData  := GFRE_DBI.NewObject;
-  FREDB_SiteMap_AddRadialEntry(SiteMapData,'Status',FetchAppTextShort(session,'$sitemap_main'),'images_apps/certificate/main_white.svg','',0,conn.sys.CheckClassRight4AnyDomain(sr_FETCH,TFRE_CERTIFICATE_APP));
-  FREDB_SiteMap_AddRadialEntry(SiteMapData,'Status/Ca',FetchAppTextShort(session,'$sitemap_ca'),'images_apps/certificate/ca.svg',TFRE_CERTIFICATE_CA_MOD.ClassName,0,conn.sys.CheckClassRight4AnyDomain(sr_FETCH,TFRE_CERTIFICATE_CA_MOD));
+  FREDB_SiteMap_AddRadialEntry(SiteMapData,'Status',FetchAppTextShort(session,'$sitemap_main'),'images_apps/certificate/main_white.svg','',0,conn.sys.CheckClassRight4MyDomain(sr_FETCH,TFRE_CERTIFICATE_APP));
+  FREDB_SiteMap_AddRadialEntry(SiteMapData,'Status/Ca',FetchAppTextShort(session,'$sitemap_ca'),'images_apps/certificate/ca.svg',TFRE_CERTIFICATE_CA_MOD.ClassName,0,conn.sys.CheckClassRight4MyDomain(sr_FETCH,TFRE_CERTIFICATE_CA_MOD));
   FREDB_SiteMap_RadialAutoposition(SiteMapData);
   session.GetSessionAppData(ClassName).Field('SITEMAP').AsObject := SiteMapData;
 end;
