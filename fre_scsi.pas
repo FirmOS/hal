@@ -58,13 +58,13 @@ var
 
 type
 
-  TFRE_DB_UNDEFINED_BLOCKDEVICE = class(TFRE_DB_ZFS_BLOCKDEVICE)   // devices from iostat without /dev/rdsk/*s2 entry
+  TFRE_DB_UNDEFINED_BLOCKDEVICE = class(TFRE_DB_OS_BLOCKDEVICE)   // devices from iostat without /dev/rdsk/*s2 entry
   end;
 
 
   { TFRE_DB_PHYS_DISK }
 
-  TFRE_DB_PHYS_DISK=class(TFRE_DB_ZFS_BLOCKDEVICE)
+  TFRE_DB_PHYS_DISK=class(TFRE_DB_OS_BLOCKDEVICE)
   private
     function GetBlockSize: Uint16;
     function GetEnclosureUID: TGUID;
@@ -100,7 +100,8 @@ type
     procedure _getSizeMB                        (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getCaption                       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
-    function GetTargetPorts: TFRE_DB_StringArray;
+    function  GetTargetPorts: TFRE_DB_StringArray;
+    procedure ClearSlotandEnclosureInformation   ;
     property WWN                                 : string read GetWWN write SetWWN;
     property Manufacturer                        : string read Getmanufacturer write Setmanufacturer;
     property Model_number                        : string read Getmodel_number write Setmodel_number;
@@ -180,6 +181,7 @@ type
     procedure SetAttachedTo  (const port_nr:Byte; const AValue: string);
     procedure SetTargetPort  (const port_nr:Byte; const AValue: string);
     function  GetTargetPort  (const port_nr:Byte) : TFRE_DB_String;
+    procedure RemoveLinkToMe             (const conn:IFRE_DB_CONNECTION);
     property  SlotNr: Uint16 read GetSlotNr write SetSlotNr;
     property  PortType             : string read GetPortType write SetPortType;
     property  DeviceIdentifier     : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
@@ -211,6 +213,7 @@ type
     procedure _getLayoutIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
+    procedure DeleteReferencingToMe             (const conn:IFRE_DB_CONNECTION);
 
     property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DriveSlots       : UInt16 read GetDriveSlots write SetDriveSlots;
@@ -356,6 +359,25 @@ begin
   driveslot.SlotNr       := slotnr;
   driveslot.EnclosureNr  := EnclosureNr;
   Field('slots').AsObject.Field('slot'+inttostr(slotnr)).AsObject:=driveslot;
+end;
+
+procedure TFRE_DB_ENCLOSURE.DeleteReferencingToMe(const conn: IFRE_DB_CONNECTION);
+var refs: TFRE_DB_ObjectReferences;
+       i: NativeInt;
+    obj : IFRE_DB_Object;
+begin
+  refs := conn.GetReferencesDetailed(Uid,false);
+  for i:=0 to high(refs) do
+    begin
+      writeln('SWL DB ENCL REF:',refs[i].schemename);
+      if refs[i].schemename=TFRE_DB_DRIVESLOT.Classname then
+        begin
+          CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),'could not fetch driveslot for delete referencing ['+FREDB_G2H(refs[i].linked_uid));
+          (obj.Implementor_HC as TFRE_DB_DRIVESLOT).RemoveLinkToMe(conn);
+          obj.Finalize;
+        end;
+      CheckDbResult(conn.Delete(refs[i].linked_uid),'could not delete enclosure refs uid ['+FREDB_G2H(refs[i].linked_uid)+'] scheme ['+refs[i].schemename+']');
+    end;
 end;
 
 function TFRE_DB_SCSI._SG3GetPage(const cmd: string; out output: string; out error: string; const params: TFRE_DB_StringArray): integer;
@@ -1361,6 +1383,14 @@ begin
     result := TFRE_DB_StringArray.Create;
 end;
 
+procedure TFRE_DB_PHYS_DISK.ClearSlotandEnclosureInformation;
+begin
+  Field('parent_in_enclosure_uid').Clear;
+  Field('enclosure_uid').Clear;
+  EnclosureNr         := 0;
+  SlotNr              := 0;
+end;
+
 
 { TFRE_DB_SAS_DISK }
 
@@ -1440,6 +1470,25 @@ end;
 function TFRE_DB_DRIVESLOT.GetTargetPort(const port_nr: Byte): TFRE_DB_String;
 begin
   result := Field('targetport_'+inttostr(port_nr)).AsString;
+end;
+
+procedure TFRE_DB_DRIVESLOT.RemoveLinkToMe(const conn: IFRE_DB_CONNECTION);
+var refs: TFRE_DB_ObjectReferences;
+       i: NativeInt;
+    obj : IFRE_DB_Object;
+begin
+  refs := conn.GetReferencesDetailed(Uid,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),'could not fetch driveslot for update referencing ['+FREDB_G2H(refs[i].linked_uid)+']');
+      if (obj.Implementor_HC is TFRE_DB_PHYS_DISK) then
+        begin
+          (obj.Implementor_HC as TFRE_DB_PHYS_DISK).ClearSlotandEnclosureInformation;
+          CheckDbResult(conn.Update(obj),'could not update disk after clearing driveslot ['+FREDB_G2H(refs[i].linked_uid)+']');
+        end
+      else
+        obj.Finalize;
+    end;
 end;
 
 { TFRE_DB_SAS_EXPANDER }

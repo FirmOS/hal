@@ -684,7 +684,7 @@ begin
   inherited RegisterSystemScheme(scheme);
 
   enum:=GFRE_DBI.NewEnum('tcs_signal_status').Setup(GFRE_DBI.CreateText('$enum_tcs_signal_status','signal status Enum'));
-  enum.addEntry('ok',GFRE_DBI.CreateText('$enum_signal_status_ok','Ok'));
+  enum.addEntry('ok',GetTranslateableTextKey('enum_tcs_signal_status_ok'));
   enum.addEntry('warning',GetTranslateableTextKey('enum_tcs_signal_status_warning'));
   enum.addEntry('failure',GetTranslateableTextKey('enum_tcs_signal_status_failure'));
   enum.addEntry('unknown',GetTranslateableTextKey('enum_tcs_signal_status_unknown'));
@@ -705,7 +705,7 @@ begin
 
  if (currentVersionId='') then begin
    currentVersionId:='1.0';
-
+   StoreTranslateableText(conn,'enum_tcs_signal_status_ok','Ok');
    StoreTranslateableText(conn,'enum_tcs_signal_status_warning','Warning');
    StoreTranslateableText(conn,'enum_tcs_signal_status_failure','Failure');
    StoreTranslateableText(conn,'enum_tcs_signal_status_unknown','Unknown');
@@ -782,7 +782,7 @@ begin
   inherited RegisterSystemScheme(scheme);
 
   enum:=GFRE_DBI.NewEnum('tcr_signal_status').Setup(GFRE_DBI.CreateText('$enum_tcr_signal_status','signal status Enum'));
-  enum.addEntry('ok',GFRE_DBI.CreateText('$enum_signal_status_ok','Ok'));
+  enum.addEntry('ok',GetTranslateableTextKey('enum_tcr_signal_status_ok'));
   enum.addEntry('warning',GetTranslateableTextKey('enum_tcr_signal_status_warning'));
   enum.addEntry('failure',GetTranslateableTextKey('enum_tcr_signal_status_failure'));
   enum.addEntry('unknown',GetTranslateableTextKey('enum_tcr_signal_status_unknown'));
@@ -802,6 +802,7 @@ begin
  if (currentVersionId='') then begin
    currentVersionId:='1.0';
 
+   StoreTranslateableText(conn,'enum_tcr_signal_status_ok','Ok');
    StoreTranslateableText(conn,'enum_tcr_signal_status_warning','Warning');
    StoreTranslateableText(conn,'enum_tcr_signal_status_failure','Failure');
    StoreTranslateableText(conn,'enum_tcr_signal_status_unknown','Unknown');

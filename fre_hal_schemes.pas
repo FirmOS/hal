@@ -54,6 +54,7 @@ uses
   fre_testcase,
   fre_alert,
   fre_zfs,
+  fre_scsi,
   fre_openssl_interface;
 
 const
@@ -78,6 +79,8 @@ type
      function GetOldField : IFRE_DB_Field;
      function GetNewFieldName : TFRE_DB_NameType;
      function GetOldFieldName : TFRE_DB_NameType;
+     function GetScheme       : TFRE_DB_NameType;
+     function GetParentUID    : TGUID;
    end;
 
    { TFRE_DB_HALCONFIG }
@@ -108,6 +111,8 @@ type
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       DeleteReferencingToMe   (const conn: IFRE_DB_CONNECTION);
    published
      procedure       CALC_GetDisplayAddress  (const setter:IFRE_DB_CALCFIELD_SETTER);
      procedure       CALC_GetDisplayName     (const setter:IFRE_DB_CALCFIELD_SETTER);
@@ -828,56 +833,70 @@ end;
 class function TFRE_DB_UPDATE_TRANSPORT.CreateUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field): TFRE_DB_UPDATE_TRANSPORT;
 begin
   result := TFRE_DB_UPDATE_TRANSPORT.CreateForDB;
-  result.Field('UO_ID').AsGUID       := update_obj.UID;
-  result.Field('UO_C').AsBoolean := is_child_update;
-  result.Field('UO_T').AsByte     := Ord(update_type);
+  result.Field('ID').AsGUID       := update_obj.UID;
+  result.Field('C').AsBoolean     := is_child_update;
+  result.Field('T').AsByte        := Ord(update_type);
+  result.Field('S').asstring      := update_obj.SchemeClass;
+  if assigned(update_obj.Parent) then
+    result.Field('P').asGUID        := update_obj.Parent.UID;
+
   if assigned(new_field) then
     begin
-      result.Field('UO_NFN').asstring := new_field.FieldName;
-      result.Field('UO_N').CloneFromField(new_field);
+      result.Field('NFN').asstring := new_field.FieldName;
+      result.Field('N').CloneFromField(new_field);
     end;
   if assigned(old_field) then
     begin
       if update_type=cev_FieldDeleted then
-        result.Field('UO_OFN').asstring := old_field.FieldName;
+        result.Field('OFN').asstring := old_field.FieldName;
       if (old_field.FieldType=fdbft_Object) then
-        result.Field('UO_O').CloneFromField(old_field);
+        result.Field('O').CloneFromField(old_field);
     end;
 end;
 
 function TFRE_DB_UPDATE_TRANSPORT.GetTargetID: TGUID;
 begin
-  result := Field('UO_ID').AsGUID;
+  result := Field('ID').AsGUID;
 end;
 
 function TFRE_DB_UPDATE_TRANSPORT.GetIsChild: boolean;
 begin
-  result :=  Field('UO_C').AsBoolean;
+  result :=  Field('C').AsBoolean;
 end;
 
 function TFRE_DB_UPDATE_TRANSPORT.GetType: TFRE_DB_ObjCompareEventType;
 begin
-  result := TFRE_DB_ObjCompareEventType(Field('UO_T').AsByte);
+  result := TFRE_DB_ObjCompareEventType(Field('T').AsByte);
 end;
 
 function TFRE_DB_UPDATE_TRANSPORT.GetNewField: IFRE_DB_Field;
 begin
-  result := Field('UO_N');
+  result := Field('N');
 end;
 
 function TFRE_DB_UPDATE_TRANSPORT.GetOldField: IFRE_DB_Field;
 begin
-  result := Field('UO_O');
+  result := Field('O');
 end;
 
 function TFRE_DB_UPDATE_TRANSPORT.GetNewFieldName: TFRE_DB_NameType;
 begin
-  result := Field('UO_NFN').asstring;
+  result := Field('NFN').asstring;
 end;
 
 function TFRE_DB_UPDATE_TRANSPORT.GetOldFieldName: TFRE_DB_NameType;
 begin
-  result := Field('UO_OFN').asstring;
+  result := Field('OFN').asstring;
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetScheme: TFRE_DB_NameType;
+begin
+  result := Field('S').asstring;
+end;
+
+function TFRE_DB_UPDATE_TRANSPORT.GetParentUID: TGUID;
+begin
+  result := Field('P').AsGUID;
 end;
 
 { TFRE_DB_ZIP_STATUS }
@@ -1057,7 +1076,7 @@ begin
   inherited RegisterSystemScheme(scheme);
 
   enum:=GFRE_DBI.NewEnum('tcr_signal_status').Setup(GFRE_DBI.CreateText('$enum_tcr_signal_status','signal status Enum'));
-  enum.addEntry('ok',GFRE_DBI.CreateText('$enum_signal_status_ok','Ok'));
+  enum.addEntry('ok',GetTranslateableTextKey('enum_tcr_signal_status_ok'));
   enum.addEntry('warning',GetTranslateableTextKey('enum_tcr_signal_status_warning'));
   enum.addEntry('failure',GetTranslateableTextKey('enum_tcr_signal_status_failure'));
   enum.addEntry('unknown',GetTranslateableTextKey('enum_tcr_signal_status_unknown'));
@@ -1065,11 +1084,11 @@ begin
 
   scheme.SetParentSchemeByName('TFRE_DB_ACCESSPOINT');
 
-  scheme.AddSchemeField('routing',fdbft_String).SetupFieldDef(true,false,'routing');
+//  scheme.AddSchemeField('routing',fdbft_String).SetupFieldDef(true,false,'routing');
   scheme.AddSchemeField('vpn_crtid',fdbft_ObjLink);
 
   group:=scheme.AddInputGroup('options').Setup(GetTranslateableTextKey('scheme_options_group'));
-  group.AddInput('routing',GetTranslateableTextKey('scheme_routing'));
+//  group.AddInput('routing',GetTranslateableTextKey('scheme_routing'));
   group.AddInput('vpn_crtid',GetTranslateableTextKey('scheme_vpn_cert'),false,false,'certificate');
 end;
 
@@ -3390,6 +3409,43 @@ end;
      StoreTranslateableText(conn,'scheme_address_group','Site Address');
    end;
    VersionInstallCheck(currentVersionId,newVersionId);
+ end;
+
+ procedure TFRE_DB_MACHINE.DeleteReferencingToMe(const conn: IFRE_DB_CONNECTION);
+ var refs: TFRE_DB_ObjectReferences;
+        i: NativeInt;
+     obj : IFRE_DB_Object;
+     res : TFRE_DB_Errortype;
+ begin
+   refs := conn.GetReferencesDetailed(Uid,false);
+   for i:=0 to high(refs) do
+     begin
+       res := conn.Fetch(refs[i].linked_uid,obj);
+       if (res=edb_NOT_FOUND) then   // already deleted
+         continue;
+       if not (res=edb_NOT_FOUND) then
+         CheckDbResult(res,'could not fetch referencing for delete ['+FREDB_G2H(refs[i].linked_uid));
+       if (obj.Implementor_HC is TFRE_DB_ENCLOSURE) then
+         begin
+           (obj.Implementor_HC as TFRE_DB_ENCLOSURE).DeleteReferencingToMe(conn);
+         end;
+       if (obj.Implementor_HC is TFRE_DB_ZFS_POOL) then
+         begin
+           (obj.Implementor_HC as TFRE_DB_ZFS_POOL).DeleteReferencingVdevToMe(conn);
+         end;
+       if (obj.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+         begin
+           (obj.Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).DeleteReferencingVdevToMe(conn);
+         end;
+       if (obj.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
+         begin
+           (obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE).UnassignReferencingDisksToMe(conn);
+         end;
+       obj.Finalize;
+       res := conn.Delete(refs[i].linked_uid);
+       if not ((res=edb_OK) or (res=edb_NOT_FOUND)) then
+         CheckDbResult(res,'could not delete machine refs uid ['+FREDB_G2H(refs[i].linked_uid)+'] scheme ['+refs[i].schemename+']');
+     end;
  end;
 
  procedure TFRE_DB_MACHINE.CALC_GetDisplayAddress(const setter: IFRE_DB_CALCFIELD_SETTER);

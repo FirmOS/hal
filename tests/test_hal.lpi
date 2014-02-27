@@ -12,7 +12,6 @@
       <Title Value="test_hal"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
-      <Icon Value="0"/>
     </General>
     <i18n>
       <EnableI18N LFM="False"/>
@@ -31,7 +30,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="-a"/>
+        <CommandLineParams Value="-a --format=plain"/>
       </local>
     </RunParams>
     <Units Count="4">

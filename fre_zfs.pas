@@ -39,6 +39,7 @@ unit fre_zfs;
 
 {$mode objfpc}{$H+}
 {$codepage UTF8}
+{$modeswitch nestedprocvars}
 
 interface
 
@@ -59,10 +60,9 @@ const
   CFRE_DB_ENCLOSURE_COLLECTION       = 'enclosure';
   CFRE_DB_SAS_EXPANDER_COLLECTION    = 'expander';
   CFRE_DB_DRIVESLOT_COLLECTION       = 'driveslot';
-  CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION     = 'blockdevice';
+  CFRE_DB_DEVICE_COLLECTION     = 'blockdevice';
 
-  CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX   = 'deviceId';
-  CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX = 'deviceName';
+  CFRE_DB_DEVICE_DEV_ID_INDEX   = 'deviceId';
 
   CFRE_DB_ENCLOSURE_ID_INDEX   = 'deviceIdentifier';
   CFRE_DB_EXPANDER_ID_INDEX    = 'deviceIdentifier';
@@ -123,9 +123,12 @@ type
     procedure setCaption       (avalue: TFRE_DB_String); virtual;
     procedure SetParentInZFSId (AValue: TGuid);
     procedure SetPoolId        (AValue: TGuid);
+    procedure SetMachineID          (AValue: TGUID);
     function  getIOStat             : TFRE_DB_IOSTAT;
     procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
+    function  getZpoolIoStat        : TFRE_DB_ZPOOL_IOSTAT;
     procedure setZpoolIoStat        (const AValue: TFRE_DB_ZPOOL_IOSTAT);
+    function  getMachineID          : TGUID;
   protected
     procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
@@ -158,7 +161,8 @@ type
     property  transferW               : TFRE_DB_String read GetTransferWrite;
     property  poolId                  : TGuid          read GetPoolId        write SetPoolId;
     property  parentInZFSId           : TGuid          read GetParentInZFS   write SetParentInZFSId;
-    property  ZPoolIostat             : TFRE_DB_ZPOOL_IOSTAT write SetZpoolIOstat;
+    property  ZPoolIostat             : TFRE_DB_ZPOOL_IOSTAT read getZpoolIoStat write SetZpoolIOstat;
+    property  MachineID               : TGUID read GetMachineID write SetMachineID;
   end;
 
 
@@ -168,10 +172,8 @@ type
   private
     function  getIsOffline          : Boolean;
     function  getisUnassigned       : Boolean;
-    function  getMachineID          : TGUID;
     procedure setIsOffline          (AValue: Boolean);
     procedure setIsUnassgined       (AValue: Boolean);
-    procedure SetMachineID          (AValue: TGUID);
   protected
     function  getDeviceIdentifier               : TFRE_DB_String;
     function  getDeviceName                     : TFRE_DB_String;
@@ -190,14 +192,20 @@ type
   public
     class function  GetMachineDeviceIdentifier  (const vmachine_uid: TGUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
     class function  GetMachineDeviceName        (const vmachine_uid: TGUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
-
+    procedure UnassignReferencingDisksToMe      (const conn: IFRE_DB_CONNECTION);
     function  mayHaveZFSChildren: Boolean; override;
     function  canIdentify       : Boolean; override;
     property  isOffline         : Boolean read getIsOffline write setIsOffline;
     property  DeviceIdentifier  : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
     property  IsUnassigned      : Boolean read getisUnassigned write setIsUnassgined;
-    property  MachineID         : TGUID read GetMachineID write SetMachineID;
+  end;
+
+  { TFRE_DB_OS_BLOCKDEVICE }
+
+  TFRE_DB_OS_BLOCKDEVICE = class(TFRE_DB_ZFS_BLOCKDEVICE)
+  public
+    function  mayHaveZFSChildren: Boolean; override;
   end;
 
   TFRE_DB_ZFS_DISKREPLACECONTAINER=class;
@@ -214,12 +222,13 @@ type
   public
     function  addBlockdevice            (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
     function  addBlockdeviceEmbedded    (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
-    function  createBlockdeviceEmbedded : TFRE_DB_ZFS_BLOCKDEVICE; virtual;
-    function  createDiskReplaceContainerEmbedded : TFRE_DB_ZFS_DISKREPLACECONTAINER; virtual;
-    function  createDiskSpareContainerEmbedded   : TFRE_DB_ZFS_DISKSPARECONTAINER; virtual;
+    function  createBlockdeviceEmbedded                     (const devicename:TFRE_DB_String): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
+    function  createDiskReplaceContainerEmbedded            (const devicename:TFRE_DB_String) : TFRE_DB_ZFS_DISKREPLACECONTAINER; virtual;
+    function  createDiskSpareContainerEmbedded              (const devicename:TFRE_DB_String) : TFRE_DB_ZFS_DISKSPARECONTAINER; virtual;
     function  mayHaveZFSChildren       : Boolean; override;
     function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
     function  getLastChildId            (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
+    procedure DeleteReferencingVdevToMe (const conn: IFRE_DB_CONNECTION);
     property  raidLevel                 : TFRE_DB_ZFS_RAID_LEVEL read GetRaidLevel write SetRaidLevel;
   end;
 
@@ -270,7 +279,7 @@ type
     class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function  createVdev         : TFRE_DB_ZFS_VDEV; virtual;
-    function  createVdevEmbedded : TFRE_DB_ZFS_VDEV; virtual;
+    function  createVdevEmbedded (const devicename:TFRE_DB_String): TFRE_DB_ZFS_VDEV; virtual;
   end;
 
   { TFRE_DB_ZFS_DATASTORAGE }
@@ -340,9 +349,7 @@ type
   TFRE_DB_ZFS_POOL=class(TFRE_DB_ZFS_ROOTOBJ)
   private
     function  getCaption       : TFRE_DB_String; override;
-    function  GetMachineID     : TGUID;
     procedure setCaption       (avalue: TFRE_DB_String); override;
-    procedure SetMachineID     (AValue: TGUID);
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -361,8 +368,9 @@ type
     function  createLogEmbedded         : TFRE_DB_ZFS_LOG;
     function  createSpare               : TFRE_DB_ZFS_SPARE;
     function  createSpareEmbedded       : TFRE_DB_ZFS_SPARE;
-    procedure FlatEmbeddedAndStoreInCollections (const conn: IFRE_DB_CONNECTION);
-    property  MachineID                 : TGUID read GetMachineID write SetMachineID;
+    procedure FlatEmbeddedAndStoreInCollections      (const conn: IFRE_DB_CONNECTION);
+    procedure DeleteReferencingVdevToMe              (const conn: IFRE_DB_CONNECTION);
+
   end;
 
   { TFRE_DB_ZFS_UNASSIGNED }
@@ -372,6 +380,7 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+    class function  FetchUnassigned     (const conn:IFRE_DB_CONNECTION) : TFRE_DB_ZFS_UNASSIGNED;
     function  addBlockdevice            (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
     function  addBlockdeviceEmbedded    (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
   end;
@@ -444,6 +453,13 @@ type
   procedure CreateDiskDataCollections(const conn: IFRE_DB_COnnection);
 
 implementation
+
+{ TFRE_DB_OS_BLOCKDEVICE }
+
+function TFRE_DB_OS_BLOCKDEVICE.mayHaveZFSChildren: Boolean;
+begin
+  Result:=false;
+end;
 
 { TFRE_DB_ZFS_DISKSPARECONTAINER }
 
@@ -555,6 +571,15 @@ begin
   newVersionId:='1.0';
 end;
 
+class function TFRE_DB_ZFS_UNASSIGNED.FetchUnassigned(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_UNASSIGNED;
+var ua_obj : IFRE_DB_Object;
+begin
+  if conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION).GetIndexedObj(GFRE_BT.HashString_MD5_HEX('UNASSIGNED'),ua_obj) then
+    result := (ua_obj.Implementor_HC as TFRE_DB_ZFS_UNASSIGNED)
+  else
+    raise EFRE_DB_Exception.Create(edb_ERROR,'could not get unassigned disks object by index');
+end;
+
 function TFRE_DB_ZFS_UNASSIGNED.addBlockdevice(const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
   blockdevice.parentInZFSId:=UID;
@@ -641,22 +666,22 @@ begin
   Field('vdev').AddObject(blockdevice);
 end;
 
-function TFRE_DB_ZFS_DISKCONTAINER.createBlockdeviceEmbedded: TFRE_DB_ZFS_BLOCKDEVICE;
+function TFRE_DB_ZFS_DISKCONTAINER.createBlockdeviceEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
   Result:=TFRE_DB_ZFS_BLOCKDEVICE.CreateForDB;
-  Field('vdev').AddObject(Result);
+  Field(devicename).AddObject(Result);
 end;
 
-function TFRE_DB_ZFS_DISKCONTAINER.createDiskReplaceContainerEmbedded: TFRE_DB_ZFS_DISKREPLACECONTAINER;
+function TFRE_DB_ZFS_DISKCONTAINER.createDiskReplaceContainerEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_DISKREPLACECONTAINER;
 begin
  Result:=TFRE_DB_ZFS_DISKREPLACECONTAINER.CreateForDB;
- Field('vdev').AddObject(Result);
+ Field(devicename).AsObject := Result;
 end;
 
-function TFRE_DB_ZFS_DISKCONTAINER.createDiskSpareContainerEmbedded: TFRE_DB_ZFS_DISKSPARECONTAINER;
+function TFRE_DB_ZFS_DISKCONTAINER.createDiskSpareContainerEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_DISKSPARECONTAINER;
 begin
  Result:=TFRE_DB_ZFS_DISKSPARECONTAINER.CreateForDB;
- Field('vdev').AddObject(Result);
+ Field(devicename).AsObject := Result;
 end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.mayHaveZFSChildren: Boolean;
@@ -679,6 +704,40 @@ begin
   end else begin
     Result:='';
   end;
+end;
+
+procedure TFRE_DB_ZFS_DISKCONTAINER.DeleteReferencingVdevToMe(const conn: IFRE_DB_CONNECTION);
+var refs: TFRE_DB_ObjectReferences;
+       i: NativeInt;
+    obj : IFRE_DB_Object;
+    res : TFRE_DB_Errortype;
+begin
+  refs := conn.GetReferencesDetailed(Uid,false);
+  for i:=0 to high(refs) do
+    begin
+      res := conn.Fetch(refs[i].linked_uid,obj);
+      if (res=edb_NOT_FOUND) then   // already deleted
+        continue;
+      if not (res=edb_NOT_FOUND) then
+        CheckDbResult(res,'could not fetch vdev sub for update referencing ['+FREDB_G2H(refs[i].linked_uid)+']');
+      if (obj.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
+        begin
+          (obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE).UnassignReferencingDisksToMe(conn);
+          obj.Finalize;
+          CheckDbResult(conn.Delete(refs[i].linked_uid),'could not delete vdev refs uid ['+FREDB_G2H(refs[i].linked_uid)+'] scheme ['+refs[i].schemename+']');
+        end
+      else
+      if (obj.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+        begin
+          (obj.Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).DeleteReferencingVdevToMe(conn);
+          obj.Finalize;
+          CheckDbResult(conn.Delete(refs[i].linked_uid),'could not delete vdev refs uid ['+FREDB_G2H(refs[i].linked_uid)+'] scheme ['+refs[i].schemename+']');
+        end
+      else
+        begin
+          obj.Finalize;
+        end;
+    end;
 end;
 
 { TFRE_DB_ZFS_RAIDCONTAINER }
@@ -711,10 +770,10 @@ begin
   Result.poolId:=poolId;
 end;
 
-function TFRE_DB_ZFS_VDEVCONTAINER.createVdevEmbedded: TFRE_DB_ZFS_VDEV;
+function TFRE_DB_ZFS_VDEVCONTAINER.createVdevEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_VDEV;
 begin
   Result:=TFRE_DB_ZFS_VDEV.CreateForDB;
-  Field('vdev').AddObject(Result);
+  Field(devicename).asObject:=Result;
 end;
 
 { TFRE_DB_ZFS_DATASTORAGE }
@@ -839,12 +898,18 @@ end;
 procedure TFRE_DB_ZFS_OBJ.SetParentInZFSId(AValue: TGuid);
 begin
   Field('parent_in_zfs_uid').AsObjectLink:=AValue;
-  Field('mosparentIds').AddObjectLink(AValue);
+  if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
+    Field('mosparentIds').AddObjectLink(AValue);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.SetPoolId(AValue: TGuid);
 begin
   Field('pool_uid').AsGUID:=AValue;
+end;
+
+procedure TFRE_DB_ZFS_OBJ.SetMachineID(AValue: TGUID);
+begin
+ Field('machineid').AsObjectLink := AValue;
 end;
 
 function TFRE_DB_ZFS_OBJ.getIOStat: TFRE_DB_IOSTAT;
@@ -857,9 +922,25 @@ begin
   Field('iostat').AsObject:=AValue;
 end;
 
+function TFRE_DB_ZFS_OBJ.getZpoolIoStat: TFRE_DB_ZPOOL_IOSTAT;
+begin
+ if FieldExists('zpooliostat') then
+   result := (Field('zpooliostat').AsObject.Implementor_HC as TFRE_DB_ZPOOL_IOSTAT)
+ else
+   result := nil;
+end;
+
 procedure TFRE_DB_ZFS_OBJ.setZpoolIoStat(const AValue: TFRE_DB_ZPOOL_IOSTAT);
 begin
   Field('zpooliostat').AsObject:=AValue;
+end;
+
+function TFRE_DB_ZFS_OBJ.getMachineID: TGUID;
+begin
+ if FieldExists('machineid') then
+   result := Field('machineid').AsObjectLink
+ else
+   result := CFRE_DB_NullGUID;
 end;
 
 procedure TFRE_DB_ZFS_OBJ._getDnDClass(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -1087,14 +1168,6 @@ begin
   result:=(FieldExists('isUnassigned') and Field('isUnassigned').AsBoolean);
 end;
 
-function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineID: TGUID;
-begin
-  if FieldExists('machineid') then
-    result := Field('machineid').AsObjectLink
-  else
-    result := CFRE_DB_NullGUID;
-end;
-
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceName(AValue: TFRE_DB_String);
 begin
   Field('devicename').AsString := AValue;
@@ -1150,6 +1223,7 @@ begin
  calcfieldsetter.SetAsString(TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(MachineID,DeviceIdentifier));
 end;
 
+
 function TFRE_DB_ZFS_BLOCKDEVICE.getDeviceIdentifier: TFRE_DB_String;
 begin
  result := Field('deviceIdentifier').AsString;
@@ -1164,11 +1238,6 @@ end;
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setIsUnassgined(AValue: Boolean);
 begin
   Field('isUnassigned').AsBoolean:=AValue;
-end;
-
-procedure TFRE_DB_ZFS_BLOCKDEVICE.SetMachineID(AValue: TGUID);
-begin
- Field('machineid').AsObjectLink := AValue;
 end;
 
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceIdentifier(AValue: TFRE_DB_String);
@@ -1201,12 +1270,33 @@ end;
 
 class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceName(const vmachine_uid: TGUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
 begin
- result := FREDB_G2H(vmachine_uid)+'_'+uppercase(vdeviceName);
+  result := FREDB_G2H(vmachine_uid)+'_'+uppercase(vdeviceName);
+end;
+
+procedure TFRE_DB_ZFS_BLOCKDEVICE.UnassignReferencingDisksToMe(const conn: IFRE_DB_CONNECTION);
+var refs: TFRE_DB_ObjectReferences;
+       i: NativeInt;
+    obj : IFRE_DB_Object;
+begin
+  refs := conn.GetReferencesDetailed(Uid,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),'could not fetch blockdevice sub for update referencing ['+FREDB_G2H(refs[i].linked_uid)+']');
+      if (obj.Implementor_HC is TFRE_DB_OS_BLOCKDEVICE) then
+        begin
+          obj.Field('mosparentIds').RemoveObjectLinkByUID(uid);
+          TFRE_DB_ZFS_UNASSIGNED.FetchUnassigned(conn).addBlockdevice(obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE);
+          CheckDbResult(conn.Update(obj),'could not update disk after clearing from vdev ['+FREDB_G2H(refs[i].linked_uid)+']');
+        end
+      else
+        obj.Finalize;
+    end;
 end;
 
 function TFRE_DB_ZFS_BLOCKDEVICE.mayHaveZFSChildren: Boolean;
 begin
-  Result:=false;
+  //Result:=false;
+  Result:=true;
 end;
 
 function TFRE_DB_ZFS_BLOCKDEVICE.canIdentify: Boolean;
@@ -1232,60 +1322,23 @@ begin
 end;
 
 function TFRE_DB_ZFS_POOL.GetDatastorageEmbedded: TFRE_DB_ZFS_DATASTORAGE;
-var
-  i: Integer;
 begin
-  for i := 0 to Field('vdev').ValueCount - 1 do begin
-    if Field('vdev').AsObjectItem[i].Implementor_HC is TFRE_DB_ZFS_DATASTORAGE then begin
-      Result:=Field('vdev').AsObjectItem[i].Implementor_HC as TFRE_DB_ZFS_DATASTORAGE;
-      break;
-    end;
-  end;
+  result := Field('datastorage').asObject.Implementor_HC as TFRE_DB_ZFS_DATASTORAGE;
 end;
 
 function TFRE_DB_ZFS_POOL.GetSpare(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_SPARE;
-var
-  i       : Integer;
-  children: IFRE_DB_ObjectArray;
 begin
-  Result:=nil;
-  children:=getZFSChildren(conn);
-  for i := 0 to Length(children) - 1 do begin
-    if children[i].Implementor_HC is TFRE_DB_ZFS_SPARE then begin
-      Result:=children[i].Implementor_HC as TFRE_DB_ZFS_SPARE;
-      break;
-    end;
-  end;
+ result := Field('spares').asObject.Implementor_HC as TFRE_DB_ZFS_SPARE;
 end;
 
 function TFRE_DB_ZFS_POOL.GetCache(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_CACHE;
-var
-  i       : Integer;
-  children: IFRE_DB_ObjectArray;
 begin
-  Result:=nil;
-  children:=getZFSChildren(conn);
-  for i := 0 to Length(children) - 1 do begin
-    if children[i].Implementor_HC is TFRE_DB_ZFS_CACHE then begin
-      Result:=children[i].Implementor_HC as TFRE_DB_ZFS_CACHE;
-      break;
-    end;
-  end;
+  result := Field('cache').asObject.Implementor_HC as TFRE_DB_ZFS_CACHE;
 end;
 
 function TFRE_DB_ZFS_POOL.GetLog(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_LOG;
-var
-  i       : Integer;
-  children: IFRE_DB_ObjectArray;
 begin
-  Result:=nil;
-  children:=getZFSChildren(conn);
-  for i := 0 to Length(children) - 1 do begin
-    if children[i].Implementor_HC is TFRE_DB_ZFS_LOG then begin
-      Result:=children[i].Implementor_HC as TFRE_DB_ZFS_LOG;
-      break;
-    end;
-  end;
+ result := Field('logs').asObject.Implementor_HC as TFRE_DB_ZFS_LOG;
 end;
 
 class procedure TFRE_DB_ZFS_POOL.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1313,7 +1366,7 @@ var
 begin
    poolcolletion  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
    vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
-   blockcollection := conn.GetCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
+   blockcollection := conn.GetCollection(CFRE_DB_DEVICE_COLLECTION);
 
    if poolcolletion.Fetch(db_zfs_pool_id,obj)=false then
      raise EFRE_DB_Exception.Create(edb_NOT_FOUND,'Could not find pool for CreateEmbeddedPoolObjectfromCollection');
@@ -1339,19 +1392,9 @@ begin
   Result:=Field('pool').AsString;
 end;
 
-function TFRE_DB_ZFS_POOL.GetMachineID: TGUID;
-begin
-  result:=Field('machineid').AsGUID;
-end;
-
 procedure TFRE_DB_ZFS_POOL.setCaption(avalue: TFRE_DB_String);
 begin
   Field('pool').AsString:=avalue;
-end;
-
-procedure TFRE_DB_ZFS_POOL.SetMachineID(AValue: TGUID);
-begin
- Field('machineid').AsGUID:=avalue;
 end;
 
 function TFRE_DB_ZFS_POOL.createDatastorage: TFRE_DB_ZFS_DATASTORAGE;
@@ -1366,7 +1409,7 @@ end;
 function TFRE_DB_ZFS_POOL.createDatastorageEmbedded: TFRE_DB_ZFS_DATASTORAGE;
 begin
   Result:=TFRE_DB_ZFS_DATASTORAGE.CreateForDB;
-  Field('vdev').AddObject(Result);
+  Field('datastorage').asObject := Result;
 end;
 
 function TFRE_DB_ZFS_POOL.createCache: TFRE_DB_ZFS_CACHE;
@@ -1379,7 +1422,7 @@ end;
 function TFRE_DB_ZFS_POOL.createCacheEmbedded: TFRE_DB_ZFS_CACHE;
 begin
   Result:=TFRE_DB_ZFS_CACHE.CreateForDB;
-  Field('vdev').AddObject(Result);
+  Field('cache').asObject := Result;
 end;
 
 function TFRE_DB_ZFS_POOL.createLog: TFRE_DB_ZFS_LOG;
@@ -1392,7 +1435,7 @@ end;
 function TFRE_DB_ZFS_POOL.createLogEmbedded: TFRE_DB_ZFS_LOG;
 begin
   Result:=TFRE_DB_ZFS_LOG.CreateForDB;
-  Field('vdev').AddObject(Result);
+  Field('logs').asObject := Result;
 end;
 
 function TFRE_DB_ZFS_POOL.createSpare: TFRE_DB_ZFS_SPARE;
@@ -1407,205 +1450,315 @@ end;
 function TFRE_DB_ZFS_POOL.createSpareEmbedded: TFRE_DB_ZFS_SPARE;
 begin
   Result:=TFRE_DB_ZFS_SPARE.CreateForDB;
-  Field('vdev').AddObject(Result);
+  Field('spares').asobject := Result;
 end;
 
 procedure TFRE_DB_ZFS_POOL.FlatEmbeddedAndStoreInCollections(const conn: IFRE_DB_CONNECTION);
-var poolcolletion        : IFRE_DB_COLLECTION;
+var poolcollection       : IFRE_DB_COLLECTION;
     vdevcollection       : IFRE_DB_COLLECTION;
     blockcollection      : IFRE_DB_COLLECTION;
+    obj                  : IFRE_DB_OBject;
     dbpool_obj           : TFRE_DB_ZFS_ROOTOBJ;
     dbvdev_obj           : TFRE_DB_ZFS_VDEV;
 
-    vdevcontainer        : IFRE_DB_Object;
     vdev                 : IFRE_DB_Object;
 
-    db_pool_uid            : TGUID;
-    db_vdev_container_uid  : TGUID;
-    db_vdev_uid            : TGUID;
+    db_pool_uid          : TGUID;
+    vdev_refs            : Array [0..10] of TFRE_DB_ObjectReferences;
 
     i           : NativeInt;
     j           : NativeInt;
 
 
-    procedure _AddBlockdevice(const disk:IFRE_DB_Object; const parent_id:TGUID);
-    var
-      dbblockdevice_obj    : TFRE_DB_ZFS_BLOCKDEVICE;
-      dbblockdevice_uo     : IFRE_DB_Object;
-      machinedevicename    : TFRE_DB_String;
-
-      procedure _SetPoolParameter;
-      begin
-        dbblockdevice_obj.setZFSGuid((disk.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE).getZFSGuid);
-        dbblockdevice_obj.parentInZFSId :=  parent_id;
-        dbblockdevice_obj.poolId        :=  db_pool_uid;
-        dbblockdevice_obj.IsUnassigned  :=  false;
-        dbblockdevice_obj.MachineID     :=  MachineID;
-      end;
-
+    procedure __removeVdevFromDeleteArray(const vdev_uid:TGUID; const lvl:NativeInt);
+    var i    : NativeInt;
+        luid : TGUID;
     begin
-      machinedevicename := TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceName(MachineID,(disk.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE).DeviceName);
-      if not blockcollection.ExistsIndexed(machinedevicename,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX) then
+      for i:=0 to high(vdev_refs[lvl]) do
         begin
-          dbblockdevice_obj   := disk.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE;
-          _SetPoolParameter;
-          CheckDbResult(blockcollection.Store(dbblockdevice_obj),'could not store blockdevice ');
-        end
-      else
-        begin
-          if disk.Field('STATE').asstring<>'INUSE' then
+          luid := vdev_refs[lvl][i].linked_uid;
+          if luid=vdev_uid then
             begin
-              assert(blockcollection.GetIndexedObj(machinedevicename,dbblockdevice_uo,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX)=true,'could not get indexed blockdevice machinedevicename ['+machinedevicename+']');
-              dbblockdevice_obj := (dbblockdevice_uo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
-              _SetPoolParameter;
-              CheckDbResult(blockcollection.Update(dbblockdevice_obj),'could not update blockdevice');
+              vdev_refs[lvl][i].linked_uid:=CFRE_DB_NullGUID;
+              break;
             end;
         end;
     end;
 
-    function _AddDiskReplaceContainer(const vdev:IFRE_DB_Object; const parent_id:TGUID) : TGUID;
+    procedure __AssignDeviceAndUnassignOldDevices(const zfs_blockdevice:TFRE_DB_ZFS_BLOCKDEVICE);
     var
-      dbvdevcontainer_obj  : TFRE_DB_ZFS_DISKREPLACECONTAINER;
-      zfsguid              : string;
+      disk_refs : TFRE_DB_ObjectReferences;
+      i         : NativeInt;
+      disk_obj  : IFRE_DB_Object;
+      disk      : TFRE_DB_ZFS_BLOCKDEVICE;
+      already_assigned : boolean;
+
+      procedure _updateParameter;
+      begin
+        disk.parentInZFSId :=  zfs_blockdevice.UID;
+        disk.poolId        :=  db_pool_uid;
+        disk.IsUnassigned  :=  false;
+      end;
+
     begin
-      dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_DISKREPLACECONTAINER;
-      dbvdevcontainer_obj.DeleteField('vdev');
-      dbvdevcontainer_obj.parentInZFSId := parent_id;
-      dbvdevcontainer_obj.poolId        :=  db_pool_uid;
-
-      zfsguid                           := dbvdevcontainer_obj.getZFSGuid;
-
-      result := dbvdevcontainer_obj.UID;
-      CheckDbResult(vdevcollection.Store(dbvdevcontainer_obj),'could not store vdev disk replace container '+zfsguid);
-    end;
-
-    function _AddDiskSpareContainer(const vdev:IFRE_DB_Object; const parent_id:TGUID) : TGUID;
-    var
-      dbvdevcontainer_obj  : TFRE_DB_ZFS_DISKSPARECONTAINER;
-      zfsguid              : string;
-    begin
-      dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_DISKSPARECONTAINER;
-      dbvdevcontainer_obj.DeleteField('vdev');
-      dbvdevcontainer_obj.parentInZFSId := parent_id;
-      dbvdevcontainer_obj.poolId        :=  db_pool_uid;
-
-      zfsguid                           := dbvdevcontainer_obj.getZFSGuid;
-
-      result := dbvdevcontainer_obj.UID;
-      CheckDbResult(vdevcollection.Store(dbvdevcontainer_obj),'could not store vdev disk spare container '+zfsguid);
-    end;
-
-    procedure _AddDisksofVdev(const vdev:IFRE_DB_Object; const parent_id:TGUID);
-    var i        : NativeInt;
-        dev      : IFRE_DB_Object;
-        dbdevUID : TGUID;
-    begin
-      for i:= 0 to vdev.Field('vdev').ValueCount-1 do
+      already_assigned :=false;
+      disk_refs := conn.GetReferencesDetailed(zfs_blockdevice.UID,false,'','PARENT_IN_ZFS_UID');       // check for assigned disks
+      for i:= 0 to high(disk_refs) do
         begin
-          dev := vdev.Field('vdev').AsObjectItem[i];
-          if (dev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
-            _AddBlockdevice(dev,parent_id)
-          else
-            if (dev.Implementor_HC is TFRE_DB_ZFS_DISKREPLACECONTAINER) then
-              begin
-                dbdevUID:=_AddDiskReplaceContainer(dev,parent_id);
-                _AddDisksofVdev(dev,dbdevUID);
-              end
-            else
-              if (dev.Implementor_HC is TFRE_DB_ZFS_DISKSPARECONTAINER) then
+          if disk_refs[i].fieldname='PARENT_IN_ZFS_UID' then
+            begin
+              CheckDbResult(conn.Fetch(disk_refs[i].linked_uid,disk_obj),'could not fetch disk for assignment to zfs blockdevice check');
+              if (disk_obj.Implementor_HC is TFRE_DB_OS_BLOCKDEVICE) then
                 begin
-                  dbdevUID:=_AddDiskSpareContainer(dev,parent_id);
-                  _AddDisksofVdev(dev,dbdevUID);
+                  disk := (disk_obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE);
+                  if disk.getZFSGuid=zfs_blockdevice.getZFSGuid then
+                    begin
+                      disk_obj.Finalize;
+                      already_assigned:=true;
+                    end
+                  else
+                    begin
+                      TFRE_DB_ZFS_UNASSIGNED.FetchUnassigned(conn).addBlockdevice(obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+                      CheckDbResult(blockcollection.Update(disk),'could not update device ');
+                    end;
                 end
               else
-                GFRE_DBI.LogError(dblc_APPLICATION,'>Unknown device in vdev TFRE_DB_ZFS_POOL.FlatEmbeddedAndStoreInCollection : '+dev.DumpToString());
+                disk_obj.Finalize;
+            end;
+        end;
+      if not already_assigned then
+        begin
+          if blockcollection.GetIndexedObj(zfs_blockdevice.getZFSGuid,disk_obj) then
+            begin
+              disk := (disk_obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+              _updateParameter;
+              CheckDbResult(blockcollection.Update(disk),'could not update device ');
+            end;
         end;
     end;
 
-    function _StoreVdevContainer(const vdev:IFRE_DB_Object; const parent_id:TGUID) : TGUID;
-    var
-      dbvdevcontainer_obj  : TFRE_DB_ZFS_DISKCONTAINER;
+    procedure __deleteVdevs(const lvl:NativeInt);
+    var i    : NativeInt;
+        luid : TGUID;
+        lsn  : string;
+        obj  : IFRE_DB_Object;
+        res  : TFRE_DB_Errortype;
     begin
-      dbvdevcontainer_obj   := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER;
-      dbvdevcontainer_obj.DeleteField('vdev');
-      dbvdevcontainer_obj.parentInZFSId := parent_id;
-      dbvdevcontainer_obj.poolId        :=  db_pool_uid;
-
-      result := dbvdevcontainer_obj.UID;
-      CheckDbResult(vdevcollection.Store(dbvdevcontainer_obj),'could not store vdev container');
+      for i:=0 to high(vdev_refs[lvl]) do
+        begin
+          luid := vdev_refs[lvl][i].linked_uid;
+          lsn  := vdev_refs[lvl][i].schemename;
+          if luid<>CFRE_DB_NullGUID then
+            begin
+              CheckDbResult(conn.Fetch(luid,obj),'could not fetch vdev for delete referencing ['+FREDB_G2H(luid));
+              if (obj.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+                begin
+                  (obj.Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).DeleteReferencingVdevToMe(conn);
+                  obj.Finalize;
+                  res := conn.Delete(luid);
+                  if not ((res=edb_OK) or (res=edb_NOT_FOUND)) then
+                    CheckDbResult(res,'could not delete vdevs refs uid ['+FREDB_G2H(luid)+'] scheme ['+lsn+']');
+                end
+              else
+                if (obj.Implementor_HC is TFRE_DB_OS_BLOCKDEVICE) then
+                  begin
+//                   writeln('SWL: UNASSIGNED DISK BEFORE ',obj.DumpToString());
+                    TFRE_DB_ZFS_UNASSIGNED.FetchUnassigned(conn).addBlockdevice(obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+//                    writeln('SWL: UNASSIGNED DISK AFTER ',obj.DumpToString());
+                    CheckDbResult(conn.Update(obj),'could not update disk after clearing from vdev ['+FREDB_G2H(luid)+']');
+                  end
+                else
+                  obj.Finalize;
+            end;
+        end;
     end;
 
-   procedure _dump(const obj:IFRE_DB_Object);
-   begin
-    writeln(obj.DumpToString());
-   end;
 
-begin
-   poolcolletion  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
-   vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
-   blockcollection := conn.GetCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
 
-   setZFSGuid(FREDB_G2H(MachineID)+Field('pool').asstring);
+    procedure _dumpvdevs(const msg:string; const lvl:NativeInt);
+    var i: NativeInt;
+    begin
+      exit; //SWL
+//      writeln('SWL: DUMP VDEV REFS LEVEL ',msg,' ',lvl);
+      for i:=0 to high(vdev_refs[lvl]) do
+        begin
+//          writeln('      SWL:',i,' ',vdev_refs[lvl][i].schemename,' ',FREDB_G2H(vdev_refs[lvl][i].linked_uid),' ',vdev_refs[lvl][i].fieldname);
+        end;
+    end;
 
-   if poolcolletion.ExistsIndexed(getZFSGuid) then      // FIXME UPDATE CASE
-     exit;
+    procedure _updateVdevContainer(const vdev:IFRE_DB_Object; const parent_id:TGUID;const lvl:NativeInt);
+    var
 
-   // Add to DB
-   dbpool_obj        := CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_POOL;
-   dbpool_obj.DeleteField('vdev');
-   db_pool_uid       := dbpool_obj.UID;
+      dbvdev_obj           : TFRE_DB_ZFS_OBJ;
+      obj                  : IFRE_DB_Object;
 
-//   writeln(dbpool_obj.DumpToString);
-   CheckDbResult(poolcolletion.Store(dbpool_obj),'could not store pool');
-   for i    := 0 to Field('vdev').ValueCount-1 do
-     begin
-       vdevcontainer := Field('vdev').AsObjectItem[i];
-       if (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_DATASTORAGE) or
-           (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_LOG) then
+      procedure __updateSubVdev (const subvdev:IFRE_DB_Object);
+      begin
+        //if (subvdev.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+        //  begin
+        //    _updateVdevContainer(subvdev,vdev.UID,lvl+1);
+        //  end
+        //else
+        //  if (subvdev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
+        //    begin
+        //      _AddBlockdeviceOrAssignDisk(subvdev,vdev.UID,lvl+1);
+        //    end;
+        _updateVdevContainer(subvdev,vdev.UID,lvl+1);
+      end;
+
+      procedure __insertvdev;
+      begin
+        obj                   := GFRE_DBI.NewObjectSchemeByName(vdev.SchemeClass);
+        obj.Field('UID').asGUID := vdev.UID;
+        dbvdev_obj     := (obj.Implementor_HC as TFRE_DB_ZFS_OBJ);
+
+        dbvdev_obj.SetAllSimpleObjectFieldsFromObject(vdev);
+        dbvdev_obj.parentInZFSId := parent_id;
+        dbvdev_obj.poolId        := db_pool_uid;
+        dbvdev_obj.MachineID     := MachineID;
+//        writeln('SWL: INSERT VDEV ',lvl,dbvdev_obj.DumpToString(lvl*10));
+        CheckDbResult(vdevcollection.Store(dbvdev_obj),'could not store vdev ');
+        if (dbvdev_obj.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+          vdev.ForAllObjects(@__updateSubvdev);
+        if (vdev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
+          begin
+            __AssignDeviceAndUnassignOldDevices(vdev.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+          end;
+      end;
+
+      procedure __deletevdev;
+      begin
+        dbvdev_obj     := (obj.Implementor_HC as TFRE_DB_ZFS_OBJ);
+
+        if (dbvdev_obj.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+          (dbvdev_obj.Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).DeleteReferencingVdevToMe(conn);
+//        writeln('SWL: DELETE VDEV ',lvl,dbvdev_obj.DumpToString(lvl*10));
+        CheckDbResult(conn.Delete(dbvdev_obj.UID),'could not delete vdev container '+dbvdev_obj.UID_String);
+        __removeVdevFromDeleteArray(obj.UID,lvl);
+      end;
+
+      procedure __updatevdev;
+      begin
+        dbvdev_obj               := (obj.Implementor_HC as TFRE_DB_ZFS_OBJ);
+        dbvdev_obj.SetAllSimpleObjectFieldsFromObject(vdev);
+        dbvdev_obj.parentInZFSId := parent_id;
+        dbvdev_obj.poolId        := db_pool_uid;
+        dbvdev_obj.MachineID     := MachineID;
+//        writeln('SWL: UPDATE VDEV ',lvl,dbvdev_obj.DumpToString(lvl*10));
+        CheckDbResult(vdevcollection.Update(dbvdev_obj),'could not update vdev container');
+        __removeVdevFromDeleteArray(vdev.UID,lvl);
+        if (vdev.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+          begin
+            vdev_refs[lvl+1] := conn.GetReferencesDetailed(vdev.UID,false,'','PARENT_IN_ZFS_UID');
+            _dumpvdevs('BEFORE UPDATE ',lvl+1);
+            vdev.ForAllObjects(@__updateSubvdev);
+            _dumpvdevs('AFTER UPDATE ',lvl+1);
+            __deleteVdevs(lvl+1);
+          end;
+        if (vdev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
+          begin
+           __AssignDeviceAndUnassignOldDevices(vdev.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+          end;
+      end;
+
+    begin
+      if vdevcollection.GetIndexedObj((vdev.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid,obj) then
+        begin
+          if obj.UID<>vdev.UID then
+            begin
+              __deletevdev;
+              __insertvdev;
+            end
+          else
+            begin
+              __updatevdev;
+            end;
+        end
+      else
+        begin
+          __insertvdev;
+        end;
+    end;
+
+
+    procedure __updatePoolVdev(const vdevcontainer: IFRE_DB_Object);
+    begin
+      if (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_DATASTORAGE) or
+          (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_LOG) or
+           (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_SPARE) or
+            (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_CACHE) then
          begin
-           db_vdev_container_uid := _StoreVdevcontainer(vdevcontainer,db_pool_uid);
-
-           for j:=0 to vdevcontainer.Field('vdev').ValueCount-1 do
-             begin
-               vdev := vdevcontainer.Field('vdev').AsObjectItem[j];
-               if (vdev.Implementor_HC is TFRE_DB_ZFS_VDEV) then
-                 begin
-                   dbvdev_obj := vdev.CloneToNewObject(false).Implementor_HC as TFRE_DB_ZFS_VDEV;
-                   dbvdev_obj.DeleteField('vdev');
-                   dbvdev_obj.parentInZFSId := db_vdev_container_uid;
-                   dbvdev_obj.poolId        :=  db_pool_uid;
-
-                   db_vdev_uid := dbvdev_obj.UID;
-                   CheckDbResult(vdevcollection.Store(dbvdev_obj),'could not store vdev');
-                   _AddDisksofVdev(vdev,db_vdev_uid);
-                 end
-               else
-                 _AddBlockdevice(vdev,db_vdev_container_uid);
-             end;
-         end
-       else
-         if (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_SPARE) then
-           begin
-             db_vdev_container_uid := _StoreVdevcontainer(vdevcontainer,db_pool_uid);
-             _AddDisksofVdev(vdevcontainer,db_vdev_container_uid);
-           end
-         else
-           if (vdevcontainer.Implementor_HC is TFRE_DB_ZFS_CACHE) then
-             begin
-               db_vdev_container_uid := _StoreVdevcontainer(vdevcontainer,db_pool_uid);
-               _AddDisksofVdev(vdevcontainer,db_vdev_container_uid);
-             end
-           else
-             raise EFRE_DB_Exception.Create('UNKNOWN VDEV CONTAINER IN EmbeddedZPoolObjectToDB');
+           _UpdateVdevcontainer(vdevcontainer,db_pool_uid,0);
+         end;
      end;
 
-  //writeln('POOL');
-  //poolcolletion.ForAll(@_dump);
-  //writeln('VDEV');
-  //vdevcollection.ForAll(@_dump);
-  //writeln('BLOCK');
-  //blockcollection.ForAll(@_dump);
-  //writeln('dumped');
+
+
+    procedure __updatepoolVdevs;
+    begin
+      vdev_refs[0] := conn.GetReferencesDetailed(db_pool_uid,false,'','PARENT_IN_ZFS_UID');
+      _dumpvdevs('BEFORE UPDATE POOL',0);
+      ForAllObjects(@__updatePoolVdev);
+      _dumpvdevs('AFTER UPDATE POOL',0);
+      __deleteVdevs(0);
+    end;
+
+begin
+   poolcollection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
+   vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
+   blockcollection := conn.GetCollection(CFRE_DB_DEVICE_COLLECTION);
+
+   setZFSGuid(Field('pool').asstring);
+
+   if poolcollection.GetIndexedObj(getZFSGuid,obj) then
+     begin
+       if obj.UID<>UID then
+         begin
+           abort;
+           //delete db pool
+         end
+       else
+         begin
+           db_pool_uid := obj.UID;
+           dbpool_obj  := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
+           dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
+           CheckDbResult(poolcollection.Update(dbpool_obj),'could not update pool');
+           __updatepoolVdevs;
+         end;
+     end
+   else
+     begin
+       // Add to DB
+       dbpool_obj        := TFRE_DB_ZFS_POOL.CreateForDB;
+       dbpool_obj.Field('UID').AsGUID := UID;
+       dbpool_obj.MachineID           := MachineID;
+       dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
+       db_pool_uid       := dbpool_obj.UID;
+       CheckDbResult(poolcollection.Store(dbpool_obj),'could not store pool');
+       __updatepoolVdevs;
+     end;
+end;
+
+procedure TFRE_DB_ZFS_POOL.DeleteReferencingVdevToMe(const conn: IFRE_DB_CONNECTION);
+var refs: TFRE_DB_ObjectReferences;
+       i: NativeInt;
+    obj : IFRE_DB_Object;
+begin
+  refs := conn.GetReferencesDetailed(Uid,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),'could not fetch vdev sub for update referencing ['+FREDB_G2H(refs[i].linked_uid)+']');
+      if (obj.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
+        begin
+          (obj.Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).DeleteReferencingVdevToMe(conn);
+          obj.Finalize;
+          CheckDbResult(conn.Delete(refs[i].linked_uid),'could not delete vdev refs uid ['+FREDB_G2H(refs[i].linked_uid)+'] scheme ['+refs[i].schemename+']');
+        end
+      else
+        begin
+          obj.Finalize;
+        end;
+    end;
 end;
 
 { TFRE_DB_ZFSJob }
@@ -2792,18 +2945,6 @@ var  slist   : TStringList;
        end;
       end;
 
-      function RenumberVdev(const devn:string) : string;
-      begin
-        if Pos('-',devn)>0 then
-          begin
-            result := Copy(devn,1,Pos('-',devn));
-            result := result+'V'+inttostr(vdevc);
-            inc(vdevc);
-          end
-        else
-          result := devn;
-      end;
-
   begin
     newcmd    := trim(Copy ( line, 1, 8));
     cmdline   := false;
@@ -2831,39 +2972,37 @@ var  slist   : TStringList;
           devname                       := Copy(line,namep,statep-namep-2);
           devlvl                        := DevLevel(devname);
           if (Pos('raid',trim(lowercase(devname)))=1) then begin
-            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded;
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(devname);
             if (Pos('raidz1',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z1)
               else if (Pos('raidz2',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z2)
                 else if (Pos('raidz3',trim(lowercase(devname)))=1) then (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_z3)
                   else (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_undefined);
-            devname := RenumberVdev(devname);
           end else if (Pos('mirror',trim(lowercase(devname)))=1) then begin
-            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded;
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(devname);
             (dev.Implementor_HC as TFRE_DB_ZFS_VDEV).SetRaidLevel(zfs_rl_mirror);
-            devname := RenumberVdev(devname);
           end else if Pos('spare',trim(lowercase(devname)))=1 then begin
             if devlvl = 0 then
               dev := pool.createSpareEmbedded
             else
-              dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createDiskSpareContainerEmbedded;
+              dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createDiskSpareContainerEmbedded(devname);
           end else if Pos('log',trim(lowercase(devname)))=1 then begin
             dev := pool.createLogEmbedded;
           end else if Pos('cache',trim(lowercase(devname)))=1 then begin
             dev := pool.createCacheEmbedded;
           end else if Pos('replacing',trim(lowercase(devname)))=1 then begin
-            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createDiskReplaceContainerEmbedded;
+            dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createDiskReplaceContainerEmbedded(devname);
           end else begin
             if devlvl = 0 then begin
               dev := pool.createDatastorageEmbedded;
             end else begin
-              dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded;
+              dev := (parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded(devname);
             end;
           end;
           dev.Field('devicename').AsString := trim(devname);
           dev.Field('name').AsString       := trim(devname);
           dev.Field('state').AsString      := trim(Copy (line,statep,readp-statep-1));
 
-          if (dev.Field('state').AsString='AVAIL') or (dev.Field('state').AsString='INUSE') then
+          if (dev.Field('state').AsString='AVAIL') or (dev.Field('state').AsString='INUSE') then      // no values for spare entries
             begin
               dev.Field('read').AsString       := '';
               dev.Field('write').AsString      := '';
@@ -2881,14 +3020,21 @@ var  slist   : TStringList;
                 end;
             end;
           if (dev.Implementor_HC is TFRE_DB_ZFS_DATASTORAGE) then
-            zfs_path := trim(devname)
+            zfs_path := trim(pool.Field('pool').AsString+'/'+'datastorage')
           else
             if (dev.Implementor_HC is TFRE_DB_ZFS_DISKREPLACECONTAINER) or (dev.Implementor_HC is TFRE_DB_ZFS_DISKSPARECONTAINER) then
               zfs_path := pool.Field('pool').AsString+'/'+(parentdev[devlvl-1].Implementor_HC as TFRE_DB_ZFS_DISKCONTAINER).getZFSGuid+'/'+trim(devname)
             else
-              zfs_path := pool.Field('pool').AsString+'/'+trim(devname);
+              if (dev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
+                begin
+                  zfs_path := trim(devname);
+                end
+              else
+                begin
+                  zfs_path := pool.Field('pool').AsString+'/'+trim(devname);
+                end;
 
-          (dev.Implementor_HC as TFRE_DB_ZFS_OBJ).setZFSGuid(zfs_path);
+          (dev.Implementor_HC as TFRE_DB_ZFS_OBJ).setZFSGuid(GFRE_BT.HashString_MD5_HEX(cFRE_MACHINE_NAME+'_'+zfs_path));
           parentdev [devlvl ]              := dev;
         end;
       end;
@@ -2897,7 +3043,7 @@ var  slist   : TStringList;
 
 begin
  result := false;
- vdevc  := 1;
+ vdevc  := 0;
  slist  := TStringList.Create;
  try
     slist.text                          := pooltxt;
@@ -2905,6 +3051,7 @@ begin
     for i  := 0 to slist.Count -1 do begin
       ParseLine(slist[i]);
     end;
+    pool.setZFSGuid                     (GFRE_BT.HashString_MD5_HEX(cFRE_MACHINE_NAME+'_'+pool.Field('pool').asstring));
     result:=true;
  finally
    slist.Free;
@@ -2918,49 +3065,79 @@ var
 
 begin
 
-  if not conn.CollectionExists(CFRE_DB_MACHINE_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_MACHINE_COLLECTION);
-    collection.DefineIndexOnField('objname',fdbft_String,true,true);
-  end;
+   if conn.CollectionExists(CFRE_DB_MACHINE_COLLECTION) then
+     collection  := conn.GetCollection(CFRE_DB_MACHINE_COLLECTION)
+   else
+     collection  := conn.CreateCollection(CFRE_DB_MACHINE_COLLECTION);
 
-  if not conn.CollectionExists(CFRE_DB_ZFS_POOL_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_ZFS_POOL_COLLECTION);  // ZFS GUID for pool => zdb
-    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-    unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
-    unassigned_disks.setZFSGuid('UNASSIGNED');
-    unassigned_disks.caption:= 'Unassigned disks';  //FIXXME: should be a languge key ?!?
-    unassigned_disks.poolId := unassigned_disks.UID;
-    CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
-  end;
+   if not collection.IndexExists('def') then
+     begin
+       collection.DefineIndexOnField('objname',fdbft_String,true,true);
+     end;
 
-  if not conn.CollectionExists(CFRE_DB_ZFS_VDEV_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_ZFS_VDEV_COLLECTION);  // ZFS GUID for VDEV => zdb
-    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-  end;
+   if conn.CollectionExists(CFRE_DB_ZFS_POOL_COLLECTION) then
+     collection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION)
+   else
+     collection  := conn.CreateCollection(CFRE_DB_ZFS_POOL_COLLECTION);
 
-  if not conn.CollectionExists(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);  // ZFS GUID / WWN
-    collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-    collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_ZFS_BLOCKDEVICE_DEV_ID_INDEX,true);
-    collection.DefineIndexOnField('machinedevicename',fdbft_String,true,true,CFRE_DB_ZFS_BLOCKDEVICE_DEV_NAME_INDEX,false);
-  end;
+   if not collection.IndexExists('def') then
+     begin
+       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+       unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
+       unassigned_disks.setZFSGuid(GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
+       unassigned_disks.caption:= 'Unassigned disks';  //FIXXME: should be a languge key ?!?
+       unassigned_disks.poolId := unassigned_disks.UID;
+       CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
+     end;
 
-  if not conn.CollectionExists(CFRE_DB_ENCLOSURE_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_ENCLOSURE_COLLECTION);
-    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
-  end;
+   if conn.CollectionExists(CFRE_DB_ZFS_VDEV_COLLECTION) then
+     collection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION)
+   else
+     collection  := conn.CreateCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
 
-  if not conn.CollectionExists(CFRE_DB_SAS_EXPANDER_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
-    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
-  end;
+   if not collection.IndexExists('def') then
+     collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
 
-  if not conn.CollectionExists(CFRE_DB_DRIVESLOT_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_DRIVESLOT_COLLECTION);
-    collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
-    collection.DefineIndexOnField('targetport_1',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP1_INDEX,false);
-    collection.DefineIndexOnField('targetport_2',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP2_INDEX,false);
-  end;
+
+   if conn.CollectionExists(CFRE_DB_DEVICE_COLLECTION) then
+     collection  := conn.GetCollection(CFRE_DB_DEVICE_COLLECTION)
+   else
+     collection  := conn.CreateCollection(CFRE_DB_DEVICE_COLLECTION);
+
+   if not collection.IndexExists('def') then
+     collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+   if not collection.IndexExists(CFRE_DB_DEVICE_DEV_ID_INDEX) then
+     collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_DEVICE_DEV_ID_INDEX,true);
+
+   if conn.CollectionExists(CFRE_DB_ENCLOSURE_COLLECTION) then
+     collection  := conn.GetCollection(CFRE_DB_ENCLOSURE_COLLECTION)
+   else
+     collection  := conn.CreateCollection(CFRE_DB_ENCLOSURE_COLLECTION);
+
+   if not collection.IndexExists(CFRE_DB_ENCLOSURE_ID_INDEX) then
+     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
+
+   if conn.CollectionExists(CFRE_DB_SAS_EXPANDER_COLLECTION) then
+     collection  := conn.GetCollection(CFRE_DB_SAS_EXPANDER_COLLECTION)
+   else
+     collection  := conn.CreateCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
+
+   if not collection.IndexExists(CFRE_DB_EXPANDER_ID_INDEX) then
+     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
+
+   if conn.CollectionExists(CFRE_DB_DRIVESLOT_COLLECTION) then
+     collection  := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION)
+   else
+     collection  := conn.CreateCollection(CFRE_DB_DRIVESLOT_COLLECTION);
+
+   collection  := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION);
+   if not collection.IndexExists(CFRE_DB_DRIVESLOT_ID_INDEX) then
+     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
+   if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP1_INDEX) then
+     collection.DefineIndexOnField('targetport_1',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP1_INDEX,false);
+   if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP2_INDEX) then
+     collection.DefineIndexOnField('targetport_2',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP2_INDEX,false);
+
 end;
 
 
