@@ -51,7 +51,7 @@ uses
 const
 
   cremoteuser               = 'root';
-  cremotehost               = '10.1.0.89';
+  cremotehost               = '10.220.251.10';
   cremotehosttester         = '10.220.252.130';
   cwinrmurl                 = 'https://10.4.0.234:5986/wsman';
   cwinrmuser                = 'winrmi';
@@ -119,7 +119,6 @@ type
     procedure MultiPing;
     procedure AlertConfig;
     procedure changeToggle;
-    procedure ZPoolStatus;
     procedure ZFSDiskspace;
     procedure ProcessCheck;
     procedure ProcessFreebsdCheck;
@@ -127,13 +126,14 @@ type
     procedure HTTPRequest;
     procedure CPULoad;
 
-    procedure SNMPTest;
 
     procedure ZTCPSendSnapshot;
     procedure ZTCPCheckDataSetExists;
     procedure ZTCPGetLastSnapShot;
-  published
     procedure ZTCPReplicateJob;
+    procedure ZPoolStatus;
+  published
+    procedure SNMPTest;
   end;
 
 
