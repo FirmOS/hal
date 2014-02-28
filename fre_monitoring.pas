@@ -18,13 +18,8 @@ interface
 
 uses
   Classes, SysUtils,
-  FOS_TOOL_INTERFACES,
   FRE_DB_INTERFACE,
-  FRE_DB_COMMON,
-  fre_hal_disk,
-  fre_zfs,
-  fre_scsi,
-  fre_hal_schemes;
+  FRE_DB_COMMON;
 
 type
 
