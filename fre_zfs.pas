@@ -370,7 +370,8 @@ type
     function  createSpareEmbedded       : TFRE_DB_ZFS_SPARE;
     procedure FlatEmbeddedAndStoreInCollections      (const conn: IFRE_DB_CONNECTION);
     procedure DeleteReferencingVdevToMe              (const conn: IFRE_DB_CONNECTION);
-
+  published
+    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_ZFS_UNASSIGNED }
@@ -1345,8 +1346,15 @@ begin
 end;
 
 class procedure TFRE_DB_ZFS_POOL.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+
+  scheme.AddSchemeField('pool',fdbft_String);
+
+  group:=scheme.AddInputGroup('main_mos').Setup('$scheme_TFRE_DB_ZFS_POOL_main_mos');
+  group.AddInput('pool','$scheme_TFRE_DB_ZFS_POOL_pool');
 end;
 
 class procedure TFRE_DB_ZFS_POOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1775,6 +1783,18 @@ begin
           obj.Finalize;
         end;
     end;
+end;
+
+function TFRE_DB_ZFS_POOL.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  panel         : TFRE_DB_FORM_PANEL_DESC;
+  scheme        : IFRE_DB_SchemeObject;
+begin
+  GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$pool_content_header'));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('main_mos'),GetSession(input));
+  panel.FillWithObjectValues(self,GetSession(input));
+  Result:=panel;
 end;
 
 { TFRE_DB_ZFSJob }

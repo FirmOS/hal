@@ -80,7 +80,7 @@ type
      function GetOldField : IFRE_DB_Field;
      function GetNewFieldName : TFRE_DB_NameType;
      function GetOldFieldName : TFRE_DB_NameType;
-     function GetScheme       : TFRE_DB_NameType;
+     function GetUpdateScheme : TFRE_DB_NameType;
      function GetParentUID    : TGUID;
    end;
 
@@ -900,7 +900,7 @@ begin
   result := Field('OFN').asstring;
 end;
 
-function TFRE_DB_UPDATE_TRANSPORT.GetScheme: TFRE_DB_NameType;
+function TFRE_DB_UPDATE_TRANSPORT.GetUpdateScheme: TFRE_DB_NameType;
 begin
   result := Field('S').asstring;
 end;

@@ -536,6 +536,10 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
     var obj_id      : TGUID;
         target_obj  : IFRE_DB_Object;
         update_type : TFRE_DB_ObjCompareEventType;
+        zpool_iostat: TFRE_DB_ZPOOL_IOSTAT;
+        iostat      : TFRE_DB_IOSTAT;
+        sglog       : TFRE_DB_SG_LOGS;
+        res         : TFRE_DB_Errortype;
 
         //procedure _UpdateObjInMatchingCollection;
         //begin
@@ -584,7 +588,89 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
       else
         begin
           obj_id        := updatestep.GetTargetID;
+          case update_type of
+           cev_FieldDeleted:
+             begin
+             end;
+           cev_FieldAdded:
+             begin
+             end;
+           cev_FieldChanged:
+             begin
+               if updatestep.GetNewField.FieldType<>fdbft_Object then
+                 begin
+                   if updatestep.GetUpdateScheme=TFRE_DB_ZPOOL_IOSTAT.ClassName then
+                     begin
+                       res := conn.Fetch(updatestep.GetParentUID,target_obj);
+                       if res=edb_NOT_FOUND then
+                         begin
+                           GFRE_DBI.LogWarning(dblc_APPLICATION,'could not fetch zfs object for change of zpool iostat',[FREDB_G2H(updatestep.GetParentUID)]);
+                           exit;
+                         end
+                       else
+                         CheckDbResult(res,'could not fetch zfs object for change');
+//                       writeln('SWL: DISKO UP',target_obj.DumpToString);
+                       zpool_iostat:=(target_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).ZPoolIostat;
+                       if not assigned(zpool_iostat) then
+                         begin
+                           zpool_iostat := TFRE_DB_ZPOOL_IOSTAT.CreateForDB;
+                           zpool_iostat.SetDomainID(target_obj.DomainID);
+                           (target_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).ZPoolIostat:=zpool_iostat;
+                         end;
+                       zpool_iostat.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
+//                       writeln('SWL: DISKO UPDATED',target_obj.DumpToString);
+                       CheckDBResult(conn.Update(target_obj),'could not update zfs object');
+                     end;
+                   if updatestep.GetUpdateScheme=TFRE_DB_IOSTAT.ClassName then
+                     begin
+                       res := conn.Fetch(updatestep.GetParentUID,target_obj);
+                       if res=edb_NOT_FOUND then
+                         begin
+                           GFRE_DBI.LogWarning(dblc_APPLICATION,'could not fetch device object for change of iostat',[FREDB_G2H(updatestep.GetParentUID)]);
+                           exit;
+                         end
+                       else
+                         CheckDbResult(res,'could not fetch device object for change');
+                       iostat:=(target_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).IoStat;
+                       if not assigned(iostat) then
+                         begin
+                           iostat := TFRE_DB_IOSTAT.CreateForDB;
+                           iostat.SetDomainID(target_obj.DomainID);
+                           (target_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).Iostat:=iostat;
+                         end;
+                       iostat.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
+//                       writeln('SWL: DISKO UPDATED',target_obj.DumpToString);
+                       CheckDBResult(conn.Update(target_obj),'could not update zfs object');
+                     end;
+                   if updatestep.GetUpdateScheme=TFRE_DB_SG_LOGS.ClassName then
+                     begin
+                       res := conn.Fetch(updatestep.GetParentUID,target_obj);
+                       if res=edb_NOT_FOUND then
+                         begin
+                           GFRE_DBI.LogWarning(dblc_APPLICATION,'could not fetch device object for change of sg logs',[FREDB_G2H(updatestep.GetParentUID)]);
+                           exit;
+                         end
+                       else
+                         CheckDbResult(res,'could not fetch device object for change');
+                       sglog:=(target_obj.Implementor_HC as TFRE_DB_PHYS_DISK).DiskLog;
+                       if not assigned(sglog) then
+                         begin
+                           sglog := TFRE_DB_SG_LOGS.CreateForDB;
+                           sglog.SetDomainID(target_obj.DomainID);
+                           (target_obj.Implementor_HC as TFRE_DB_PHYS_DISK).DiskLog:=sglog;
+                         end;
+                       sglog.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
+//                       writeln('SWL: DISKO LOG UPDATED',target_obj.DumpToString);
+                       CheckDBResult(conn.Update(target_obj),'could not update device object');
+                     end;
 
+//                   target_obj.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
+//                   _UpdateObjInMatchingCollection;
+                 end;
+             end
+          else
+            raise EFRE_DB_Exception.Create(edb_ERROR,'Invalid Update Type [%s] for id [%s]',[Inttostr(Ord(updatestep.GetType)),FREDB_G2H(obj_id)]);
+          end;
         end;
       //CheckDbResult(conn.Fetch(obj_id,target_obj),'could not fetch object for change');
       //case update_type of

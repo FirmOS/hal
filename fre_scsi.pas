@@ -61,6 +61,13 @@ type
   TFRE_DB_UNDEFINED_BLOCKDEVICE = class(TFRE_DB_OS_BLOCKDEVICE)   // devices from iostat without /dev/rdsk/*s2 entry
   end;
 
+  { TFRE_DB_SG_LOGS }
+
+  TFRE_DB_SG_LOGS=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
 
   { TFRE_DB_PHYS_DISK }
 
@@ -79,6 +86,7 @@ type
     function GetWWN: string;
     function Getserial_number: string;
     function GetSize_Sectors: UInt32;
+    function GetDiskLog: TFRE_DB_SG_LOGS;
     procedure SetBlockSize(AValue: Uint16);
     procedure SetEnclosureNr(AValue: Uint16);
     procedure SetEnclosureUID(AValue: TGUID);
@@ -92,8 +100,11 @@ type
     procedure SetWWN(AValue: string);
     procedure Setserial_number(AValue: string);
     procedure SetSize_Sectors(AValue: UInt32);
+    procedure SetDiskLog(Avalue:TFRE_DB_SG_LOGS);
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+
     procedure _getLayoutCaption                 (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutSubCaption              (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutIcon                    (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -115,6 +126,9 @@ type
     property BlockSize                           : Uint16 read GetBlockSize write SetBlockSize;
     property TotalPathCount                      : Uint16 read GetTotalPathCount write SetTotalPathCount;
     property OperationalPathCount                : Uint16 read GetOperationalPathCount write SetOperationalPathCount;
+    property DiskLog                             : TFRE_DB_SG_LOGS read GetDiskLog write SetDiskLog;
+  published
+    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_SATA_DISK }
@@ -131,11 +145,6 @@ type
     procedure SetTargetPorts                    (const targetport_1:string; const targetport_2:string);
   end;
 
-  { TFRE_DB_SG_LOGS }
-
-  TFRE_DB_SG_LOGS=class(TFRE_DB_ObjectEx)
-  protected
-  end;
 
   { TFRE_DB_SAS_EXPANDER }
 
@@ -244,6 +253,168 @@ procedure Register_DB_Extensions;
 
 
 implementation
+
+{ TFRE_DB_SG_LOGS }
+
+class procedure TFRE_DB_SG_LOGS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+
+  scheme.AddSchemeField('EC_READ_EC_POSSIBLE_DELAYS',fdbft_Int64);
+  scheme.AddSchemeField('EC_READ_EC_SUBSTANTIAL_DELAY',fdbft_Int64);
+  scheme.AddSchemeField('EC_READ_TOTAL_BYTES_PROCESSED',fdbft_Int64);
+  scheme.AddSchemeField('EC_READ_TOTAL_ERRORS_CORRECTED',fdbft_Int64);
+  scheme.AddSchemeField('EC_READ_TOTAL_REWRITES_OR_REREADS',fdbft_Int64);
+  scheme.AddSchemeField('EC_READ_TOTAL_TIMES_CORR_ALGO_PROCESSED',fdbft_Int64);
+  scheme.AddSchemeField('EC_READ_TOTAL_UNCORRECTED_ERRORS',fdbft_Int64);
+
+  scheme.AddSchemeField('EC_VERIFY_EC_POSSIBLE_DELAYS',fdbft_Int64);
+  scheme.AddSchemeField('EC_VERIFY_EC_SUBSTANTIAL_DELAY',fdbft_Int64);
+  scheme.AddSchemeField('EC_VERIFY_TOTAL_BYTES_PROCESSED',fdbft_Int64);
+  scheme.AddSchemeField('EC_VERIFY_TOTAL_ERRORS_CORRECTED',fdbft_Int64);
+  scheme.AddSchemeField('EC_VERIFY_TOTAL_REWRITES_OR_REREADS',fdbft_Int64);
+  scheme.AddSchemeField('EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROCESSED',fdbft_Int64);
+  scheme.AddSchemeField('EC_VERIFY_TOTAL_UNCORRECTED_ERRORS',fdbft_Int64);
+
+  scheme.AddSchemeField('EC_WRITE_EC_POSSIBLE_DELAYS',fdbft_Int64);
+  scheme.AddSchemeField('EC_WRITE_TOTAL_BYTES_PROCESSED',fdbft_Int64);
+  scheme.AddSchemeField('EC_WRITE_TOTAL_ERRORS_CORRECTED',fdbft_Int64);
+  scheme.AddSchemeField('EC_WRITE_TOTAL_REWRITES_OR_REREADS',fdbft_Int64);
+  scheme.AddSchemeField('EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROCESSED',fdbft_Int64);
+  scheme.AddSchemeField('EC_WRITE_TOTAL_UNCORRECTED_ERRORS',fdbft_Int64);
+
+  scheme.AddSchemeField('NON_MEDIUM_ERROR_COUNT',fdbft_Int64);
+  scheme.AddSchemeField('TEMP_REFERENCE_TEMP',fdbft_Int16);
+  scheme.AddSchemeField('TEMP_CURRENT_TEMP',fdbft_Int16);
+
+  scheme.AddSchemeField('PROTOCOL_TP1_ATTACHED_DEVICE_TYPE',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP1_ATTACHED_INITIATOR_PORT',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER',fdbft_Int16);
+  scheme.AddSchemeField('PROTOCOL_TP1_ATTACHED_REASON',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP1_ATTACHED_SAS_ADDRESS',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP1_ATTACHED_TARGET_PORT',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP1_GENERATION_CODE',fdbft_Int16);
+  scheme.AddSchemeField('PROTOCOL_TP1_INVALID_DWORD_COUNT',fdbft_Int64);
+  scheme.AddSchemeField('PROTOCOL_TP1_LOSS_DWORD_SYNC',fdbft_Int64);
+  scheme.AddSchemeField('PROTOCOL_TP1_NEG_LINK_RATE',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP1_NUMBER_PHYS',fdbft_int16);
+  scheme.AddSchemeField('PROTOCOL_TP1_PHY_IDENTIFIER',fdbft_int16);
+  scheme.AddSchemeField('PROTOCOL_TP1_PHY_INVALID_WORD_COUNT',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP1_PHY_RESET_PROBLEM',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP1_REASON',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP1_RUNNING_DISPARITY_EC',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP1_SAS_ADDRESS',fdbft_string);
+
+  scheme.AddSchemeField('PROTOCOL_TP2_ATTACHED_DEVICE_TYPE',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP2_ATTACHED_INITIATOR_PORT',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER',fdbft_Int16);
+  scheme.AddSchemeField('PROTOCOL_TP2_ATTACHED_REASON',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP2_ATTACHED_SAS_ADDRESS',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP2_ATTACHED_TARGET_PORT',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP2_GENERATION_CODE',fdbft_Int16);
+  scheme.AddSchemeField('PROTOCOL_TP2_INVALID_DWORD_COUNT',fdbft_Int64);
+  scheme.AddSchemeField('PROTOCOL_TP2_LOSS_DWORD_SYNC',fdbft_Int64);
+  scheme.AddSchemeField('PROTOCOL_TP2_NEG_LINK_RATE',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP2_NUMBER_PHYS',fdbft_int16);
+  scheme.AddSchemeField('PROTOCOL_TP2_PHY_IDENTIFIER',fdbft_int16);
+  scheme.AddSchemeField('PROTOCOL_TP2_PHY_INVALID_WORD_COUNT',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP2_PHY_RESET_PROBLEM',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP2_REASON',fdbft_String);
+  scheme.AddSchemeField('PROTOCOL_TP2_RUNNING_DISPARITY_EC',fdbft_int64);
+  scheme.AddSchemeField('PROTOCOL_TP2_SAS_ADDRESS',fdbft_string);
+
+  group:=scheme.AddInputGroup('log_common').Setup('$scheme_TFRE_DB_SG_LOGS_common');
+  group.AddInput('NON_MEDIUM_ERROR_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_NON_MEDIUM_ERROR_COUNT'),true);
+  group.AddInput('TEMP_REFERENCE_TEMP',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_TEMP_REFERENCE_TEMP'),true);
+  group.AddInput('TEMP_CURRENT_TEMP',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_TEMP_CURRENT_TEMP'),true);
+
+  group:=scheme.AddInputGroup('log_ec').Setup('$scheme_TFRE_DB_SG_LOGS_ec');
+  group.AddInput('EC_READ_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_EC_POSSIBLE_DELAYS'),true);
+  group.AddInput('EC_READ_EC_SUBSTANTIAL_DELAY',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_EC_SUBSTANTIAL_DELAY'),true);
+  group.AddInput('EC_READ_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_BYTES_PROCESSED'),true);
+  group.AddInput('EC_READ_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_ERRORS_CORRECTED'),true);
+  group.AddInput('EC_READ_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_REWRITES_OR_REREADS'),true);
+  group.AddInput('EC_READ_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_TIMES_CORR_ALGO_PROCESSED'),true);
+  group.AddInput('EC_READ_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_UNCORRECTED_ERRORS'),true);
+
+  group.AddInput('EC_VERIFY_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_EC_POSSIBLE_DELAYS'),true);
+  group.AddInput('EC_VERIFY_EC_SUBSTANTIAL_DELAY',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_EC_SUBSTANTIAL_DELAY'),true);
+  group.AddInput('EC_VERIFY_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_BYTES_PROCESSED'),true);
+  group.AddInput('EC_VERIFY_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_ERRORS_CORRECTED'),true);
+  group.AddInput('EC_VERIFY_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_REWRITES_OR_REREADS'),true);
+  group.AddInput('EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROCESSED'),true);
+  group.AddInput('EC_VERIFY_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_UNCORRECTED_ERRORS'),true);
+
+  group.AddInput('EC_WRITE_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_EC_POSSIBLE_DELAYS'),true);
+  group.AddInput('EC_WRITE_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_BYTES_PROCESSED'),true);
+  group.AddInput('EC_WRITE_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_ERRORS_CORRECTED'),true);
+  group.AddInput('EC_WRITE_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_REWRITES_OR_REREADS'),true);
+  group.AddInput('EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROCESSED'),true);
+  group.AddInput('EC_WRITE_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_UNCORRECTED_ERRORS'),true);
+
+
+  group:=scheme.AddInputGroup('log_tp1').Setup('$scheme_TFRE_DB_SG_LOGS_tp1');
+
+  group.AddInput('PROTOCOL_TP1_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_DEVICE_TYPE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_DEVICE_TYPE'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_INITIATOR_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_INITIATOR_PORT'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_REASON'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_TARGET_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_TARGET_PORT'),true);
+  group.AddInput('PROTOCOL_TP1_GENERATION_CODE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_GENERATION_CODE'),true);
+  group.AddInput('PROTOCOL_TP1_INVALID_DWORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_INVALID_DWORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_LOSS_DWORD_SYNC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_LOSS_DWORD_SYNC'),true);
+  group.AddInput('PROTOCOL_TP1_NEG_LINK_RATE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_NEG_LINK_RATE'),true);
+  group.AddInput('PROTOCOL_TP1_NUMBER_PHYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_NUMBER_PHYS'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_INVALID_WORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_INVALID_WORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_RESET_PROBLEM',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_RESET_PROBLEM'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_REASON'),true);
+  group.AddInput('PROTOCOL_TP1_RUNNING_DISPARITY_EC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_RUNNING_DISPARITY_EC'),true);
+
+  group:=scheme.AddInputGroup('log_tp2').Setup('$scheme_TFRE_DB_SG_LOGS_tp2');
+
+  group.AddInput('PROTOCOL_TP2_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_DEVICE_TYPE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_DEVICE_TYPE'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_INITIATOR_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_INITIATOR_PORT'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_REASON'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_TARGET_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_TARGET_PORT'),true);
+  group.AddInput('PROTOCOL_TP2_GENERATION_CODE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_GENERATION_CODE'),true);
+  group.AddInput('PROTOCOL_TP2_INVALID_DWORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_INVALID_DWORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_LOSS_DWORD_SYNC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_LOSS_DWORD_SYNC'),true);
+  group.AddInput('PROTOCOL_TP2_NEG_LINK_RATE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_NEG_LINK_RATE'),true);
+  group.AddInput('PROTOCOL_TP2_NUMBER_PHYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_NUMBER_PHYS'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_INVALID_WORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_INVALID_WORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_RESET_PROBLEM',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_RESET_PROBLEM'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_REASON'),true);
+  group.AddInput('PROTOCOL_TP2_RUNNING_DISPARITY_EC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_RUNNING_DISPARITY_EC'),true);
+
+end;
+
+class procedure TFRE_DB_SG_LOGS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+//    StoreTranslateableText(conn,'scheme_setting','Setting');
+//    StoreTranslateableText(conn,'scheme_uptime','Uptime');
+  end;
+  VersionInstallCheck(currentVersionId,newVersionId);
+end;
 
 { TFRE_DB_SATA_DISK }
 
@@ -1263,6 +1434,14 @@ begin
   result := field('size_sectors').AsUInt32;
 end;
 
+function TFRE_DB_PHYS_DISK.GetDiskLog: TFRE_DB_SG_LOGS;
+begin
+  if FieldExists('log') then
+    result :=(Field('log').AsObject.Implementor_HC as TFRE_DB_SG_LOGS)
+  else
+    result := nil;
+end;
+
 procedure TFRE_DB_PHYS_DISK.SetBlockSize(AValue: Uint16);
 begin
   Field('blocksize').AsUInt16:=AValue;
@@ -1330,6 +1509,11 @@ begin
   field('size_sectors').AsUInt32 := AValue;
 end;
 
+procedure TFRE_DB_PHYS_DISK.SetDiskLog(Avalue: TFRE_DB_SG_LOGS);
+begin
+  Field('log').AsObject := Avalue;
+end;
+
 procedure TFRE_DB_PHYS_DISK._getSizeMB(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
   if FieldExists('blocksize') and FieldExists('size_sectors') then
@@ -1344,12 +1528,46 @@ begin
 end;
 
 class procedure TFRE_DB_PHYS_DISK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.AddCalcSchemeField('size_mb',fdbft_UInt32,@_getSizeMb);
   scheme.AddCalcSchemeField('caption_layout',fdbft_String,@_getLayoutCaption);
   scheme.AddCalcSchemeField('subcaption_layout',fdbft_String,@_getLayoutSubcaption);
   scheme.AddCalcSchemeField('icon_layout',fdbft_String,@_getLayoutIcon);
+
+  scheme.AddSchemeField('manufacturer',fdbft_String);
+  scheme.AddSchemeField('model_number',fdbft_String);
+  scheme.AddSchemeField('serial_number',fdbft_String);
+  scheme.AddSchemeField('fw_revision',fdbft_String);
+
+  scheme.AddSchemeFieldSubscheme('log',TFRE_DB_SG_LOGS.Classname);
+
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_main'));
+  group.AddInput('deviceidentifier',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_deviceidentifier'),true);
+  group.AddInput('manufacturer',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_manufacturer'),true);
+  group.AddInput('model_number',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_model_number'),true);
+  group.AddInput('serial_number',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_serial_number'),true);
+  group.AddInput('fw_revision',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_fw_revision'),true);
+  group.AddInput('devicename',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_devicename'),true);
+
+  group:=scheme.AddInputGroup('log_common').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_common'));
+  group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_common','log');
+
+  group:=scheme.AddInputGroup('log_ec').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_ec'));
+  group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_ec','log');
+
+  group:=scheme.AddInputGroup('log_tp1').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_tp1'));
+  group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_tp1','log');
+
+  group:=scheme.AddInputGroup('log_tp2').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_tp2'));
+  group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_tp2','log');
+
+end;
+
+class procedure TFRE_DB_PHYS_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newversionID:='1.0';
 end;
 
 procedure TFRE_DB_PHYS_DISK._getLayoutCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -1391,6 +1609,22 @@ begin
   SlotNr              := 0;
 end;
 
+function TFRE_DB_PHYS_DISK.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  panel         : TFRE_DB_FORM_PANEL_DESC;
+  scheme        : IFRE_DB_SchemeObject;
+begin
+  GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$phys_disk_content_header'));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('log_common'),GetSession(input)).SetCollapseState(false,true);
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('log_ec'),GetSession(input)).SetCollapseState(true);
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('log_tp1'),GetSession(input)).SetCollapseState(true);
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('log_tp2'),GetSession(input)).SetCollapseState(true);
+
+  panel.FillWithObjectValues(self,GetSession(input));
+  Result:=panel;
+end;
 
 { TFRE_DB_SAS_DISK }
 
