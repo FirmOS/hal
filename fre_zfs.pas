@@ -590,6 +590,7 @@ end;
 
 function TFRE_DB_ZFS_UNASSIGNED.addBlockdeviceEmbedded(const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
+  abort;
   Field('vdev').AddObject(blockdevice);
 end;
 
@@ -663,13 +664,14 @@ end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.addBlockdeviceEmbedded(const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
+  abort;
   Field('vdev').AddObject(blockdevice);
 end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.createBlockdeviceEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
   Result:=TFRE_DB_ZFS_BLOCKDEVICE.CreateForDB;
-  Field(devicename).AddObject(Result);
+  Field(devicename).AsObject := Result;
 end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.createDiskReplaceContainerEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_DISKREPLACECONTAINER;
@@ -1045,6 +1047,7 @@ var
     i                    : NativeInt;
 
 begin
+ abort;
  children := getZFSChildren(conn);
  for i:= 0 to high(children) do
    begin
@@ -1662,22 +1665,27 @@ var poolcollection       : IFRE_DB_COLLECTION;
       end;
 
     begin
-      if vdevcollection.GetIndexedObj((vdev.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid,obj) then
-        begin
-          if obj.UID<>vdev.UID then
-            begin
-              __deletevdev;
-              __insertvdev;
-            end
-          else
-            begin
-              __updatevdev;
-            end;
-        end
-      else
-        begin
-          __insertvdev;
-        end;
+      try
+        if vdevcollection.GetIndexedObj((vdev.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid,obj) then
+          begin
+            if obj.UID<>vdev.UID then
+              begin
+                __deletevdev;
+                __insertvdev;
+              end
+            else
+              begin
+                __updatevdev;
+              end;
+          end
+        else
+          begin
+            __insertvdev;
+          end;
+      except
+        writeln(' >>>> DEBUG HERE [{2CC3A4E4-6DDC-94CF-071E-E9DF57A9D179] ',vdev.Implementor_HC.ClassName);
+        halt;
+      end;
     end;
 
 
@@ -2159,6 +2167,7 @@ var
   i        : integer;
   snapname : string;
 begin
+  abort;
   if proc.ExitStatus=0 then begin
     slist := TStringList.Create;
     try
@@ -2209,6 +2218,7 @@ var  slist         : TStringList;
      pool          : IFRE_DB_Object;
      i             : NativeInt;
 begin
+  abort;
   slist := TStringList.Create;
   llist := TStringList.Create;
   try
