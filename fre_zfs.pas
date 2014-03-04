@@ -45,7 +45,7 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,fre_testcase,fre_system;
+  FOS_TOOL_INTERFACES,fre_testcase,fre_system,fre_monitoring;
 
 type
 
@@ -136,6 +136,8 @@ type
     procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure removeFromPool          ;
@@ -153,6 +155,8 @@ type
     procedure setZFSGuid              (const avalue:String);
     function  canIdentify             : Boolean; virtual;
     procedure embedChildrenRecursive  (const conn: IFRE_DB_CONNECTION);
+    procedure SetMOSStatus            (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+    function  GetMOSStatus            : TFRE_DB_MOS_STATUS_TYPE;
     property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
     property  caption                 : TFRE_DB_String read GetCaption       write SetCaption;
     property  iopsR                   : TFRE_DB_String read GetIopsRead;
@@ -163,6 +167,10 @@ type
     property  parentInZFSId           : TGuid          read GetParentInZFS   write SetParentInZFSId;
     property  ZPoolIostat             : TFRE_DB_ZPOOL_IOSTAT read getZpoolIoStat write SetZpoolIOstat;
     property  MachineID               : TGUID read GetMachineID write SetMachineID;
+  published
+    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
 
@@ -353,6 +361,7 @@ type
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
     class function  CreateEmbeddedPoolObjectfromCollection (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID): TFRE_DB_ZFS_POOL;
     function  GetDatastorage            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_DATASTORAGE;
@@ -509,8 +518,22 @@ end;
 { TFRE_DB_ZPOOL_IOSTAT }
 
 class procedure TFRE_DB_ZPOOL_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
-  inherited RegisterSystemScheme(scheme);
+ inherited RegisterSystemScheme(scheme);
+ scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+
+ scheme.AddSchemeField('IOPS_R',fdbft_String);
+ scheme.AddSchemeField('IOPS_W',fdbft_String);
+ scheme.AddSchemeField('TRANSFER_R',fdbft_String);
+ scheme.AddSchemeField('TRANSFER_W',fdbft_String);
+
+ group:=scheme.AddInputGroup('zpool_iostat_common').Setup('$scheme_TFRE_DB_ZPOOL_IOSTAT_common');
+ group.AddInput('IOPS_R',GetTranslateableTextKey('$scheme_TFRE_DB_ZPOOL_IOSTAT_IOPS_R'),true);
+ group.AddInput('IOPS_W',GetTranslateableTextKey('$scheme_TFRE_DB_ZPOOL_IOSTAT_IOPS_W'),true);
+ group.AddInput('TRANSFER_R',GetTranslateableTextKey('$scheme_TFRE_DB_ZPOOL_IOSTAT_TRANSFER_R'),true);
+ group.AddInput('TRANSFER_W',GetTranslateableTextKey('$scheme_TFRE_DB_ZPOOL_IOSTAT_TRANSFER_W'),true);
+
 end;
 
 { TFRE_DB_IOSTAT }
@@ -851,15 +874,25 @@ begin
 end;
 
 class procedure TFRE_DB_ZFS_OBJ.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+
   scheme.AddCalcSchemeField('dndclass',fdbft_String,@_getDnDClass);
   scheme.AddCalcSchemeField('icon',fdbft_String,@_getIcon);
   scheme.AddCalcSchemeField('caption',fdbft_String,@_getCaption);
-  scheme.AddCalcSchemeField('caption_mos',fdbft_String,@_getCaption);
+  scheme.AddCalcSchemeField('caption_mos',fdbft_String,@_getMOSCaption);
   scheme.AddCalcSchemeField('children',fdbft_String,@_getChildrenString);
   scheme.AddCalcSchemeField('_disabledrop_',fdbft_Boolean,@_getDisableDrop);
   scheme.AddCalcSchemeField('_disabledrag_',fdbft_Boolean,@_getDisableDrag);
+  scheme.AddSchemeField('status_mos',fdbft_String);
+  scheme.AddCalcSchemeField('status_icon_mos',fdbft_String,@_getStatusIcon);
+
+  scheme.AddSchemeField('state',fdbft_String);
+
+  group:=scheme.AddInputGroup('zfs').Setup('$scheme_TFRE_DB_ZFS_zfs');
+  group.AddInput('state','$scheme_TFRE_DB_ZFS_state');
 end;
 
 procedure TFRE_DB_ZFS_OBJ.removeFromPool;
@@ -917,7 +950,10 @@ end;
 
 function TFRE_DB_ZFS_OBJ.getIOStat: TFRE_DB_IOSTAT;
 begin
-  result :=  (Field('iostat').AsObject.Implementor_HC as TFRE_DB_IOSTAT);
+  if FieldExists('iostat') then
+    result :=  (Field('iostat').AsObject.Implementor_HC as TFRE_DB_IOSTAT)
+  else
+    result := nil;
 end;
 
 procedure TFRE_DB_ZFS_OBJ.setIOStat(const Avalue: TFRE_DB_IOSTAT);
@@ -992,6 +1028,16 @@ begin
   calcfieldsetter.SetAsString(caption+' '+Field('state').asstring);     //DEBUG
 end;
 
+procedure TFRE_DB_ZFS_OBJ._getMOSCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString(caption+' '+Field('state').asstring);     //DEBUG
+end;
+
+procedure TFRE_DB_ZFS_OBJ._getStatusIcon(const calc: IFRE_DB_CALCFIELD_SETTER);
+begin
+  GFRE_MOS_GetStatusIcon(GetMOSStatus,calc);
+end;
+
 function TFRE_DB_ZFS_OBJ.getId: TFRE_DB_String;
 begin
   Result:=UID_String;
@@ -1056,6 +1102,40 @@ begin
      if (children[i].Implementor_HC is TFRE_DB_ZFS_OBJ) then
        (children[i].Implementor_HC as TFRE_DB_ZFS_OBJ).embedChildrenRecursive(conn);
    end;
+end;
+
+procedure TFRE_DB_ZFS_OBJ.SetMOSStatus(const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+begin
+  GFRE_MOS_SetMOSStatusandUpdate(self,status,input,ses,app,conn);
+end;
+
+function TFRE_DB_ZFS_OBJ.GetMOSStatus: TFRE_DB_MOS_STATUS_TYPE;
+begin
+  Result:=String2DBMOSStatus(Field('status_mos').AsString);
+end;
+
+function TFRE_DB_ZFS_OBJ.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  panel         : TFRE_DB_FORM_PANEL_DESC;
+  scheme        : IFRE_DB_SchemeObject;
+begin
+  GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$zfs_content_header'));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('zfs'),GetSession(input));
+  panel.FillWithObjectValues(self,GetSession(input));
+  Result:=panel;
+end;
+
+function TFRE_DB_ZFS_OBJ.WEB_MOSChildStatusChanged(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  SetMOSStatus(GFRE_MOS_MOSChildStatusChanged(UID,input,ses,app,conn),input,ses,app,conn);
+  Result:=GFRE_DB_NIL_DESC;
+end;
+
+function TFRE_DB_ZFS_OBJ.WEB_MOSStatus(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+ Result:=GFRE_DBI.NewObject;
+ Result.Field('status_mos').AsString:=Field('status_mos').AsString;
 end;
 
 { TFRE_DB_ZFS_CACHE }
@@ -1349,17 +1429,29 @@ class procedure TFRE_DB_ZFS_POOL.RegisterSystemScheme(const scheme: IFRE_DB_SCHE
 var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+  scheme.SetParentSchemeByName(TFRE_DB_ZFS_OBJ.ClassName);
 
   scheme.AddSchemeField('pool',fdbft_String);
+  scheme.AddSchemeField('scan',fdbft_String);
+  scheme.AddSchemeField('errors',fdbft_String);
 
-  group:=scheme.AddInputGroup('main_mos').Setup('$scheme_TFRE_DB_ZFS_POOL_main_mos');
+  //  scheme.AddSchemeFieldSubscheme('zpooliostat',TFRE_DB_ZPOOL_IOSTAT.Classname);
+
+  group:=scheme.AddInputGroup('zpool').Setup('$scheme_TFRE_DB_ZFS_POOL_zpool');
   group.AddInput('pool','$scheme_TFRE_DB_ZFS_POOL_pool');
+  group.AddInput('scan','$scheme_TFRE_DB_ZFS_POOL_scan');
+  group.AddInput('errors','$scheme_TFRE_DB_ZFS_POOL_errors');
+
 end;
 
 class procedure TFRE_DB_ZFS_POOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+end;
+
+procedure TFRE_DB_ZFS_POOL._getMOSCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+ calcfieldsetter.SetAsString('Zpool '+caption+' '+Field('state').asstring);
 end;
 
 class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromCollection(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TGUID): TFRE_DB_ZFS_POOL;
@@ -1605,16 +1697,16 @@ var poolcollection       : IFRE_DB_COLLECTION;
 
       procedure __updateSubVdev (const subvdev:IFRE_DB_Object);
       begin
-        //if (subvdev.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) then
-        //  begin
-        //    _updateVdevContainer(subvdev,vdev.UID,lvl+1);
-        //  end
+//        writeln('UP SUB' ,subvdev.SchemeClass,' ',lvl+1);
+        if ((subvdev.Implementor_HC is TFRE_DB_ZFS_DISKCONTAINER) or (subvdev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE)) then
+          begin
+            _updateVdevContainer(subvdev,vdev.UID,lvl+1);
+          end;
         //else
         //  if (subvdev.Implementor_HC is TFRE_DB_ZFS_BLOCKDEVICE) then
         //    begin
         //      _AddBlockdeviceOrAssignDisk(subvdev,vdev.UID,lvl+1);
         //    end;
-        _updateVdevContainer(subvdev,vdev.UID,lvl+1);
       end;
 
       procedure __insertvdev;
@@ -1650,6 +1742,7 @@ var poolcollection       : IFRE_DB_COLLECTION;
 
       procedure __updatevdev;
       begin
+//         writeln('UP VDEV' ,vdev.SchemeClass,' ',lvl);
         dbvdev_obj               := (obj.Implementor_HC as TFRE_DB_ZFS_OBJ);
         dbvdev_obj.SetAllSimpleObjectFieldsFromObject(vdev);
         dbvdev_obj.parentInZFSId := parent_id;
@@ -1719,12 +1812,25 @@ var poolcollection       : IFRE_DB_COLLECTION;
       __deleteVdevs(0);
     end;
 
+    procedure __setmosstatus;
+    var obj   :IFRE_Db_Object;
+        state : TFRE_DB_String;
+    begin
+      CheckDbResult(conn.Fetch(db_pool_uid,obj),'could not fetch pool for status update');
+      state := obj.Field('state').AsString;
+      if state = 'ONLINE' then
+        (obj.Implementor_HC as TFRE_DB_ZFS_OBJ).SetMOSStatus(fdbstat_ok,nil,nil,nil,conn)
+      else
+        if state = 'DEGRADED' then
+          (obj.Implementor_HC as TFRE_DB_ZFS_OBJ).SetMOSStatus(fdbstat_warning,nil,nil,nil,conn)
+        else
+          (obj.Implementor_HC as TFRE_DB_ZFS_OBJ).SetMOSStatus(fdbstat_error,nil,nil,nil,conn);
+    end;
+
 begin
    poolcollection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
    vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
    blockcollection := conn.GetCollection(CFRE_DB_DEVICE_COLLECTION);
-
-   setZFSGuid(Field('pool').asstring);
 
    if poolcollection.GetIndexedObj(getZFSGuid,obj) then
      begin
@@ -1741,6 +1847,7 @@ begin
            dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
 //           writeln('SWL: POOOL UPDATE',dbpool_obj.DumpToString());
            CheckDbResult(poolcollection.Update(dbpool_obj),'could not update pool');
+           __setmosstatus;
            __updatepoolVdevs;
          end;
      end
@@ -1754,6 +1861,7 @@ begin
        dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
        db_pool_uid       := dbpool_obj.UID;
        CheckDbResult(poolcollection.Store(dbpool_obj),'could not store pool');
+       __SetMOSStatus;
        __updatepoolVdevs;
      end;
 end;
@@ -1792,7 +1900,9 @@ var
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
   panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$pool_content_header'));
-  panel.AddSchemeFormGroup(scheme.GetInputGroup('main_mos'),GetSession(input));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool'),GetSession(input));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('zfs'),GetSession(input));
+//  panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool_iostat'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
 end;
@@ -3103,23 +3213,15 @@ var
 
 begin
 
-   if conn.CollectionExists(CFRE_DB_MACHINE_COLLECTION) then
-     collection  := conn.GetCollection(CFRE_DB_MACHINE_COLLECTION)
-   else
-     collection  := conn.CreateCollection(CFRE_DB_MACHINE_COLLECTION);
-
-   if not collection.IndexExists('def') then
+   if not conn.CollectionExists(CFRE_DB_MACHINE_COLLECTION) then
      begin
+       collection  := conn.CreateCollection(CFRE_DB_MACHINE_COLLECTION);
        collection.DefineIndexOnField('objname',fdbft_String,true,true);
      end;
 
-   if conn.CollectionExists(CFRE_DB_ZFS_POOL_COLLECTION) then
-     collection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION)
-   else
-     collection  := conn.CreateCollection(CFRE_DB_ZFS_POOL_COLLECTION);
-
-   if not collection.IndexExists('def') then
+   if not conn.CollectionExists(CFRE_DB_ZFS_POOL_COLLECTION) then
      begin
+       collection  := conn.CreateCollection(CFRE_DB_ZFS_POOL_COLLECTION);
        collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
        unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
        unassigned_disks.setZFSGuid(GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
@@ -3128,54 +3230,38 @@ begin
        CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
      end;
 
-   if conn.CollectionExists(CFRE_DB_ZFS_VDEV_COLLECTION) then
-     collection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION)
-   else
-     collection  := conn.CreateCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
+   if not conn.CollectionExists(CFRE_DB_ZFS_VDEV_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
+       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+     end;
 
-   if not collection.IndexExists('def') then
-     collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+   if not conn.CollectionExists(CFRE_DB_DEVICE_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_DEVICE_COLLECTION);
+       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+       collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_DEVICE_DEV_ID_INDEX,true);
+     end;
 
+   if not conn.CollectionExists(CFRE_DB_ENCLOSURE_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_ENCLOSURE_COLLECTION);
+       collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
+     end;
 
-   if conn.CollectionExists(CFRE_DB_DEVICE_COLLECTION) then
-     collection  := conn.GetCollection(CFRE_DB_DEVICE_COLLECTION)
-   else
-     collection  := conn.CreateCollection(CFRE_DB_DEVICE_COLLECTION);
+   if not conn.CollectionExists(CFRE_DB_SAS_EXPANDER_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
+       collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
+     end;
 
-   if not collection.IndexExists('def') then
-     collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-   if not collection.IndexExists(CFRE_DB_DEVICE_DEV_ID_INDEX) then
-     collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_DEVICE_DEV_ID_INDEX,true);
-
-   if conn.CollectionExists(CFRE_DB_ENCLOSURE_COLLECTION) then
-     collection  := conn.GetCollection(CFRE_DB_ENCLOSURE_COLLECTION)
-   else
-     collection  := conn.CreateCollection(CFRE_DB_ENCLOSURE_COLLECTION);
-
-   if not collection.IndexExists(CFRE_DB_ENCLOSURE_ID_INDEX) then
-     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_ENCLOSURE_ID_INDEX,false);
-
-   if conn.CollectionExists(CFRE_DB_SAS_EXPANDER_COLLECTION) then
-     collection  := conn.GetCollection(CFRE_DB_SAS_EXPANDER_COLLECTION)
-   else
-     collection  := conn.CreateCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
-
-   if not collection.IndexExists(CFRE_DB_EXPANDER_ID_INDEX) then
-     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_EXPANDER_ID_INDEX,false);
-
-   if conn.CollectionExists(CFRE_DB_DRIVESLOT_COLLECTION) then
-     collection  := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION)
-   else
-     collection  := conn.CreateCollection(CFRE_DB_DRIVESLOT_COLLECTION);
-
-   collection  := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION);
-   if not collection.IndexExists(CFRE_DB_DRIVESLOT_ID_INDEX) then
-     collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
-   if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP1_INDEX) then
-     collection.DefineIndexOnField('targetport_1',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP1_INDEX,false);
-   if not collection.IndexExists(CFRE_DB_DRIVESLOT_TP2_INDEX) then
-     collection.DefineIndexOnField('targetport_2',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP2_INDEX,false);
-
+   if not conn.CollectionExists(CFRE_DB_DRIVESLOT_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_DRIVESLOT_COLLECTION);
+       collection.DefineIndexOnField('deviceIdentifier',fdbft_String,true,false,CFRE_DB_DRIVESLOT_ID_INDEX,false);
+       collection.DefineIndexOnField('targetport_1',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP1_INDEX,false);
+       collection.DefineIndexOnField('targetport_2',fdbft_String,false,false,CFRE_DB_DRIVESLOT_TP2_INDEX,false);
+     end;
 end;
 
 

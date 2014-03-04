@@ -46,7 +46,8 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi,fre_base_parser,FRE_SYSTEM,fre_hal_schemes;
+  FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi,fre_base_parser,FRE_SYSTEM,fre_hal_schemes,fre_monitoring,
+  fre_hal_update;
 
 
 type
@@ -216,6 +217,8 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
                   db_disk.EnclosureUID        := db_slot.ParentInEnclosureUID;
                   db_disk.EnclosureNr         := db_slot.EnclosureNr;
                   db_disk.SlotNr              := db_slot.SlotNr;
+                  db_disk.Field('mosparentIds').AddObjectLink(db_slot.ParentInEnclosureUID);
+
                   CheckDbResult(blockdevicecollection.Update(dbo),'update blockdevice with slot information');
                 end;
               sdbo.Finalize;
@@ -384,6 +387,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
       var i : NativeInt;
       begin
         db_enclosure.SetAllSimpleObjectFieldsFromObject(enclosure);
+        db_enclosure.Field('mosparentIds').AsObjectLinkArray := enclosure.Field('mosparentIds').AsObjectLinkArray;
         db_enclosure.MachineID := machine_uid;
         for i:=0 to high(enclosure_refs) do
           begin
@@ -407,8 +411,17 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
         db_enclosure.Field('UID').asGuid := enclosure.UID;
       end;
 
+      procedure __setmosstatus;
+      var obj   :IFRE_Db_Object;
+          state : TFRE_DB_String;
+      begin
+        CheckDbResult(conn.Fetch(enclosure.UID,obj),'could not fetch enclosure for status update');
+        (obj.Implementor_HC as TFRE_DB_ENCLOSURE).SetMOSStatus(fdbstat_ok,nil,nil,nil,conn);  //fixed OK
+      end;
+
     begin
       enclosure      := (obj.Implementor_HC as TFRE_DB_ENCLOSURE);
+      enclosure.Field('mosparentIds').AddObjectLink(machine_uid);
       if enclosurecollection.GetIndexedObj(enclosure.DeviceIdentifier,dbo,CFRE_DB_ENCLOSURE_ID_INDEX) then
         begin
           if dbo.UID<>enclosure.UID then
@@ -431,6 +444,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
           __updateenclosure;
           CheckDbResult(enclosurecollection.Store(db_enclosure),'could not store enclosure');
         end;
+      __setmosstatus;
       enclosure.Field('slots').AsObject.ForAllObjects(@__UpdateDriveSlots);
       enclosure.Field('expanders').AsObject.ForAllObjects(@__UpdateExpanders);
     end;
@@ -591,9 +605,32 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
           case update_type of
            cev_FieldDeleted:
              begin
+               if updatestep.GetOldField.FieldType<>fdbft_Object then
+                 begin
+                   CheckDbResult(conn.Fetch(obj_id,target_obj),'could not fetch object for field delete');
+                   writeln('SWL GENERIC DELETE SIMPLE FIELD:',updatestep.GetUpdateScheme,' ',updatestep.GetOldFieldName);
+                   target_obj.DeleteField(updatestep.GetOldFieldName);
+                   CheckDBResult(conn.Update(target_obj),'could not update generic object after field delete');
+                 end
+               else
+                 begin
+                   writeln('SWL GENERIC DELETE OBJECT:',updatestep.DumpToString);
+                 end;
              end;
            cev_FieldAdded:
              begin
+               writeln('SWL GENERIC ADD:',updatestep.DumpToString);
+               if updatestep.GetNewField.FieldType<>fdbft_Object then
+                 begin
+                   CheckDbResult(conn.Fetch(obj_id,target_obj),'could not fetch object for field add');
+                   writeln('SWL GENERIC ADD SIMPLE FIELD:',updatestep.GetUpdateScheme,' ',updatestep.GetNewFieldName);
+                   target_obj.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
+                   CheckDBResult(conn.Update(target_obj),'could not update generic object after field add');
+                 end
+               else
+                 begin
+                   writeln('SWL GENERIC ADD OBJECT:',updatestep.DumpToString);
+                 end;
              end;
            cev_FieldChanged:
              begin
@@ -610,6 +647,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
                        else
                          CheckDbResult(res,'could not fetch zfs object for change');
 //                       writeln('SWL: DISKO UP',target_obj.DumpToString);
+                       Assert(target_obj.DomainID<>CFRE_DB_NullGUID,'fetched null for zfs obj domainid!'+target_obj.DumpToString);
                        zpool_iostat:=(target_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).ZPoolIostat;
                        if not assigned(zpool_iostat) then
                          begin
@@ -620,6 +658,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
                        zpool_iostat.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
 //                       writeln('SWL: DISKO UPDATED',target_obj.DumpToString);
                        CheckDBResult(conn.Update(target_obj),'could not update zfs object');
+                       exit;
                      end;
                    if updatestep.GetUpdateScheme=TFRE_DB_IOSTAT.ClassName then
                      begin
@@ -631,6 +670,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
                          end
                        else
                          CheckDbResult(res,'could not fetch device object for change');
+                       Assert(target_obj.DomainID<>CFRE_DB_NullGUID,'fetched null for iostat obj domainid!'+target_obj.DumpToString);
                        iostat:=(target_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).IoStat;
                        if not assigned(iostat) then
                          begin
@@ -641,6 +681,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
                        iostat.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
 //                       writeln('SWL: DISKO UPDATED',target_obj.DumpToString);
                        CheckDBResult(conn.Update(target_obj),'could not update zfs object');
+                       exit;
                      end;
                    if updatestep.GetUpdateScheme=TFRE_DB_SG_LOGS.ClassName then
                      begin
@@ -652,6 +693,7 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
                          end
                        else
                          CheckDbResult(res,'could not fetch device object for change');
+                       Assert(target_obj.DomainID<>CFRE_DB_NullGUID,'fetched null for sg_log obj domainid!');
                        sglog:=(target_obj.Implementor_HC as TFRE_DB_PHYS_DISK).DiskLog;
                        if not assigned(sglog) then
                          begin
@@ -662,73 +704,23 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
                        sglog.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
 //                       writeln('SWL: DISKO LOG UPDATED',target_obj.DumpToString);
                        CheckDBResult(conn.Update(target_obj),'could not update device object');
+                       exit;
                      end;
-
-//                   target_obj.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
-//                   _UpdateObjInMatchingCollection;
+                   res := conn.Fetch(updatestep.GetTargetID,target_obj);
+                   if res=edb_NOT_FOUND then
+                     begin
+                       GFRE_DBI.LogWarning(dblc_APPLICATION,'could not fetch object for field update',[FREDB_G2H(updatestep.GetTargetID)]);
+                       exit;
+                     end;
+                   writeln('SWL GENERIC UPDATE:',target_obj.SchemeClass,' ',updatestep.GetNewFieldName);
+                   target_obj.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
+                   CheckDBResult(conn.Update(target_obj),'could not update generic object');
                  end;
              end
           else
             raise EFRE_DB_Exception.Create(edb_ERROR,'Invalid Update Type [%s] for id [%s]',[Inttostr(Ord(updatestep.GetType)),FREDB_G2H(obj_id)]);
           end;
         end;
-      //CheckDbResult(conn.Fetch(obj_id,target_obj),'could not fetch object for change');
-      //case update_type of
-      // cev_FieldDeleted:
-      //   begin
-      //     if updatestep.GetOldField.FieldType<>fdbft_Object then
-      //       begin
-      //         target_obj.DeleteField(updatestep.GetOldFieldName);
-      //         _UpdateObjInMatchingCollection;
-      //       end
-      //     else
-      //       if target_obj.SchemeClass=TFOS_ARTEMES_DEVICE.ClassName then
-      //         begin
-      //           if (updatestep.GetOldField.AsObject.Implementor_HC is TFOS_ARTEMES_MEASUREMENT) then
-      //             begin
-      //               CheckDbResult(mes_coll.Remove(updatestep.GetOldField.asObject.UID),'could not remove measurement in update');
-      //             end
-      //           else
-      //             raise EFRE_DB_Exception.Create(edb_ERROR,'Unsupported field delete for other subobjects than TFOS_ARTEMES_MEASUREMENT [%s] ',[updatestep.DumpToString()]);
-      //         end
-      //       else
-      //         raise EFRE_DB_Exception.Create(edb_ERROR,'Unsupported field delete for subobjects not in TFOS_ARTEMES_DEVICE [%s] ',[updatestep.DumpToString()]);
-      //   end;
-      // cev_FieldAdded:
-      //   begin
-      //     if updatestep.GetNewField.FieldType<>fdbft_Object then
-      //       begin
-      //         target_obj.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
-      //         _UpdateObjInMatchingCollection;
-      //       end
-      //     else
-      //       if target_obj.SchemeClass=TFOS_ARTEMES_DEVICE.ClassName then
-      //         begin
-      //           if (updatestep.GetNewField.AsObject.Implementor_HC is TFOS_ARTEMES_MEASUREMENT) then
-      //             begin
-      //               mesId:=_getMesiD(obj_id,updatestep.GetNewField.AsObject);
-      //               _addMeasurement(updatestep.GetNewField.AsObject,obj_id);
-      //             end
-      //           else
-      //             raise EFRE_DB_Exception.Create(edb_ERROR,'Unsupported field add for other subobjects than TFOS_ARTEMES_MEASUREMENT [%s] ',[updatestep.DumpToString()]);
-      //         end
-      //       else
-      //         raise EFRE_DB_Exception.Create(edb_ERROR,'Unsupported field add for subobjects not in TFOS_ARTEMES_DEVICE [%s] ',[updatestep.DumpToString()]);
-      //   end;
-      // cev_FieldChanged:
-      //   begin
-      //     if updatestep.GetNewField.FieldType<>fdbft_Object then
-      //       begin
-      //         target_obj.Field(updatestep.GetNewFieldName).CloneFromField(updatestep.GetNewField);
-      //         _UpdateObjInMatchingCollection;
-      //       end
-      //     else
-      //       raise EFRE_DB_Exception.Create(edb_ERROR,'Unsupported fiel update for object fields [%s] ',[updatestep.DumpToString()]);
-      //   end;
-      //else
-      //  raise EFRE_DB_Exception.Create(edb_ERROR,'Invalid Update Type [%s] for id [%s]',[Inttostr(Ord(updatestep.GetType)),FREDB_G2H(obj_id)]);
-      //end;
-
     end;
 
 

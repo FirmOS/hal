@@ -19,7 +19,7 @@ interface
 uses
   Classes, SysUtils,
   FRE_DB_INTERFACE,
-  FRE_DB_COMMON;
+  FRE_DB_COMMON,fos_tool_interfaces,fre_system,fre_hal_update;
 
 type
 
@@ -45,18 +45,88 @@ type
    property  caption                    : TFRE_DB_String      read GetCaption       write SetCaption;
    procedure SetMOSStatus               (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
    function  GetMOSStatus               : TFRE_DB_MOS_STATUS_TYPE;
+   procedure SetMOSKey                  (const avalue: TFRE_DB_String);
+   function  GetMOSKey                  : TFRE_DB_String;
  published
    function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
  end;
 
+
   procedure Register_DB_Extensions;
 
-  function  String2DBMOSStatus         (const fts: string): TFRE_DB_MOS_STATUS_TYPE;
-  procedure CreateMonitoringCollections(const conn: IFRE_DB_COnnection);
+
+  procedure GFRE_MOS_SetMOSStatusandUpdate          (const mosobject:IFRE_DB_Object;const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+  function  GFRE_MOS_MOSChildStatusChanged          (const mos_UID: TGUID;const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):TFRE_DB_MOS_STATUS_TYPE;
+  procedure GFRE_MOS_GetStatusIcon                  (const status:TFRE_DB_MOS_STATUS_TYPE;const calc: IFRE_DB_CALCFIELD_SETTER);
+  function  String2DBMOSStatus                  (const fts: string): TFRE_DB_MOS_STATUS_TYPE;
+  procedure CreateMonitoringCollections         (const conn: IFRE_DB_COnnection);
 
 implementation
+
+procedure GFRE_MOS_SetMOSStatusandUpdate(const mosobject: IFRE_DB_Object; const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+var
+  i         : Integer;
+  mosParent : IFRE_DB_Object;
+  mosParents: TFRE_DB_ObjLinkArray;
+begin
+  if String2DBMOSStatus(mosobject.Field('status_mos').AsString)<>status then begin
+    mosobject.Field('status_mos').AsString:=CFRE_DB_MOS_STATUS[status];
+    mosParents:=mosobject.Field('mosparentIds').AsObjectLinkArray;
+    CheckDbResult(conn.Update(mosobject));
+    for i := 0 to Length(mosParents) - 1 do begin
+      CheckDbResult(conn.Fetch(mosParents[i],mosParent));
+      if mosParent.MethodExists('MOSChildStatusChanged') then begin
+        mosParent.Invoke('MOSChildStatusChanged',input,ses,app,conn);
+      end;
+    end;
+  end;
+end;
+
+
+function GFRE_MOS_MOSChildStatusChanged(const mos_UID: TGUID; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): TFRE_DB_MOS_STATUS_TYPE;
+var
+  refs      : TFRE_DB_GUIDArray;
+  i         : Integer;
+  refObj    : IFRE_DB_Object;
+  newStatus : TFRE_DB_MOS_STATUS_TYPE;
+  child_stat: IFRE_DB_Object;
+begin
+  refs:=conn.GetReferences(mos_UID,false,'','MOSPARENTIDS');
+  newStatus:=fdbstat_ok;
+  for i := 0 to Length(refs) - 1 do begin
+    CheckDbResult(conn.Fetch(refs[i],refObj));
+    writeln('SWL: GET MOSSTATUS',refobj.SchemeClass);
+    if refObj.MethodExists('MOSStatus') then begin
+      child_stat:=refObj.Invoke('MOSStatus',input,ses,app,conn);
+      case String2DBMOSStatus(child_stat.Field('status_mos').AsString) of
+        fdbstat_ok     : ;  //do nothing
+        fdbstat_warning: if newStatus=fdbstat_ok then newStatus:=fdbstat_warning;
+        fdbstat_error  : newStatus:=fdbstat_error;
+        fdbstat_unknown: begin
+                           exit(fdbstat_unknown);
+                         end;
+      end;
+    end else begin
+      exit(fdbstat_unknown);
+    end;
+  end;
+  result := newStatus;
+end;
+
+procedure GFRE_MOS_GetStatusIcon(const status: TFRE_DB_MOS_STATUS_TYPE; const calc: IFRE_DB_CALCFIELD_SETTER);
+begin
+  case status of
+    fdbstat_ok     : calc.SetAsString('images_apps/citycom_monitoring/status_ok.png');
+    fdbstat_warning: calc.SetAsString('images_apps/citycom_monitoring/status_warning.png');
+    fdbstat_error  : calc.SetAsString('images_apps/citycom_monitoring/status_error.png');
+    fdbstat_unknown: calc.SetAsString('images_apps/citycom_monitoring/status_unknown.png');
+  else begin
+     calc.SetAsString('images_apps/citycom_monitoring/status_unknown.png');
+  end; end;
+end;
+
 
 function String2DBMOSStatus(const fts: string): TFRE_DB_MOS_STATUS_TYPE;
 begin
@@ -71,13 +141,19 @@ var
 begin
   if not conn.CollectionExists(CFRE_DB_MOS_COLLECTION) then begin
     collection  := conn.CreateCollection(CFRE_DB_MOS_COLLECTION);
+    collection.DefineIndexOnField('key_mos',fdbft_String,true,true,'def',true);
   end;
 end;
 
 procedure Register_DB_Extensions;
 begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUALMOSOBJECT);
+  GFRE_DBI.Initialize_Extension_Objects;
 end;
+
+
+
+
 
 { TFRE_DB_VIRTUALMOSOBJECT }
 
@@ -91,40 +167,29 @@ begin
   Result:=String2DBMOSStatus(Field('status_mos').AsString);
 end;
 
+procedure TFRE_DB_VIRTUALMOSOBJECT.SetMOSKey(const avalue: TFRE_DB_String);
+begin
+  Field('key_mos').AsString:=AValue;
+end;
+
+function TFRE_DB_VIRTUALMOSOBJECT.GetMOSKey: TFRE_DB_String;
+begin
+  result :=Field('key_mos').AsString;
+end;
+
 procedure TFRE_DB_VIRTUALMOSOBJECT.SetCaption(const AValue: TFRE_DB_String);
 begin
   Field('caption_mos').AsString:=AValue;
 end;
 
 procedure TFRE_DB_VIRTUALMOSOBJECT.SetMOSStatus(const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
-var
-  i         : Integer;
-  mosParent : IFRE_DB_Object;
-  mosParents: TFRE_DB_ObjLinkArray;
 begin
-  if String2DBMOSStatus(Field('status_mos').AsString)<>status then begin
-    Field('status_mos').AsString:=CFRE_DB_MOS_STATUS[status];
-    mosParents:=Field('mosparentIds').AsObjectLinkArray;
-    CheckDbResult(conn.Update(self));
-    for i := 0 to Length(mosParents) - 1 do begin
-      CheckDbResult(conn.Fetch(mosParents[i],mosParent));
-      if mosParent.MethodExists('MOSChildStatusChanged') then begin
-        mosParent.Invoke('MOSChildStatusChanged',input,ses,app,conn);
-      end;
-    end;
-  end;
+  GFRE_MOS_SetMOSStatusandUpdate(self,status,input,ses,app,conn);
 end;
 
 procedure TFRE_DB_VIRTUALMOSOBJECT._getStatusIcon(const calc: IFRE_DB_CALCFIELD_SETTER);
 begin
-  case GetMOSStatus of
-    fdbstat_ok     : calc.SetAsString('images_apps/citycom_monitoring/status_ok.png');
-    fdbstat_warning: calc.SetAsString('images_apps/citycom_monitoring/status_warning.png');
-    fdbstat_error  : calc.SetAsString('images_apps/citycom_monitoring/status_error.png');
-    fdbstat_unknown: calc.SetAsString('images_apps/citycom_monitoring/status_unknown.png');
-  else begin
-     calc.SetAsString('images_apps/citycom_monitoring/status_unknown.png');
-  end; end;
+  GFRE_MOS_GetStatusIcon(GetMOSStatus,calc);
 end;
 
 class procedure TFRE_DB_VIRTUALMOSOBJECT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -134,6 +199,7 @@ begin
 
   scheme.AddSchemeField('caption_mos',fdbft_String);
   scheme.AddSchemeField('status_mos',fdbft_String);
+  scheme.AddSchemeField('key_mos',fdbft_String);
   scheme.AddCalcSchemeField('status_icon_mos',fdbft_String,@_getStatusIcon);
 end;
 
@@ -147,34 +213,8 @@ begin
 end;
 
 function TFRE_DB_VIRTUALMOSOBJECT.WEB_MOSChildStatusChanged(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var
-  refs      : TFRE_DB_GUIDArray;
-  i         : Integer;
-  refObj    : IFRE_DB_Object;
-  newStatus : TFRE_DB_MOS_STATUS_TYPE;
-  child_stat: IFRE_DB_Object;
 begin
-  refs:=conn.GetReferences(UID,false,'','MOSPARENTIDS');
-  newStatus:=fdbstat_ok;
-  for i := 0 to Length(refs) - 1 do begin
-    CheckDbResult(conn.Fetch(refs[i],refObj));
-    if refObj.MethodExists('MOSStatus') then begin
-      child_stat:=refObj.Invoke('MOSStatus',input,ses,app,conn);
-      case String2DBMOSStatus(child_stat.Field('status_mos').AsString) of
-        fdbstat_ok     : ;  //do nothing
-        fdbstat_warning: if newStatus=fdbstat_ok then newStatus:=fdbstat_warning;
-        fdbstat_error  : newStatus:=fdbstat_error;
-        fdbstat_unknown: begin
-                           SetMOSStatus(fdbstat_unknown,input,ses,app,conn);
-                           exit;
-                         end;
-      end;
-    end else begin
-      SetMOSStatus(fdbstat_unknown,input,ses,app,conn);
-      exit;
-    end;
-  end;
-  SetMOSStatus(newStatus,input,ses,app,conn);
+  SetMOSStatus(GFRE_MOS_MOSChildStatusChanged(UID,input,ses,app,conn),input,ses,app,conn);
   Result:=GFRE_DB_NIL_DESC;
 end;
 

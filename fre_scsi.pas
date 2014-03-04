@@ -45,7 +45,7 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,fre_zfs,fre_system;
+  FOS_TOOL_INTERFACES,fre_zfs,fre_system,fre_monitoring;
 
 var
 
@@ -110,6 +110,8 @@ type
     procedure _getLayoutIcon                    (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getSizeMB                        (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getCaption                       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+
   public
     function  GetTargetPorts: TFRE_DB_StringArray;
     procedure ClearSlotandEnclosureInformation   ;
@@ -214,20 +216,30 @@ type
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-  public
-    procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string='');
     procedure _getChildrenString                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutCaption                 (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutSubcaption              (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getStatusIcon                    (const calc: IFRE_DB_CALCFIELD_SETTER);
+
+  public
+    procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string='');
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
     procedure DeleteReferencingToMe             (const conn:IFRE_DB_CONNECTION);
+    procedure SetMOSStatus                      (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+    function  GetMOSStatus                      : TFRE_DB_MOS_STATUS_TYPE;
 
     property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DriveSlots       : UInt16 read GetDriveSlots write SetDriveSlots;
     property  EnclosureNr      : Uint16 read GetEnclosureNr write SetEnclosureNr;
     property  MachineID        : TGUID read GetMachineID write SetMachineID;
+
+  published
+    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+
   end;
 
   { TFRE_DB_SCSI }
@@ -432,12 +444,18 @@ end;
 
 function TFRE_DB_ENCLOSURE.GetDriveSlots: UInt16;
 begin
-  result := field('drive_slots').AsUInt16;
+  if FieldExists('drive_slots') then
+    Result:=Field('drive_slots').AsUInt16
+  else
+    result:=0;
 end;
 
 function TFRE_DB_ENCLOSURE.GetEnclosureNr: Uint16;
 begin
-  Result:=Field('enclosurenr').AsUInt16;
+  if FieldExists('enclosurenr') then
+    Result:=Field('enclosurenr').AsUInt16
+  else
+    result:=0;
 end;
 
 function TFRE_DB_ENCLOSURE.GetMachineID: TGUID;
@@ -465,18 +483,42 @@ begin
   Field('machineid').AsObjectLink :=Avalue;
 end;
 
+procedure TFRE_DB_ENCLOSURE.SetMOSStatus(const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+begin
+  GFRE_MOS_SetMOSStatusandUpdate(self,status,input,ses,app,conn);
+end;
+
+function TFRE_DB_ENCLOSURE.GetMOSStatus: TFRE_DB_MOS_STATUS_TYPE;
+begin
+  Result:=String2DBMOSStatus(Field('status_mos').AsString);
+end;
+
 class procedure TFRE_DB_ENCLOSURE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
 end;
 
 class procedure TFRE_DB_ENCLOSURE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+
+  scheme.AddSchemeField('deviceIdentifier',fdbft_String);
+  scheme.AddSchemeField('drive_slots',fdbft_UInt16);
+  scheme.AddSchemeField('enclosurenr',fdbft_UInt16);
+
   scheme.AddCalcSchemeField('children',fdbft_String,@_getChildrenString);
   scheme.AddCalcSchemeField('caption_layout',fdbft_String,@_getLayoutCaption);
   scheme.AddCalcSchemeField('subcaption_layout',fdbft_String,@_getLayoutSubcaption);
   scheme.AddCalcSchemeField('icon_layout',fdbft_String,@_getLayoutIcon);
+  scheme.AddCalcSchemeField('caption_mos',fdbft_String,@_getLayoutCaption);
+  scheme.AddCalcSchemeField('status_icon_mos',fdbft_String,@_getStatusIcon);
+
+  group:=scheme.AddInputGroup('enclosure').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_ENCLOSURE_enclosure'));
+  group.AddInput('deviceidentifier',GetTranslateableTextKey('$scheme_TFRE_DB_ENCLOSURE_deviceidentifier'),true);
+  group.AddInput('enclosurenr',GetTranslateableTextKey('$scheme_TFRE_DB_ENCLOSURE_drive_slots'),true);
+  group.AddInput('drive_slots',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_drive_slots'),true);
 end;
 
 procedure TFRE_DB_ENCLOSURE._getChildrenString(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -497,6 +539,11 @@ end;
 procedure TFRE_DB_ENCLOSURE._getLayoutIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
   calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
+end;
+
+procedure TFRE_DB_ENCLOSURE._getStatusIcon(const calc: IFRE_DB_CALCFIELD_SETTER);
+begin
+  GFRE_MOS_GetStatusIcon(GetMOSStatus,calc);
 end;
 
 procedure TFRE_DB_ENCLOSURE.AddExpanderEmbedded(const expander: TFRE_DB_SAS_Expander;const devicename:string);
@@ -549,6 +596,30 @@ begin
         end;
       CheckDbResult(conn.Delete(refs[i].linked_uid),'could not delete enclosure refs uid ['+FREDB_G2H(refs[i].linked_uid)+'] scheme ['+refs[i].schemename+']');
     end;
+end;
+
+function TFRE_DB_ENCLOSURE.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  panel         : TFRE_DB_FORM_PANEL_DESC;
+  scheme        : IFRE_DB_SchemeObject;
+begin
+  GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$enclosure_content_header'));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('enclosure'),GetSession(input));
+  panel.FillWithObjectValues(self,GetSession(input));
+  Result:=panel;
+end;
+
+function TFRE_DB_ENCLOSURE.WEB_MOSChildStatusChanged(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  SetMOSStatus(GFRE_MOS_MOSChildStatusChanged(UID,input,ses,app,conn),input,ses,app,conn);
+  Result:=GFRE_DB_NIL_DESC;
+end;
+
+function TFRE_DB_ENCLOSURE.WEB_MOSStatus(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  Result:=GFRE_DBI.NewObject;
+  Result.Field('status_mos').AsString:=Field('status_mos').AsString;
 end;
 
 function TFRE_DB_SCSI._SG3GetPage(const cmd: string; out output: string; out error: string; const params: TFRE_DB_StringArray): integer;
@@ -1527,6 +1598,11 @@ begin
    calcfieldsetter.SetAsString('(' + IntToStr(SlotNr) + ')'+' '+WWN);
 end;
 
+procedure TFRE_DB_PHYS_DISK._getMOSCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString('(' + IntToStr(SlotNr) + ')'+' '+Model_number+' ('+inttostr(OperationalPathCount)+'/'+inttostr(TotalPathCount)+')')
+end;
+
 class procedure TFRE_DB_PHYS_DISK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
@@ -1603,6 +1679,8 @@ end;
 
 procedure TFRE_DB_PHYS_DISK.ClearSlotandEnclosureInformation;
 begin
+  if FieldExists('enclosure_uid') then
+    Field('mosparentIds').RemoveObjectLinkByUID(Field('enclosure_uid').AsGUID);
   Field('parent_in_enclosure_uid').Clear;
   Field('enclosure_uid').Clear;
   EnclosureNr         := 0;

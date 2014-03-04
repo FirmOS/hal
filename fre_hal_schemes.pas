@@ -55,7 +55,8 @@ uses
   fre_alert,
   fre_zfs,
   fre_scsi,
-  fre_openssl_interface;
+  fre_openssl_interface,
+  fre_monitoring;
 
 const
 
@@ -64,25 +65,7 @@ const
 
 type
 
-   { TFRE_DB_UPDATE_TRANSPORT }
 
-   TFRE_DB_UPDATE_TRANSPORT = class (TFRE_DB_ObjectEx)
-   protected
-     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   public
-     class function CreateUpdateObject(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field) : TFRE_DB_UPDATE_TRANSPORT;
-
-     function GetTargetID : TGUID;
-     function GetIsChild  : boolean;
-     function GetType     : TFRE_DB_ObjCompareEventType;
-     function GetNewField : IFRE_DB_Field;
-     function GetOldField : IFRE_DB_Field;
-     function GetNewFieldName : TFRE_DB_NameType;
-     function GetOldFieldName : TFRE_DB_NameType;
-     function GetUpdateScheme : TFRE_DB_NameType;
-     function GetParentUID    : TGUID;
-   end;
 
    { TFRE_DB_HALCONFIG }
 
@@ -113,14 +96,23 @@ type
      function  GetName: TFRE_DB_String;
      procedure SetName(AValue: TFRE_DB_String);
    protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     class procedure RegisterSystemScheme       (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects           (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     procedure       _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+     procedure       _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
+
    public
-     procedure       DeleteReferencingToMe   (const conn: IFRE_DB_CONNECTION);
+     procedure       DeleteReferencingToMe      (const conn: IFRE_DB_CONNECTION);
+     procedure       SetMOSStatus               (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+     function        GetMOSStatus               : TFRE_DB_MOS_STATUS_TYPE;
+
    published
-     procedure       CALC_GetDisplayAddress  (const setter:IFRE_DB_CALCFIELD_SETTER);
-     procedure       CALC_GetDisplayName     (const setter:IFRE_DB_CALCFIELD_SETTER);
-     property        Name                    : TFRE_DB_String read GetName write SetName;
+     procedure       CALC_GetDisplayAddress     (const setter:IFRE_DB_CALCFIELD_SETTER);
+     procedure       CALC_GetDisplayName        (const setter:IFRE_DB_CALCFIELD_SETTER);
+     property        Name                       : TFRE_DB_String read GetName write SetName;
+     function  WEB_MOSContent                   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+     function  WEB_MOSChildStatusChanged        (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+     function  WEB_MOSStatus                    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    end;
 
    { TFRE_DB_MACHINE_SETTING }
@@ -828,87 +820,6 @@ implementation
    result   := gresult;
   end;
 
-{ TFRE_DB_UPDATE_TRANSPORT }
-
-class procedure TFRE_DB_UPDATE_TRANSPORT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
-end;
-
-class procedure TFRE_DB_UPDATE_TRANSPORT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionID:='1.0';
-end;
-
-class function TFRE_DB_UPDATE_TRANSPORT.CreateUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field): TFRE_DB_UPDATE_TRANSPORT;
-begin
-  result := TFRE_DB_UPDATE_TRANSPORT.CreateForDB;
-  result.Field('ID').AsGUID       := update_obj.UID;
-  result.Field('C').AsBoolean     := is_child_update;
-  result.Field('T').AsByte        := Ord(update_type);
-  result.Field('S').asstring      := update_obj.SchemeClass;
-  if assigned(update_obj.Parent) then
-    result.Field('P').asGUID        := update_obj.Parent.UID;
-
-  if assigned(new_field) then
-    begin
-      result.Field('NFN').asstring := new_field.FieldName;
-      result.Field('N').CloneFromField(new_field);
-    end;
-  if assigned(old_field) then
-    begin
-      if update_type=cev_FieldDeleted then
-        result.Field('OFN').asstring := old_field.FieldName;
-      if (old_field.FieldType=fdbft_Object) then
-        result.Field('O').CloneFromField(old_field);
-    end;
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetTargetID: TGUID;
-begin
-  result := Field('ID').AsGUID;
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetIsChild: boolean;
-begin
-  result :=  Field('C').AsBoolean;
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetType: TFRE_DB_ObjCompareEventType;
-begin
-  result := TFRE_DB_ObjCompareEventType(Field('T').AsByte);
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetNewField: IFRE_DB_Field;
-begin
-  result := Field('N');
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetOldField: IFRE_DB_Field;
-begin
-  result := Field('O');
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetNewFieldName: TFRE_DB_NameType;
-begin
-  result := Field('NFN').asstring;
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetOldFieldName: TFRE_DB_NameType;
-begin
-  result := Field('OFN').asstring;
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetUpdateScheme: TFRE_DB_NameType;
-begin
-  result := Field('S').asstring;
-end;
-
-function TFRE_DB_UPDATE_TRANSPORT.GetParentUID: TGUID;
-begin
-  result := Field('P').AsGUID;
-end;
 
 { TFRE_DB_ZIP_STATUS }
 
@@ -3414,11 +3325,18 @@ end;
    scheme.AddCalcSchemeField('displayaddress',fdbft_String,@CALC_GetDisplayAddress);
    scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
 
+   scheme.AddCalcSchemeField('caption_mos',fdbft_String,@_getMOSCaption);
+   scheme.AddSchemeField('status_mos',fdbft_String);
+   scheme.AddCalcSchemeField('status_icon_mos',fdbft_String,@_getStatusIcon);
+
    group:=scheme.AddInputGroup('address').Setup(GetTranslateableTextKey('scheme_address_group'));
    group.UseInputGroup('TFRE_DB_ADDRESS','main','address');
    group.UseInputGroup('TFRE_DB_GEOPOSITION','main','position');
 
- end;
+   group:=scheme.AddInputGroup('machine').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_MACHINE_main'));
+   group.AddInput('objname',GetTranslateableTextKey('$scheme_TFRE_DB_MACHINE_name'),true);
+
+end;
 
  class procedure TFRE_DB_MACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
@@ -3430,6 +3348,23 @@ end;
    end;
    VersionInstallCheck(currentVersionId,newVersionId);
  end;
+
+procedure TFRE_DB_MACHINE._getMOSCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  calcfieldsetter.SetAsString('Machine '+Name);
+end;
+
+procedure TFRE_DB_MACHINE._getStatusIcon(const calc: IFRE_DB_CALCFIELD_SETTER);
+begin
+  case GetMOSStatus of
+    fdbstat_ok     : calc.SetAsString('images_apps/citycom_monitoring/status_ok.png');
+    fdbstat_warning: calc.SetAsString('images_apps/citycom_monitoring/status_warning.png');
+    fdbstat_error  : calc.SetAsString('images_apps/citycom_monitoring/status_error.png');
+    fdbstat_unknown: calc.SetAsString('images_apps/citycom_monitoring/status_unknown.png');
+  else begin
+    calc.SetAsString('images_apps/citycom_monitoring/status_unknown.png');
+  end; end;
+end;
 
  procedure TFRE_DB_MACHINE.DeleteReferencingToMe(const conn: IFRE_DB_CONNECTION);
  var refs: TFRE_DB_ObjectReferences;
@@ -3468,6 +3403,16 @@ end;
      end;
  end;
 
+procedure TFRE_DB_MACHINE.SetMOSStatus(const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
+begin
+  GFRE_MOS_SetMOSStatusandUpdate(self,status,input,ses,app,conn);
+end;
+
+function TFRE_DB_MACHINE.GetMOSStatus: TFRE_DB_MOS_STATUS_TYPE;
+begin
+  Result:=String2DBMOSStatus(Field('status_mos').AsString);
+end;
+
  procedure TFRE_DB_MACHINE.CALC_GetDisplayAddress(const setter: IFRE_DB_CALCFIELD_SETTER);
  var s : String;
  begin
@@ -3488,6 +3433,30 @@ end;
  begin
    setter.SetAsString('Machine '+Field('objname').AsString);
  end;
+
+function TFRE_DB_MACHINE.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  panel         : TFRE_DB_FORM_PANEL_DESC;
+  scheme        : IFRE_DB_SchemeObject;
+begin
+  GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$machine_content_header'));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('machine'),GetSession(input));
+  panel.FillWithObjectValues(self,GetSession(input));
+  Result:=panel;
+end;
+
+function TFRE_DB_MACHINE.WEB_MOSChildStatusChanged(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  SetMOSStatus(GFRE_MOS_MOSChildStatusChanged(UID,input,ses,app,conn),input,ses,app,conn);
+  Result:=GFRE_DB_NIL_DESC;
+end;
+
+function TFRE_DB_MACHINE.WEB_MOSStatus(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  Result:=GFRE_DBI.NewObject;
+  Result.Field('status_mos').AsString:=Field('status_mos').AsString;
+end;
 
 
 
@@ -3591,10 +3560,6 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_REDIRECTION_FLOW);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HALCONFIG);
    GFRE_DBI.RegisterObjectClassEx(TFRE_ZIP_STATUS);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_UPDATE_TRANSPORT);
-
-
-
    GFRE_DBI.Initialize_Extension_Objects;
  end;
 
