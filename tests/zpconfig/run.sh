@@ -1,0 +1,1 @@
+./zpconfig rpool

@@ -1,0 +1,1 @@
+gcc -O2 -o zpconfig zpconfig.c -lzfs -lnvpair
