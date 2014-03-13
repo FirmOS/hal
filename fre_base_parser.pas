@@ -20,6 +20,7 @@ type
      FProcess            : TFRE_Process;
      FMemoutstream       : TMemoryStream;
      FMemerrstream       : TMemoryStream;
+     FCurrentDirectory   : string;
   protected
      helpline            : TStringlist;
      FData               : IFRE_DB_Object;
@@ -33,6 +34,7 @@ type
      procedure   MyParseOnOnceFinished; virtual;
   public
      constructor Create (const remoteuser,remotekeyfile,remotehost,cmd : string);
+     procedure   SetCurrentDirectory(const dir:string);
      destructor  Destroy;override;
      procedure   Enable;
      procedure   Disable;
@@ -107,6 +109,11 @@ begin
   MySetup;
 end;
 
+procedure TFOS_PARSER_PROC.SetCurrentDirectory(const dir: string);
+begin
+  FCurrentDirectory:=dir;
+end;
+
 destructor TFOS_PARSER_PROC.Destroy;
 begin
   Disable;
@@ -123,6 +130,8 @@ begin
   if assigned(FProcess) then
     Disable;
   FProcess      := TFRE_Process.Create(nil);
+  if (length(FCurrentDirectory)>0) then
+    FProcess.CurrentDirectory := FCurrentDirectory;
   Fmemoutstream := TMemoryStream.Create;
   Fmemerrstream := TMemoryStream.Create;
   FProcess.RegisterCallBacks(@MyOutStreamCallBack,@MyErrStreamCallBack);
