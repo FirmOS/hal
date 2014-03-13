@@ -1,0 +1,36 @@
+msgid  "Usage: %s [-a|f|i|n|v] [-T d|u] {-F | {fstype | fspath}...} "
+       "[interval [count]]\n"
+msgstr
+msgid  "interval must be between 1 and "
+       "%ld (inclusive)\n"
+msgstr
+msgid  "Both interval and count must be between 1 "
+       "and %ld (inclusive)\n"
+msgstr
+msgid  "Can't find mount point for %s\n"
+msgstr
+msgid  "Can't determine type of \"%s\"\n"
+msgstr
+msgid  "<NULL>"
+msgstr
+msgid  "%s: Display options -{a|f|i|n|v} are mutually exclusive\n"
+msgstr
+msgid  "%s: -T option "
+       "requires either 'u' or 'd'\n"
+msgstr
+msgid  "Can't build list of fstypes\n"
+msgstr
+msgid  "Must specify -F or at least one fstype or mount point\n"
+msgstr
+msgid  "Cannot use -F with fstypes or mount points\n"
+msgstr
+msgid  "No statistics available for %s\n"
+msgstr
+msgid  "<<mount point no longer "
+       "available: %s>>\n"
+msgstr
+msgid  "<<file system module no longer "
+       "loaded: %s>>\n"
+msgstr
+msgid  "<<%s no longer available>>\n"
+msgstr

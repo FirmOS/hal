@@ -1,0 +1,24 @@
+msgid  "-q and -lpj are mutually exclusive\n"
+msgstr
+msgid  "Interval is too large\n"
+msgstr
+msgid  "Count is too large\n"
+msgstr
+msgid  "Interval must be an "
+       "integer >= 1"
+msgstr
+msgid  "Count must be an integer >= 1"
+msgstr
+msgid  "[module[:instance[:name[:statistic]]]] and "
+       "-m -i -n -s are mutually exclusive"
+msgstr
+msgid  "signal failed"
+msgstr
+msgid  "Usage:\n"
+       "kstat [ -Cjlpq ] [ -T d|u ] [ -c class ]\n"
+       "      [ -m module ] [ -i instance ] [ -n name ] [ -s statistic ]\n"
+       "      [ interval [ count ] ]\n"
+       "kstat [ -Cjlpq ] [ -T d|u ] [ -c class ]\n"
+       "      [ module[:instance[:name[:statistic]]] ... ]\n"
+       "      [ interval [ count ] ]\n"
+msgstr

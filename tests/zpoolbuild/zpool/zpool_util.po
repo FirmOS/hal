@@ -1,0 +1,2 @@
+msgid  "internal error: out of memory\n"
+msgstr

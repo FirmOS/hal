@@ -1,0 +1,781 @@
+msgid  "\tclone [-p] [-o property=value] ... "
+       "<snapshot> <filesystem|volume>\n"
+msgstr
+msgid  "\tcreate [-p] [-o property=value] ... "
+       "<filesystem>\n"
+       "\tcreate [-ps] [-b blocksize] [-o property=value] ... "
+       "-V <size> <volume>\n"
+msgstr
+msgid  "\tdestroy [-fnpRrv] <filesystem|volume>\n"
+       "\tdestroy [-dnpRrv] "
+       "<filesystem|volume>@<snap>[%<snap>][,...]\n"
+msgstr
+msgid  "\tget [-crHp] [-d max] "
+       "[-o \"all\" | field[,...]] [-t type[,...]] "
+       "[-s source[,...]]\n"
+       "\t    <\"all\" | property[,...]> "
+       "[filesystem|volume|snapshot] ...\n"
+msgstr
+msgid  "\tinherit [-rS] <property> "
+       "<filesystem|volume|snapshot> ...\n"
+msgstr
+msgid  "\tupgrade [-v]\n"
+       "\tupgrade [-r] [-V version] <-a | filesystem ...>\n"
+msgstr
+msgid  "\tlist [-Hp] [-r|-d max] [-o property[,...]] "
+       "[-s property]...\n\t    [-S property]... [-t type[,...]] "
+       "[filesystem|volume|snapshot] ...\n"
+msgstr
+msgid  "\tmount\n"
+       "\tmount [-vO] [-o opts] <-a | filesystem>\n"
+msgstr
+msgid  "\tpromote <clone-filesystem>\n"
+msgstr
+msgid  "\treceive [-vnFu] <filesystem|volume|"
+       "snapshot>\n"
+       "\treceive [-vnFu] [-d | -e] <filesystem>\n"
+msgstr
+msgid  "\trename [-f] <filesystem|volume|snapshot> "
+       "<filesystem|volume|snapshot>\n"
+       "\trename [-f] -p <filesystem|volume> <filesystem|volume>\n"
+       "\trename -r <snapshot> <snapshot>"
+msgstr
+msgid  "\trollback [-rRf] <snapshot>\n"
+msgstr
+msgid  "\tsend [-DnPpRv] [-[iI] snapshot] "
+       "<snapshot>\n"
+msgstr
+msgid  "\tset <property=value> "
+       "<filesystem|volume|snapshot> ...\n"
+msgstr
+msgid  "\tshare <-a | filesystem>\n"
+msgstr
+msgid  "\tsnapshot [-r] [-o property=value] ... "
+       "<filesystem@snapname|volume@snapname> ...\n"
+msgstr
+msgid  "\tunmount [-f] "
+       "<-a | filesystem|mountpoint>\n"
+msgstr
+msgid  "\tunshare "
+       "<-a | filesystem|mountpoint>\n"
+msgstr
+msgid  "\tallow <filesystem|volume>\n"
+       "\tallow [-ldug] "
+       "<\"everyone\"|user|group>[,...] <perm|@setname>[,...]\n"
+       "\t    <filesystem|volume>\n"
+       "\tallow [-ld] -e <perm|@setname>[,...] "
+       "<filesystem|volume>\n"
+       "\tallow -c <perm|@setname>[,...] <filesystem|volume>\n"
+       "\tallow -s @setname <perm|@setname>[,...] "
+       "<filesystem|volume>\n"
+msgstr
+msgid  "\tunallow [-rldug] "
+       "<\"everyone\"|user|group>[,...]\n"
+       "\t    [<perm|@setname>[,...]] <filesystem|volume>\n"
+       "\tunallow [-rld] -e [<perm|@setname>[,...]] "
+       "<filesystem|volume>\n"
+       "\tunallow [-r] -c [<perm|@setname>[,...]] "
+       "<filesystem|volume>\n"
+       "\tunallow [-r] -s @setname [<perm|@setname>[,...]] "
+       "<filesystem|volume>\n"
+msgstr
+msgid  "\tuserspace [-Hinp] [-o field[,...]] "
+       "[-s field]...\n\t    [-S field]... [-t type[,...]] "
+       "<filesystem|snapshot>\n"
+msgstr
+msgid  "\tgroupspace [-Hinp] [-o field[,...]] "
+       "[-s field]...\n\t    [-S field]... [-t type[,...]] "
+       "<filesystem|snapshot>\n"
+msgstr
+msgid  "\thold [-r] <tag> <snapshot> ...\n"
+msgstr
+msgid  "\tholds [-r] <snapshot> ...\n"
+msgstr
+msgid  "\trelease [-r] <tag> <snapshot> ...\n"
+msgstr
+msgid  "\tdiff [-FHt] <snapshot> "
+       "[snapshot|filesystem]\n"
+msgstr
+msgid  "internal error: out of memory\n"
+msgstr
+msgid  "usage: zfs command args ...\n"
+msgstr
+msgid  "where 'command' is one of the following:\n\n"
+msgstr
+msgid  "\nEach dataset is of the form: "
+       "pool/[dataset/]*dataset[@name]\n"
+msgstr
+msgid  "usage:\n"
+msgstr
+msgid  "\nThe following properties are supported:\n"
+msgstr
+msgid  "\nSizes are specified in bytes "
+       "with standard units such as K, M, G, etc.\n"
+msgstr
+msgid  "\nUser-defined properties can "
+       "be specified by using a name containing a colon (:).\n"
+msgstr
+msgid  "\nThe {user|group}{used|quota}@ "
+       "properties must be appended with\n"
+       "a user or group specifier of one of these forms:\n"
+       "    POSIX name      (eg: \"matt\")\n"
+       "    POSIX id        (eg: \"126829\")\n"
+       "    SMB name@domain (eg: \"matt@sun\")\n"
+       "    SMB SID         (eg: \"S-1-234-567-89\")\n"
+msgstr
+msgid  "\nFor the property list, run: %s\n"
+msgstr
+msgid  "\nFor the delegated permission list, run: %s\n"
+msgstr
+msgid  "missing "
+       "'=' for -o option\n"
+msgstr
+msgid  "property '%s' "
+       "specified multiple times\n"
+msgstr
+msgid  "%s is not an integer\n"
+msgstr
+msgid  "Depth can not be negative.\n"
+msgstr
+msgid  "invalid option '%c'\n"
+msgstr
+msgid  "missing source dataset "
+       "argument\n"
+msgstr
+msgid  "missing target dataset "
+       "argument\n"
+msgstr
+msgid  "too many arguments\n"
+msgstr
+msgid  "bad volume "
+       "size '%s': %s\n"
+msgstr
+msgid  "bad volume "
+       "block size '%s': %s\n"
+msgstr
+msgid  "missing size "
+       "argument\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "'-s' and '-b' can only be "
+       "used when creating a volume\n"
+msgstr
+msgid  "missing %s argument\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "cannot create '%s'"
+msgstr
+msgid  "filesystem "
+       "successfully created, but not mounted\n"
+msgstr
+msgid  "filesystem "
+       "successfully created, but not shared\n"
+msgstr
+msgid  "cannot destroy '%s': "
+       "%s has children\n"
+msgstr
+msgid  "use '-r' to destroy "
+       "the following datasets:\n"
+msgstr
+msgid  "cannot destroy '%s': "
+       "%s has dependent clones\n"
+msgstr
+msgid  "use '-R' to destroy "
+       "the following datasets:\n"
+msgstr
+msgid  "would destroy %s\n"
+msgstr
+msgid  "will destroy %s\n"
+msgstr
+# msgid  "would destroy %s\n"
+# msgstr
+# msgid  "will destroy %s\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing dataset argument\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "could not find any "
+       "snapshots to destroy; check snapshot names.\n"
+msgstr
+msgid  "would reclaim %s\n"
+msgstr
+msgid  "will reclaim %s\n"
+msgstr
+msgid  "cannot destroy '%s': "
+       "operation does not apply to pools\n"
+msgstr
+msgid  "use 'zfs destroy -r "
+       "%s' to destroy all datasets in the pool\n"
+msgstr
+msgid  "use 'zpool destroy %s' "
+       "to destroy the pool itself\n"
+msgstr
+msgid  "No such property '%s'\n"
+msgstr
+msgid  "missing argument for "
+       "'%c' option\n"
+msgstr
+msgid  "too "
+       "many fields given to -o "
+       "option\n"
+msgstr
+msgid  "\"all\" conflicts "
+       "with specific fields "
+       "given to -o option\n"
+msgstr
+msgid  "invalid column name "
+       "'%s'\n"
+msgstr
+msgid  "invalid source "
+       "'%s'\n"
+msgstr
+msgid  "invalid type '%s'\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing property "
+       "argument\n"
+msgstr
+msgid  "NAME"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing property argument\n"
+# msgstr
+# msgid  "missing dataset argument\n"
+# msgstr
+msgid  "%s property is read-only\n"
+msgstr
+msgid  "'%s' property cannot "
+       "be inherited\n"
+msgstr
+msgid  "use 'zfs set "
+       "%s=none' to clear\n"
+msgstr
+msgid  "'%s' property cannot "
+       "be reverted to a received value\n"
+msgstr
+msgid  "invalid property '%s'\n"
+msgstr
+msgid  "The following filesystems are "
+       "formatted using a newer software version and\n"
+       "cannot be accessed on the current system.\n\n"
+msgstr
+msgid  "The following filesystems are "
+       "out of date, and can be upgraded.  After being\n"
+       "upgraded, these filesystems (and any 'zfs send' "
+       "streams generated from\n"
+       "subsequent snapshots) will no longer be "
+       "accessible by older software versions.\n\n"
+msgstr
+msgid  "VER  FILESYSTEM\n"
+msgstr
+msgid  "---  ------------\n"
+msgstr
+msgid  "%s: can not be "
+       "upgraded; the pool version needs to first "
+       "be upgraded\nto version %d\n\n"
+msgstr
+msgid  "%s: can not be downgraded; "
+       "it is already at version %u\n"
+msgstr
+msgid  "invalid version %s\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "The following filesystem versions are "
+       "supported:\n\n"
+msgstr
+msgid  "VER  DESCRIPTION\n"
+msgstr
+msgid  " 1   Initial ZFS filesystem version\n"
+msgstr
+msgid  " 2   Enhanced directory entries\n"
+msgstr
+msgid  " 3   Case insensitive and filesystem "
+       "user identifier (FUID)\n"
+msgstr
+msgid  " 4   userquota, groupquota "
+       "properties\n"
+msgstr
+msgid  " 5   System attributes\n"
+msgstr
+msgid  "\nFor more information on a particular "
+       "version, including supported releases,\n"
+msgstr
+msgid  "%llu filesystems upgraded\n"
+msgstr
+msgid  "%llu filesystems already at "
+       "this version\n"
+msgstr
+msgid  "This system is currently running "
+       "ZFS filesystem version %llu.\n\n"
+msgstr
+msgid  "All filesystems are "
+       "formatted with the current version.\n"
+msgstr
+msgid  "invalid field '%s'\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing dataset name\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "invalid type '%s' "
+       "for -o option\n"
+msgstr
+msgid  "invalid type "
+       "'%s' for -t option\n"
+msgstr
+# msgid  "invalid property '%s'\n"
+# msgstr
+# msgid  "invalid property '%s'\n"
+# msgstr
+# msgid  "invalid type '%s'\n"
+# msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "no datasets available\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing source dataset "
+#        "argument\n"
+# msgstr
+# msgid  "missing target dataset "
+#        "argument\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "-p and -r options are mutually "
+       "exclusive\n"
+msgstr
+msgid  "source dataset for recursive "
+       "rename must be a snapshot\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing clone filesystem"
+       " argument\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "cannot "
+       "rollback to '%s': more recent snapshots "
+       "exist\n"
+msgstr
+msgid  "use '-r' to "
+       "force deletion of the following "
+       "snapshots:\n"
+msgstr
+msgid  "cannot rollback to "
+       "'%s': clones of previous snapshots exist\n"
+msgstr
+msgid  "use '-R' to "
+       "force deletion of the following clones and "
+       "dependents:\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing dataset argument\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "property may be set "
+       "but unable to remount filesystem\n"
+msgstr
+msgid  "property may be set "
+       "but unable to reshare filesystem\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing property=value "
+       "argument\n"
+msgstr
+# msgid  "missing dataset name\n"
+# msgstr
+msgid  "missing value in "
+       "property=value argument\n"
+msgstr
+msgid  "missing property in property=value argument\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing snapshot argument\n"
+msgstr
+msgid  "no snapshots were created\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing snapshot argument\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "Error: Stream can not be written to a terminal.\n"
+       "You must redirect standard output.\n"
+msgstr
+msgid  "argument must be a snapshot\n"
+msgstr
+msgid  "incremental source must be "
+       "in same filesystem\n"
+msgstr
+msgid  "invalid incremental source\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing snapshot argument\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "Error: Backup stream can not be read "
+       "from a terminal.\n"
+       "You must redirect standard input.\n"
+msgstr
+msgid  "other"
+msgstr
+msgid  "subcommand"
+msgstr
+msgid  "Must also have the permission that is being"
+       "\n\t\t\t\tallowed"
+msgstr
+msgid  "Must also have the 'create' ability and 'mount'"
+       "\n\t\t\t\tability in the origin file system"
+msgstr
+msgid  "Must also have the 'mount' ability"
+msgstr
+# msgid  "Must also have the 'mount' ability"
+# msgstr
+msgid  "Allows lookup of paths within a dataset;"
+       "\n\t\t\t\tgiven an object number. Ordinary users need this"
+       "\n\t\t\t\tin order to use zfs diff"
+msgstr
+msgid  "Allows adding a user hold to a snapshot"
+msgstr
+msgid  "Allows mount/umount of ZFS datasets"
+msgstr
+msgid  "Must also have the 'mount'\n\t\t\t\tand"
+       " 'promote' ability in the origin file system"
+msgstr
+msgid  "Must also have the 'mount' and 'create'"
+       " ability"
+msgstr
+msgid  "Allows releasing a user hold which\n\t\t\t\t"
+       "might destroy the snapshot"
+msgstr
+msgid  "Must also have the 'mount' and 'create'"
+       "\n\t\t\t\tability in the new parent"
+msgstr
+msgid  ""
+msgstr
+# msgid  ""
+# msgstr
+msgid  "Allows sharing file systems over NFS or SMB"
+       "\n\t\t\t\tprotocols"
+msgstr
+# msgid  ""
+# msgstr
+msgid  "Allows accessing any groupquota@... property"
+msgstr
+msgid  "Allows reading any groupused@... property"
+msgstr
+msgid  "Allows changing any user property"
+msgstr
+msgid  "Allows accessing any userquota@... property"
+msgstr
+msgid  "Allows reading any userused@... property"
+msgstr
+msgid  "show this help message and exit"
+msgstr
+msgid  "set permission locally"
+msgstr
+msgid  "set permission for descents"
+msgstr
+msgid  "set permission for user"
+msgstr
+msgid  "set permission for group"
+msgstr
+msgid  "set permission for everyone"
+msgstr
+msgid  "set create time permission"
+msgstr
+msgid  "define permission set"
+msgstr
+msgid  "remove permissions recursively"
+msgstr
+msgid  "%-16s %-14s\t%s\n"
+msgstr
+msgid  "Usage: %s\n"
+msgstr
+msgid  "Options:\n"
+msgstr
+msgid  "  %-10s  %s\n"
+msgstr
+msgid  "\nThe following permissions are "
+       "supported:\n\n"
+msgstr
+# msgid  "NAME"
+# msgstr
+msgid  "TYPE"
+msgstr
+msgid  "NOTES"
+msgstr
+msgid  "property"
+msgstr
+msgid  "\nzfs: error: %s"
+msgstr
+msgid  "wrong number of parameters\n"
+msgstr
+msgid  "-u, -g, and -e are mutually exclusive\n"
+msgstr
+msgid  "invalid options combined with -s\n"
+msgstr
+msgid  "invalid set name: missing '@' prefix\n"
+msgstr
+msgid  "invalid options combined with -c\n"
+msgstr
+msgid  "invalid options combined with -e\n"
+msgstr
+msgid  "invalid user %s"
+msgstr
+msgid  "invalid group %s"
+msgstr
+msgid  "invalid user/group %s"
+msgstr
+msgid  "Permission sets:\n"
+msgstr
+msgid  "Create time permissions:\n"
+msgstr
+msgid  "user"
+msgstr
+msgid  "group"
+msgstr
+msgid  "everyone"
+msgstr
+msgid  "---- Permissions on %s "
+msgstr
+msgid  "Local permissions:\n"
+msgstr
+msgid  "Descendent permissions:\n"
+msgstr
+msgid  "Local+Descendent permissions:\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "tag may not start with '.'\n"
+msgstr
+msgid  "'%s' is not a snapshot\n"
+msgstr
+msgid  "%a %b %e %k:%M %Y"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "'%s' is not a snapshot\n"
+# msgstr
+# msgid  "no datasets available\n"
+# msgstr
+msgid  "Reading ZFS config"
+msgstr
+msgid  "done."
+msgstr
+msgid  "cannot %s '%s': "
+       "dataset is exported to a local zone\n"
+msgstr
+msgid  "cannot %s '%s': "
+       "permission denied\n"
+msgstr
+msgid  "cannot share '%s': "
+       "legacy share\n"
+msgstr
+msgid  "use share(1M) to "
+       "share this filesystem, or set "
+       "sharenfs property on\n"
+msgstr
+msgid  "cannot %s '%s': "
+       "legacy mountpoint\n"
+msgstr
+msgid  "use %s(1M) to "
+       "%s this filesystem\n"
+msgstr
+msgid  "cannot %s '%s': no "
+       "mountpoint set\n"
+msgstr
+msgid  "cannot %s '%s': "
+       "'canmount' property is set to 'off'\n"
+msgstr
+msgid  "cannot share "
+       "'%s': filesystem already shared\n"
+msgstr
+msgid  "cannot share "
+       "'%s': invalid share type '%s' "
+       "specified\n"
+msgstr
+msgid  "cannot mount "
+       "'%s': filesystem already mounted\n"
+msgstr
+msgid  "Mounting ZFS filesystems"
+msgstr
+msgid  "the opts argument for "
+       "'%c' option is too long (more than %d chars)\n"
+msgstr
+msgid  "empty mount "
+       "options (-o) specified\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "share type "
+       "must be 'nfs' or 'smb'\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "missing filesystem "
+       "argument (specify -a for all)\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "cannot %s '%s': %s\n"
+msgstr
+msgid  "cannot %s '%s': not "
+       "currently mounted\n"
+msgstr
+msgid  "warning: %s not in mnttab\n"
+msgstr
+msgid  "%s: %s\n"
+msgstr
+msgid  "cannot %s '%s': not a ZFS "
+       "filesystem\n"
+msgstr
+# msgid  "cannot %s '%s': %s\n"
+# msgstr
+msgid  "cannot "
+       "%s '%s': not a mountpoint\n"
+msgstr
+msgid  "cannot unshare "
+       "'%s': legacy share\n"
+msgstr
+msgid  "use "
+       "unshare(1M) to unshare this filesystem\n"
+msgstr
+msgid  "cannot unshare '%s': "
+       "not currently shared\n"
+msgstr
+msgid  "cannot unmount "
+       "'%s': legacy mountpoint\n"
+msgstr
+msgid  "use umount(1M) "
+       "to unmount this filesystem\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "missing filesystem argument\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+# msgid  "cannot "
+#        "unshare '%s': legacy share\n"
+# msgstr
+# msgid  "use "
+#        "unshare(1M) to unshare this "
+#        "filesystem\n"
+# msgstr
+# msgid  "cannot "
+#        "unshare '%s': not currently "
+#        "shared\n"
+# msgstr
+# msgid  "cannot "
+#        "unmount '%s': legacy "
+#        "mountpoint\n"
+# msgstr
+# msgid  "use "
+#        "umount(1M) to unmount this "
+#        "filesystem\n"
+# msgstr
+msgid  "cannot "
+       "unmount '%s': not currently "
+       "mounted\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "usage: mount [-o opts] "
+       "<path>\n"
+msgstr
+# msgid  "missing dataset "
+#        "argument\n"
+# msgstr
+msgid  "missing mountpoint argument\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "mount failed: %s\n"
+msgstr
+msgid  "filesystem '%s' cannot be "
+       "mounted using 'mount -F zfs'\n"
+msgstr
+msgid  "Use 'zfs set mountpoint=%s' "
+       "instead.\n"
+msgstr
+msgid  "If you must use 'mount -F zfs' "
+       "or /etc/vfstab, use 'zfs set mountpoint=legacy'.\n"
+msgstr
+msgid  "See zfs(1M) for more "
+       "information.\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "usage: unmount [-f] "
+       "<path>\n"
+msgstr
+msgid  "missing path "
+       "argument\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+# msgid  "usage: unmount [-f] <path>\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "must provide at least one snapshot name\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "internal error: failed to "
+       "initialize ZFS library\n"
+msgstr
+msgid  "internal error: unable to "
+       "open %s\n"
+msgstr
+msgid  "missing command\n"
+msgstr
+msgid  "unrecognized "
+       "command '%s'\n"
+msgstr

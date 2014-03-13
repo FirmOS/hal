@@ -1,0 +1,1045 @@
+msgid  "\tadd [-fn] <pool> <vdev> ...\n"
+msgstr
+msgid  "\tattach [-f] <pool> <device> "
+       "<new-device>\n"
+msgstr
+msgid  "\tclear [-nF] <pool> [device]\n"
+msgstr
+msgid  "\tcreate [-fnd] [-o property=value] ... \n"
+       "\t    [-O file-system-property=value] ... \n"
+       "\t    [-m mountpoint] [-R root] <pool> <vdev> ...\n"
+msgstr
+msgid  "\tdestroy [-f] <pool>\n"
+msgstr
+msgid  "\tdetach <pool> <device>\n"
+msgstr
+msgid  "\texport [-f] <pool> ...\n"
+msgstr
+msgid  "\thistory [-il] [<pool>] ...\n"
+msgstr
+msgid  "\timport [-d dir] [-D]\n"
+       "\timport [-d dir | -c cachefile] [-F [-n]] <pool | id>\n"
+       "\timport [-o mntopts] [-o property=value] ... \n"
+       "\t    [-d dir | -c cachefile] [-D] [-f] [-m] [-N] "
+       "[-R root] [-F [-n]] -a\n"
+       "\timport [-o mntopts] [-o property=value] ... \n"
+       "\t    [-d dir | -c cachefile] [-D] [-f] [-m] [-N] "
+       "[-R root] [-F [-n]]\n"
+       "\t    <pool | id> [newpool]\n"
+msgstr
+msgid  "\tiostat [-v] [-T d|u] [pool] ... [interval "
+       "[count]]\n"
+msgstr
+msgid  "\tlist [-Hp] [-o property[,...]] "
+       "[-T d|u] [pool] ... [interval [count]]\n"
+msgstr
+msgid  "\toffline [-t] <pool> <device> ...\n"
+msgstr
+msgid  "\tonline <pool> <device> ...\n"
+msgstr
+msgid  "\treplace [-f] <pool> <device> "
+       "[new-device]\n"
+msgstr
+msgid  "\tremove <pool> <device> ...\n"
+msgstr
+msgid  "\treopen <pool>\n"
+msgstr
+msgid  "\tscrub [-s] <pool> ...\n"
+msgstr
+msgid  "\tstatus [-vx] [-T d|u] [pool] ... [interval "
+       "[count]]\n"
+msgstr
+msgid  "\tupgrade\n"
+       "\tupgrade -v\n"
+       "\tupgrade [-V version] <-a | pool ...>\n"
+msgstr
+msgid  "\tget [-p] <\"all\" | property[,...]> "
+       "<pool> ...\n"
+msgstr
+msgid  "\tset <property=value> <pool> \n"
+msgstr
+msgid  "\tsplit [-n] [-R altroot] [-o mntopts]\n"
+       "\t    [-o property=value] <pool> <newpool> "
+       "[<device> ...]\n"
+msgstr
+msgid  "\treguid <pool>\n"
+msgstr
+msgid  "usage: zpool command args ...\n"
+msgstr
+msgid  "where 'command' is one of the following:\n\n"
+msgstr
+msgid  "usage:\n"
+msgstr
+msgid  "\nthe following properties are supported:\n"
+msgstr
+msgid  "\nThe feature@ properties must be "
+       "appended with a feature name.\nSee zpool-features(5).\n"
+msgstr
+msgid  "internal error: out of memory\n"
+msgstr
+msgid  "property '%s' is "
+       "not a valid pool property\n"
+msgstr
+msgid  "'feature@' and "
+       "'version' properties cannot be specified "
+       "together\n"
+msgstr
+msgid  "property '%s' "
+       "specified multiple times\n"
+msgstr
+# msgid  "internal "
+#        "error: out of memory\n"
+# msgstr
+msgid  "invalid option '%c'\n"
+msgstr
+msgid  "missing pool name argument\n"
+msgstr
+msgid  "missing vdev specification\n"
+msgstr
+msgid  "pool '%s' is unavailable\n"
+msgstr
+msgid  "would update '%s' to the following "
+       "configuration:\n"
+msgstr
+# msgid  "missing pool name argument\n"
+# msgstr
+msgid  "missing device\n"
+msgstr
+msgid  "missing "
+       "'=' for -o option\n"
+msgstr
+msgid  "missing "
+       "'=' for -O option\n"
+msgstr
+msgid  "missing argument for "
+       "'%c' option\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name argument\n"
+# msgstr
+# msgid  "missing vdev specification\n"
+# msgstr
+msgid  "cannot create '%s': invalid "
+       "character '/' in pool name\n"
+msgstr
+msgid  "use 'zfs create' to "
+       "create a dataset\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: at least one toplevel vdev must be "
+       "specified\n"
+msgstr
+msgid  "invalid alternate root '%s': "
+       "must be an absolute path\n"
+msgstr
+msgid  "invalid mountpoint "
+       "'%s': must be an absolute path, 'legacy', or "
+       "'none'\n"
+msgstr
+msgid  "mountpoint '%s' : "
+       "%s\n"
+msgstr
+msgid  "use '-m' "
+       "option to provide a different default\n"
+msgstr
+msgid  "mountpoint "
+       "'%s' exists and is not empty\n"
+msgstr
+# msgid  "use '-m' "
+#        "option to provide a "
+#        "different default\n"
+# msgstr
+msgid  "would create '%s' with the "
+       "following layout:\n\n"
+msgstr
+msgid  "pool name may have "
+       "been omitted\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing pool argument\n"
+msgstr
+msgid  "too many arguments\n"
+msgstr
+msgid  "use 'zfs destroy' to "
+       "destroy a dataset\n"
+msgstr
+msgid  "could not destroy '%s': "
+       "could not unmount datasets\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool argument\n"
+# msgstr
+msgid  "cannot open"
+msgstr
+msgid  "missing device"
+msgstr
+msgid  "insufficient replicas"
+msgstr
+msgid  "newer version"
+msgstr
+msgid  "unsupported feature(s)"
+msgstr
+msgid  "currently in "
+       "use"
+msgstr
+msgid  "in use by "
+       "pool '%s'"
+msgstr
+# msgid  "currently in use"
+# msgstr
+msgid  "too many errors"
+msgstr
+msgid  "experienced I/O failures"
+msgstr
+msgid  "bad intent log"
+msgstr
+msgid  "external device fault"
+msgstr
+msgid  "split into new pool"
+msgstr
+msgid  "corrupted data"
+msgstr
+msgid  "  (%s)"
+msgstr
+# msgid  "cannot open"
+# msgstr
+# msgid  "missing device"
+# msgstr
+# msgid  "insufficient replicas"
+# msgstr
+# msgid  "newer version"
+# msgstr
+# msgid  "unsupported feature(s)"
+# msgstr
+# msgid  "too many errors"
+# msgstr
+# msgid  "corrupted data"
+# msgstr
+msgid  "\tcache\n"
+msgstr
+msgid  "\tspares\n"
+msgstr
+msgid  "\tlogs\n"
+msgstr
+msgid  "   pool: %s\n"
+msgstr
+msgid  "     id: %llu\n"
+msgstr
+msgid  "  state: %s"
+msgstr
+msgid  " (DESTROYED)"
+msgstr
+msgid  " status: One or more devices are "
+       "missing from the system.\n"
+msgstr
+msgid  " status: One or more devices contains "
+       "corrupted data.\n"
+msgstr
+msgid  " status: The pool data is corrupted.\n"
+msgstr
+msgid  " status: One or more devices "
+       "are offlined.\n"
+msgstr
+msgid  " status: The pool metadata is "
+       "corrupted.\n"
+msgstr
+msgid  " status: The pool is formatted using a "
+       "legacy on-disk version.\n"
+msgstr
+msgid  " status: The pool is formatted using an "
+       "incompatible version.\n"
+msgstr
+msgid  " status: Some supported features are "
+       "not enabled on the pool.\n"
+msgstr
+msgid  "status: The pool uses the following "
+       "feature(s) not supported on this sytem:\n"
+msgstr
+msgid  "status: The pool can only be accessed "
+       "in read-only mode on this system. It\n\tcannot be "
+       "accessed in read-write mode because it uses the "
+       "following\n\tfeature(s) not supported on this system:\n"
+msgstr
+msgid  " status: The pool was last accessed by "
+       "another system.\n"
+msgstr
+msgid  " status: One or more devices are "
+       "faulted.\n"
+msgstr
+msgid  " status: An intent log record cannot be "
+       "read.\n"
+msgstr
+msgid  " status: One or more devices were being "
+       "resilvered.\n"
+msgstr
+msgid  " action: The pool can be "
+       "imported using its name or numeric identifier, "
+       "though\n\tsome features will not be available "
+       "without an explicit 'zpool upgrade'.\n"
+msgstr
+msgid  " action: The pool can be "
+       "imported using its name or numeric "
+       "identifier and\n\tthe '-f' flag.\n"
+msgstr
+msgid  " action: The pool can be "
+       "imported using its name or numeric "
+       "identifier.\n"
+msgstr
+msgid  " action: The pool can be imported "
+       "despite missing or damaged devices.  The\n\tfault "
+       "tolerance of the pool may be compromised if imported.\n"
+msgstr
+msgid  " action: The pool cannot be "
+       "imported.  Access the pool on a system running "
+       "newer\n\tsoftware, or recreate the pool from "
+       "backup.\n"
+msgstr
+msgid  "action: The pool cannot be "
+       "imported. Access the pool on a system that "
+       "supports\n\tthe required feature(s), or recreate "
+       "the pool from backup.\n"
+msgstr
+msgid  "action: The pool cannot be "
+       "imported in read-write mode. Import the pool "
+       "with\n"
+       "\t\"-o readonly=on\", access the pool on a system "
+       "that supports the\n\trequired feature(s), or "
+       "recreate the pool from backup.\n"
+msgstr
+msgid  " action: The pool cannot be "
+       "imported. Attach the missing\n\tdevices and try "
+       "again.\n"
+msgstr
+msgid  " action: The pool cannot be "
+       "imported due to damaged devices or data.\n"
+msgstr
+msgid  "comment: %s\n"
+msgstr
+msgid  "\tThe pool was destroyed, "
+       "but can be imported using the '-Df' flags.\n"
+msgstr
+msgid  "\tThe pool may be active on "
+       "another system, but can be imported using\n\t"
+       "the '-f' flag.\n"
+msgstr
+msgid  "   see: http://illumos.org/msg/%s\n"
+msgstr
+msgid  " config:\n\n"
+msgstr
+msgid  "\n\tAdditional devices are known to "
+       "be part of this pool, though their\n\texact "
+       "configuration cannot be determined.\n"
+msgstr
+msgid  "cannot import '%s': pool "
+       "is formatted using an unsupported ZFS version\n"
+msgstr
+msgid  "cannot import "
+       "'%s': pool may be in use from other "
+       "system, it was last accessed by %s "
+       "(hostid: 0x%lx) on %s"
+msgstr
+msgid  "use '-f' to "
+       "import anyway\n"
+msgstr
+msgid  "cannot import '%s': "
+       "pool may be in use from other system\n"
+msgstr
+# msgid  "use '-f' to import "
+#        "anyway\n"
+# msgstr
+msgid  "invalid txg value\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "-c is incompatible with -d\n"
+msgstr
+msgid  "-n or -X only meaningful with -F\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "cannot "
+       "discover pools: permission denied\n"
+msgstr
+msgid  "cannot import '%s': "
+       "a pool with that name already exists\n"
+msgstr
+msgid  "use the form '%s "
+       "<pool | id> <newpool>' to give it a new name\n"
+msgstr
+msgid  "cannot import '%s': "
+       "a pool with that name is already created/imported,\n"
+msgstr
+msgid  "and no additional pools "
+       "with that name were found\n"
+msgstr
+msgid  "cannot import '%s': "
+       "no such pool available\n"
+msgstr
+msgid  "cannot import '%s': more than "
+       "one matching pool\n"
+msgstr
+msgid  "import by numeric ID instead\n"
+msgstr
+# msgid  "cannot import '%s': "
+#        "no such pool available\n"
+# msgstr
+msgid  "no pools available to import\n"
+msgstr
+msgid  "interval "
+       "cannot be zero\n"
+msgstr
+# msgid  "interval "
+#        "cannot be zero\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "no pools available\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "no pools available\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name argument\n"
+# msgstr
+msgid  "missing <device> specification\n"
+msgstr
+msgid  "missing <new_device> specification\n"
+msgstr
+# msgid  "too many arguments\n"
+# msgstr
+# msgid  "pool '%s' is unavailable\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name argument\n"
+# msgstr
+# msgid  "missing <device> specification\n"
+# msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "setting mntopts is only "
+       "valid when importing the pool\n"
+msgstr
+msgid  "Missing pool name\n"
+msgstr
+msgid  "Missing new pool name\n"
+msgstr
+# msgid  "would create '%s' with the "
+#        "following layout:\n\n"
+# msgstr
+msgid  "Split was successful, but "
+       "the datasets could not all be mounted\n"
+msgstr
+msgid  "Try doing '%s' with a "
+       "different altroot\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing pool name\n"
+msgstr
+msgid  "missing device name\n"
+msgstr
+msgid  "warning: device '%s' "
+       "onlined, but remains in faulted state\n"
+msgstr
+msgid  "use 'zpool "
+       "clear' to restore a faulted "
+       "device\n"
+msgstr
+msgid  "use 'zpool "
+       "replace' to replace devices "
+       "that are no longer present\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name\n"
+# msgstr
+# msgid  "missing device name\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+# msgid  "-n or -X only meaningful with -F\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name\n"
+# msgstr
+# msgid  "too many arguments\n"
+# msgstr
+msgid  "cannot scrub '%s': pool is "
+       "currently unavailable\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "missing pool name argument\n"
+# msgstr
+msgid  "  scan: "
+msgstr
+msgid  "none requested\n"
+msgstr
+msgid  "scrub repaired %s in %lluh%um with "
+       "%llu errors on %s"
+msgstr
+msgid  "resilvered %s in %lluh%um with "
+       "%llu errors on %s"
+msgstr
+msgid  "scrub canceled on %s"
+msgstr
+msgid  "resilver canceled on %s"
+msgstr
+msgid  "scrub in progress since %s"
+msgstr
+msgid  "resilver in progress since %s"
+msgstr
+msgid  "    %s scanned out of %s at %s/s"
+msgstr
+msgid  ", %lluh%um to go\n"
+msgstr
+msgid  ", (scan is slow, no estimated time)\n"
+msgstr
+msgid  "    %s resilvered, %.2f%% done\n"
+msgstr
+msgid  "    %s repaired, %.2f%% done\n"
+msgstr
+# msgid  "\tspares\n"
+# msgstr
+# msgid  "\tcache\n"
+# msgstr
+msgid  " dedup: "
+msgstr
+msgid  "no DDT entries\n"
+msgstr
+msgid  "pool '%s' is healthy\n"
+msgstr
+msgid  "  pool: %s\n"
+msgstr
+msgid  " state: %s\n"
+msgstr
+msgid  "status: One or more devices could not "
+       "be opened.  Sufficient replicas exist for\n\tthe pool to "
+       "continue functioning in a degraded state.\n"
+msgstr
+msgid  "action: Attach the missing device and "
+       "online it using 'zpool online'.\n"
+msgstr
+msgid  "status: One or more devices could not "
+       "be opened.  There are insufficient\n\treplicas for the "
+       "pool to continue functioning.\n"
+msgstr
+# msgid  "action: Attach the missing device and "
+#        "online it using 'zpool online'.\n"
+# msgstr
+msgid  "status: One or more devices could not "
+       "be used because the label is missing or\n\tinvalid.  "
+       "Sufficient replicas exist for the pool to continue\n\t"
+       "functioning in a degraded state.\n"
+msgstr
+msgid  "action: Replace the device using "
+       "'zpool replace'.\n"
+msgstr
+msgid  "status: One or more devices could not "
+       "be used because the label is missing \n\tor invalid.  "
+       "There are insufficient replicas for the pool to "
+       "continue\n\tfunctioning.\n"
+msgstr
+msgid  "status: One or more devices has "
+       "experienced an unrecoverable error.  An\n\tattempt was "
+       "made to correct the error.  Applications are "
+       "unaffected.\n"
+msgstr
+msgid  "action: Determine if the device needs "
+       "to be replaced, and clear the errors\n\tusing "
+       "'zpool clear' or replace the device with 'zpool "
+       "replace'.\n"
+msgstr
+msgid  "status: One or more devices has "
+       "been taken offline by the administrator.\n\tSufficient "
+       "replicas exist for the pool to continue functioning in "
+       "a\n\tdegraded state.\n"
+msgstr
+msgid  "action: Online the device using "
+       "'zpool online' or replace the device with\n\t'zpool "
+       "replace'.\n"
+msgstr
+msgid  "status: One or more devices has "
+       "been removed by the administrator.\n\tSufficient "
+       "replicas exist for the pool to continue functioning in "
+       "a\n\tdegraded state.\n"
+msgstr
+# msgid  "action: Online the device using "
+#        "'zpool online' or replace the device with\n\t'zpool "
+#        "replace'.\n"
+# msgstr
+msgid  "status: One or more devices is "
+       "currently being resilvered.  The pool will\n\tcontinue "
+       "to function, possibly in a degraded state.\n"
+msgstr
+msgid  "action: Wait for the resilver to "
+       "complete.\n"
+msgstr
+msgid  "status: One or more devices has "
+       "experienced an error resulting in data\n\tcorruption.  "
+       "Applications may be affected.\n"
+msgstr
+msgid  "action: Restore the file in question "
+       "if possible.  Otherwise restore the\n\tentire pool from "
+       "backup.\n"
+msgstr
+msgid  "status: The pool metadata is corrupted "
+       "and the pool cannot be opened.\n"
+msgstr
+msgid  "status: The pool is formatted using a "
+       "legacy on-disk format.  The pool can\n\tstill be used, "
+       "but some features are unavailable.\n"
+msgstr
+msgid  "action: Upgrade the pool using 'zpool "
+       "upgrade'.  Once this is done, the\n\tpool will no longer "
+       "be accessible on software that does not support feature\n"
+       "\tflags.\n"
+msgstr
+msgid  "status: The pool has been upgraded to a "
+       "newer, incompatible on-disk version.\n\tThe pool cannot "
+       "be accessed on this system.\n"
+msgstr
+msgid  "action: Access the pool from a system "
+       "running more recent software, or\n\trestore the pool from "
+       "backup.\n"
+msgstr
+msgid  "status: Some supported features are not "
+       "enabled on the pool. The pool can\n\tstill be used, but "
+       "some features are unavailable.\n"
+msgstr
+msgid  "action: Enable all features using "
+       "'zpool upgrade'. Once this is done,\n\tthe pool may no "
+       "longer be accessible by software that does not support\n\t"
+       "the features. See zpool-features(5) for details.\n"
+msgstr
+msgid  "status: The pool cannot be accessed on "
+       "this system because it uses the\n\tfollowing feature(s) "
+       "not supported on this system:\n"
+msgstr
+msgid  "action: Access the pool from a system "
+       "that supports the required feature(s),\n\tor restore the "
+       "pool from backup.\n"
+msgstr
+# msgid  "status: The pool can only be accessed "
+#        "in read-only mode on this system. It\n\tcannot be "
+#        "accessed in read-write mode because it uses the "
+#        "following\n\tfeature(s) not supported on this system:\n"
+# msgstr
+msgid  "action: The pool cannot be accessed in "
+       "read-write mode. Import the pool with\n"
+       "\t\"-o readonly=on\", access the pool from a system that "
+       "supports the\n\trequired feature(s), or restore the "
+       "pool from backup.\n"
+msgstr
+msgid  "status: One or more devices are "
+       "faulted in response to persistent errors.\n\tSufficient "
+       "replicas exist for the pool to continue functioning "
+       "in a\n\tdegraded state.\n"
+msgstr
+msgid  "action: Replace the faulted device, "
+       "or use 'zpool clear' to mark the device\n\trepaired.\n"
+msgstr
+msgid  "status: One or more devices are "
+       "faulted in response to persistent errors.  There are "
+       "insufficient replicas for the pool to\n\tcontinue "
+       "functioning.\n"
+msgstr
+msgid  "action: Destroy and re-create the pool "
+       "from a backup source.  Manually marking the device\n"
+       "\trepaired using 'zpool clear' may allow some data "
+       "to be recovered.\n"
+msgstr
+msgid  "status: One or more devices are "
+       "faulted in response to IO failures.\n"
+msgstr
+msgid  "action: Make sure the affected devices "
+       "are connected, then run 'zpool clear'.\n"
+msgstr
+msgid  "status: An intent log record "
+       "could not be read.\n"
+       "\tWaiting for adminstrator intervention to fix the "
+       "faulted pool.\n"
+msgstr
+msgid  "action: Either restore the affected "
+       "device(s) and run 'zpool online',\n"
+       "\tor ignore the intent log records by running "
+       "'zpool clear'.\n"
+msgstr
+# msgid  "   see: http://illumos.org/msg/%s\n"
+# msgstr
+msgid  "config:\n\n"
+msgstr
+msgid  "\t%-*s  %-8s %5s %5s %5s\n"
+msgstr
+msgid  "errors: No known data "
+       "errors\n"
+msgstr
+msgid  "errors: %llu data "
+       "errors, use '-v' for a list\n"
+msgstr
+msgid  "config: The configuration cannot be "
+       "determined.\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "no pools available\n"
+# msgstr
+msgid  "all pools are healthy\n"
+msgstr
+msgid  "Successfully upgraded "
+       "'%s' from version %llu to feature flags.\n"
+msgstr
+msgid  "Successfully upgraded "
+       "'%s' from version %llu to version %llu.\n"
+msgstr
+msgid  "Enabled the "
+       "following features on '%s':\n"
+msgstr
+msgid  "  %s\n"
+msgstr
+msgid  "\n"
+msgstr
+msgid  "The following pools are "
+       "formatted with legacy version numbers and can\n"
+       "be upgraded to use feature flags.  After "
+       "being upgraded, these pools\nwill no "
+       "longer be accessible by software that does not "
+       "support feature\nflags.\n\n"
+msgstr
+msgid  "VER  POOL\n"
+msgstr
+msgid  "---  ------------\n"
+msgstr
+msgid  "\nSome "
+       "supported features are not "
+       "enabled on the following pools. "
+       "Once a\nfeature is enabled the "
+       "pool may become incompatible with "
+       "software\nthat does not support "
+       "the feature. See "
+       "zpool-features(5) for "
+       "details.\n\n"
+msgstr
+msgid  "POOL  "
+       "FEATURE\n"
+msgstr
+msgid  "------"
+       "---------\n"
+msgstr
+msgid  "%s\n"
+msgstr
+msgid  "      %s\n"
+msgstr
+msgid  "'log' is now a reserved word\n"
+       "Pool 'log' must be renamed using export and import"
+       " to upgrade.\n"
+msgstr
+msgid  "Pool '%s' is already formatted "
+       "using more current version '%llu'.\n\n"
+msgstr
+msgid  "Pool '%s' is already formatted "
+       "using version %llu.\n\n"
+msgstr
+msgid  "Pool '%s' already has all "
+       "supported features enabled.\n"
+msgstr
+# msgid  "\n"
+# msgstr
+msgid  "invalid version '%s'\n"
+msgstr
+# msgid  "missing argument for "
+#        "'%c' option\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "-V option is "
+       "incompatible with other arguments\n"
+msgstr
+msgid  "-v option is "
+       "incompatible with other arguments\n"
+msgstr
+msgid  "-a option should not "
+       "be used along with a pool name\n"
+msgstr
+msgid  "This system supports ZFS pool feature "
+       "flags.\n\n"
+msgstr
+msgid  "The following features are "
+       "supported:\n\n"
+msgstr
+msgid  "FEAT DESCRIPTION\n"
+msgstr
+msgid  "The following legacy versions are also "
+       "supported:\n\n"
+msgstr
+msgid  "VER  DESCRIPTION\n"
+msgstr
+msgid  " 1   Initial ZFS version\n"
+msgstr
+msgid  " 2   Ditto blocks "
+       "(replicated metadata)\n"
+msgstr
+msgid  " 3   Hot spares and double parity "
+       "RAID-Z\n"
+msgstr
+msgid  " 4   zpool history\n"
+msgstr
+msgid  " 5   Compression using the gzip "
+       "algorithm\n"
+msgstr
+msgid  " 6   bootfs pool property\n"
+msgstr
+msgid  " 7   Separate intent log devices\n"
+msgstr
+msgid  " 8   Delegated administration\n"
+msgstr
+msgid  " 9   refquota and refreservation "
+       "properties\n"
+msgstr
+msgid  " 10  Cache devices\n"
+msgstr
+msgid  " 11  Improved scrub performance\n"
+msgstr
+msgid  " 12  Snapshot properties\n"
+msgstr
+msgid  " 13  snapused property\n"
+msgstr
+msgid  " 14  passthrough-x aclinherit\n"
+msgstr
+msgid  " 15  user/group space accounting\n"
+msgstr
+msgid  " 16  stmf property support\n"
+msgstr
+msgid  " 17  Triple-parity RAID-Z\n"
+msgstr
+msgid  " 18  Snapshot user holds\n"
+msgstr
+msgid  " 19  Log device removal\n"
+msgstr
+msgid  " 20  Compression using zle "
+       "(zero-length encoding)\n"
+msgstr
+msgid  " 21  Deduplication\n"
+msgstr
+msgid  " 22  Received properties\n"
+msgstr
+msgid  " 23  Slim ZIL\n"
+msgstr
+msgid  " 24  System attributes\n"
+msgstr
+msgid  " 25  Improved scrub stats\n"
+msgstr
+msgid  " 26  Improved snapshot deletion "
+       "performance\n"
+msgstr
+msgid  " 27  Improved snapshot creation "
+       "performance\n"
+msgstr
+msgid  " 28  Multiple vdev replacements\n"
+msgstr
+msgid  "\nFor more information on a particular "
+       "version, including supported releases,\n"
+msgstr
+msgid  "see the ZFS Administration Guide.\n\n"
+msgstr
+msgid  "All pools are already "
+       "formatted using feature flags.\n\n"
+msgstr
+msgid  "Every feature flags "
+       "pool already has all supported features "
+       "enabled.\n"
+msgstr
+msgid  "All pools are already "
+       "formatted with version %llu or higher.\n"
+msgstr
+msgid  "All pools are formatted "
+       "using feature flags.\n\n"
+msgstr
+msgid  "\nUse 'zpool upgrade -v' "
+       "for a list of available legacy versions.\n"
+msgstr
+msgid  "Every feature flags pool has "
+       "all supported features enabled.\n"
+msgstr
+# msgid  "\n"
+# msgstr
+msgid  "History for '%s':\n"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+# msgid  "no pools available\n"
+# msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing property "
+       "argument\n"
+msgstr
+msgid  "NAME"
+msgstr
+# msgid  "invalid option '%c'\n"
+# msgstr
+msgid  "missing property=value "
+       "argument\n"
+msgstr
+# msgid  "missing pool name\n"
+# msgstr
+msgid  "too many pool names\n"
+msgstr
+msgid  "missing value in "
+       "property=value argument\n"
+msgstr
+msgid  "internal error: failed to "
+       "initialize ZFS library\n"
+msgstr
+msgid  "missing command\n"
+msgstr
+msgid  "unrecognized "
+       "command '%s'\n"
+msgstr
+msgid  "invalid vdev specification\n"
+msgstr
+msgid  "use '-f' to override "
+       "the following errors:\n"
+msgstr
+msgid  "the following errors "
+       "must be manually repaired:\n"
+msgstr
+msgid  "warning: device in use checking "
+       "failed: %s\n"
+msgstr
+msgid  "%s overlaps with %s\n"
+msgstr
+msgid  "'%s' has no media in drive\n"
+msgstr
+msgid  "%s is currently used by swap. "
+       "Please see swap(1M).\n"
+msgstr
+msgid  "active"
+msgstr
+msgid  "exported"
+msgstr
+msgid  "potentially active"
+msgstr
+msgid  "unknown"
+msgstr
+msgid  "%s is reserved as a hot "
+       "spare for pool %s\n"
+msgstr
+msgid  "%s is part of %s pool "
+       "'%s'\n"
+msgstr
+msgid  "cannot open '%s': %s\n"
+msgstr
+msgid  "cannot open '%s': no such "
+       "device in %s\n"
+msgstr
+msgid  "must be a full path or "
+       "shorthand device name\n"
+msgstr
+# msgid  "cannot open '%s': %s\n"
+# msgstr
+msgid  "cannot use '%s': must be a "
+       "block device or regular file\n"
+msgstr
+# msgid  "cannot open '%s': "
+#        "%s\n"
+# msgstr
+msgid  "mismatched replication "
+       "level: %s contains both "
+       "files and devices\n"
+msgstr
+msgid  "%s contains devices of "
+       "different sizes\n"
+msgstr
+msgid  "mismatched replication level: "
+       "both %s and %s vdevs are "
+       "present\n"
+msgstr
+msgid  "mismatched replication level: "
+       "both %llu and %llu device parity "
+       "%s vdevs are present\n"
+msgstr
+msgid  "mismatched replication level: "
+       "both %llu-way and %llu-way %s "
+       "vdevs are present\n"
+msgstr
+msgid  "mismatched replication level: pool uses %s "
+       "and new vdev is %s\n"
+msgstr
+msgid  "mismatched replication level: pool uses %llu "
+       "device parity and new vdev uses %llu\n"
+msgstr
+msgid  "mismatched replication level: pool uses %llu-way "
+       "%s and new vdev uses %llu-way %s\n"
+msgstr
+# msgid  "cannot open '%s': %s\n"
+# msgstr
+msgid  "invalid vdev "
+       "specification: 'spare' can be "
+       "specified only once\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: 'log' can be "
+       "specified only once\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: 'cache' can be "
+       "specified only once\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: unsupported 'log' "
+       "device: %s\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: %s requires at least %d "
+       "devices\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: %s supports no more than "
+       "%d devices\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: at least one toplevel vdev must be "
+       "specified\n"
+msgstr
+msgid  "invalid vdev specification: "
+       "log requires at least 1 device\n"
+msgstr
+msgid  "Unable to build a "
+       "pool from the specified devices\n"
+msgstr
+msgid  "Cannot use "
+       "'%s' as a device for splitting\n"
+msgstr
+msgid  "internal error: out of memory"
+msgstr
+msgid  "internal error: out of memory\n"
+msgstr

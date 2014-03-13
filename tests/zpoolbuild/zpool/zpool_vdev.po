@@ -1,0 +1,115 @@
+msgid  "invalid vdev specification\n"
+msgstr
+msgid  "use '-f' to override "
+       "the following errors:\n"
+msgstr
+msgid  "the following errors "
+       "must be manually repaired:\n"
+msgstr
+msgid  "warning: device in use checking "
+       "failed: %s\n"
+msgstr
+msgid  "%s overlaps with %s\n"
+msgstr
+msgid  "'%s' has no media in drive\n"
+msgstr
+msgid  "%s is currently used by swap. "
+       "Please see swap(1M).\n"
+msgstr
+msgid  "active"
+msgstr
+msgid  "exported"
+msgstr
+msgid  "potentially active"
+msgstr
+msgid  "unknown"
+msgstr
+msgid  "%s is reserved as a hot "
+       "spare for pool %s\n"
+msgstr
+msgid  "%s is part of %s pool "
+       "'%s'\n"
+msgstr
+msgid  "cannot open '%s': %s\n"
+msgstr
+msgid  "cannot open '%s': no such "
+       "device in %s\n"
+msgstr
+msgid  "must be a full path or "
+       "shorthand device name\n"
+msgstr
+# msgid  "cannot open '%s': %s\n"
+# msgstr
+msgid  "cannot use '%s': must be a "
+       "block device or regular file\n"
+msgstr
+# msgid  "cannot open '%s': "
+#        "%s\n"
+# msgstr
+msgid  "mismatched replication "
+       "level: %s contains both "
+       "files and devices\n"
+msgstr
+msgid  "%s contains devices of "
+       "different sizes\n"
+msgstr
+msgid  "mismatched replication level: "
+       "both %s and %s vdevs are "
+       "present\n"
+msgstr
+msgid  "mismatched replication level: "
+       "both %llu and %llu device parity "
+       "%s vdevs are present\n"
+msgstr
+msgid  "mismatched replication level: "
+       "both %llu-way and %llu-way %s "
+       "vdevs are present\n"
+msgstr
+msgid  "mismatched replication level: pool uses %s "
+       "and new vdev is %s\n"
+msgstr
+msgid  "mismatched replication level: pool uses %llu "
+       "device parity and new vdev uses %llu\n"
+msgstr
+msgid  "mismatched replication level: pool uses %llu-way "
+       "%s and new vdev uses %llu-way %s\n"
+msgstr
+# msgid  "cannot open '%s': %s\n"
+# msgstr
+msgid  "invalid vdev "
+       "specification: 'spare' can be "
+       "specified only once\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: 'log' can be "
+       "specified only once\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: 'cache' can be "
+       "specified only once\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: unsupported 'log' "
+       "device: %s\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: %s requires at least %d "
+       "devices\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: %s supports no more than "
+       "%d devices\n"
+msgstr
+msgid  "invalid vdev "
+       "specification: at least one toplevel vdev must be "
+       "specified\n"
+msgstr
+msgid  "invalid vdev specification: "
+       "log requires at least 1 device\n"
+msgstr
+msgid  "Unable to build a "
+       "pool from the specified devices\n"
+msgstr
+msgid  "Cannot use "
+       "'%s' as a device for splitting\n"
+msgstr
