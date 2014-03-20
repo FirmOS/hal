@@ -75,18 +75,32 @@ type
       class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     end;
 
-   { TFRE_DB_ServiceGroup }
+    { TFRE_DB_SERVICEDOMAIN }
 
-   TFRE_DB_ServiceGroup=class(TFRE_DB_ObjectEx)
+    TFRE_DB_SERVICE_DOMAIN=class(TFRE_DB_ObjectEx)
+    private
+      function  GetName: TFRE_DB_String;
+      procedure SetName(AValue: TFRE_DB_String);
+    protected
+      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    published
+      procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER);
+      property        Name                : TFRE_DB_String read GetName write SetName;
+    end;
+
+    { TFRE_DB_SERVICE }
+
+   TFRE_DB_SERVICE=class(TFRE_DB_ObjectEx)
+   private
+     function  GetName: TFRE_DB_String;
+     procedure SetName(AValue: TFRE_DB_String);
    protected
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   end;
-
-   TFRE_DB_Service=class(TFRE_DB_ObjectEx)
-   protected
-     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER);
+     property        Name                : TFRE_DB_String read GetName write SetName;
    end;
 
    { TFRE_DB_MACHINE }
@@ -251,12 +265,16 @@ type
 
    { TFRE_DB_ZONE }
 
-   TFRE_DB_ZONE=class(TFRE_DB_MACHINE)
+   TFRE_DB_ZONE=class(TFRE_DB_ObjectEx)
+   private
+     function  GetName: TFRE_DB_String;
+     procedure SetName(AValue: TFRE_DB_String);
    protected
      class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
-     procedure CALC_GetDisplayName         (const setter: IFRE_DB_CALCFIELD_SETTER);
+     procedure       CALC_GetDisplayName   (const setter: IFRE_DB_CALCFIELD_SETTER);
+     property        Name                  : TFRE_DB_String read GetName write SetName;
    end;
 
   { TFRE_DB_DEVICE }
@@ -819,6 +837,43 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_SERVICE_DOMAIN }
+
+function TFRE_DB_SERVICE_DOMAIN.GetName: TFRE_DB_String;
+begin
+  Result:=Field('objname').AsString;
+end;
+
+procedure TFRE_DB_SERVICE_DOMAIN.SetName(AValue: TFRE_DB_String);
+begin
+  Field('objname').AsString:=AValue;
+end;
+
+class procedure TFRE_DB_SERVICE_DOMAIN.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+  scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
+  scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+end;
+
+class procedure TFRE_DB_SERVICE_DOMAIN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+  end;
+  VersionInstallCheck(currentVersionId,newVersionId);
+end;
+
+procedure TFRE_DB_SERVICE_DOMAIN.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  setter.SetAsString(Field('objname').AsString);
+end;
 
 
 { TFRE_DB_ZIP_STATUS }
@@ -2777,8 +2832,7 @@ var
 begin
   abort;//FIXME
   //GFRE_DBI.GetSystemScheme(TFRE_DB_OpenWifiNetwork,scheme);
-  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Open Wifi Network');
-  //res.SendChangedFieldsOnly(false);
+  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Open Wifi Network',0,0,true,true,false);
   //res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   //res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
   //res.SetElementValue('hidden','false');
@@ -2804,8 +2858,7 @@ var
 begin
   abort;//FIXME
   //GFRE_DBI.GetSystemScheme(TFRE_DB_WPA2NETWORK,scheme);
-  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add WPA2 Network');
-  //res.SendChangedFieldsOnly(false);
+  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add WPA2 Network',0,0,true,true,false);
   //res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   //res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
   //res.SetElementValue('hidden','true');
@@ -2863,15 +2916,32 @@ end;
 
  { TFRE_DB_ZONE }
 
+function TFRE_DB_ZONE.GetName: TFRE_DB_String;
+begin
+  Result:=Field('objname').AsString;
+end;
+
+procedure TFRE_DB_ZONE.SetName(AValue: TFRE_DB_String);
+begin
+  Field('objname').AsString:=AValue;
+end;
+
  class procedure TFRE_DB_ZONE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  begin
    inherited RegisterSystemScheme(scheme);
-   scheme.SetParentSchemeByName(TFRE_DB_MACHINE.ClassName);
+   scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
+   scheme.GetSchemeField('objname').required:=true;
+   scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
  end;
 
  class procedure TFRE_DB_ZONE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
    newVersionId:='1.0';
+   if currentVersionId='' then begin
+     currentVersionId := '1.0';
+     StoreTranslateableText(conn,'scheme_address_group','Site Address');
+   end;
+   VersionInstallCheck(currentVersionId,newVersionId);
  end;
 
  procedure TFRE_DB_ZONE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
@@ -3319,7 +3389,6 @@ end;
    scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('ip',fdbft_String);
-   scheme.AddSchemeField('service',fdbft_ObjLink);
    scheme.AddSchemeFieldSubscheme('position','TFRE_DB_GEOPOSITION').required:=false;
    scheme.AddSchemeFieldSubscheme('address','TFRE_DB_ADDRESS').required:=false;
    scheme.AddCalcSchemeField('displayaddress',fdbft_String,@CALC_GetDisplayAddress);
@@ -3459,16 +3528,24 @@ begin
 end;
 
 
+function TFRE_DB_SERVICE.GetName: TFRE_DB_String;
+begin
+  Result:=Field('objname').AsString;
+end;
+
+procedure TFRE_DB_SERVICE.SetName(AValue: TFRE_DB_String);
+begin
+  Field('objname').AsString:=AValue;
+end;
 
  class procedure TFRE_DB_Service.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  var group : IFRE_DB_InputGroupSchemeDefinition;
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
-   scheme.AddSchemeField('machineid',fdbft_ObjLink);
-   scheme.AddSchemeField('servicegroup',fdbft_ObjLink);
+   scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
+   scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-   group.AddInput('machineid','',false,true);
  end;
 
  class procedure TFRE_DB_Service.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3481,28 +3558,9 @@ end;
    VersionInstallCheck(currentVersionId,newVersionId);
  end;
 
- class procedure TFRE_DB_ServiceGroup.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
- var group : IFRE_DB_InputGroupSchemeDefinition;
+ procedure TFRE_DB_SERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
-   inherited RegisterSystemScheme(scheme);
-   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
-   scheme.GetSchemeField('objname').required:=true;
-   scheme.AddSchemeField('customerid',fdbft_ObjLink);
-   scheme.AddSchemeField('monitoring',fdbft_Objlink);
-   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-   group.AddInput('objname',GetTranslateableTextKey('scheme_name'));
-   group.AddInput('customerid','');
- end;
-
- class procedure TFRE_DB_ServiceGroup.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
- begin
-   newVersionId:='1.0';
-   if currentVersionId='' then begin
-     currentVersionId := '1.0';
-     StoreTranslateableText(conn,'scheme_main_group','General Information');
-     StoreTranslateableText(conn,'scheme_name','Name');
-   end;
-   VersionInstallCheck(currentVersionId,newVersionId);
+   setter.SetAsString(Field('objname').AsString);
  end;
 
  procedure Register_DB_Extensions;
@@ -3518,8 +3576,8 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_VNIC);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_AGGR);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_STUB);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ServiceGroup);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Service);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_DOMAIN);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMachine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONE);

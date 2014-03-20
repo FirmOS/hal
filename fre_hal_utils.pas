@@ -82,7 +82,7 @@ type
     procedure GetServiceHAL     (const conn: IFRE_DB_Connection;const serviceobj:IFRE_DB_Object;const result_obj:IFRE_DB_Object); virtual;
     function  ServiceSchemeName : string; virtual; abstract;
   public
-    function  GetHALObject      (const conn:IFRE_DB_Connection;const service_guid:TGUID;const machine_id:TGUID) : IFRE_DB_Object;
+    function  GetHALObject      (const conn:IFRE_DB_Connection;const machine_id:TGUID) : IFRE_DB_Object;
     procedure StartService      (const name:string); virtual;
     procedure StopService       (const name:string); virtual;
     procedure RestartService    (const name:string); virtual;
@@ -111,7 +111,6 @@ type
   procedure SaveRedirect(const halo:IFRE_DB_Object);
   function  LoadRedirect:IFRE_DB_Object;
 
-  function DummyGetServiceGroupID(const conn:IFRE_DB_Connection):TGUID;
   procedure SplitCIDR(const cidr:string;out ip,mask:string);
   procedure SplitCIDRNet(const cidr:string;out net,mask:string);
   function BitsToMask(bits:integer):string;
@@ -237,27 +236,6 @@ begin
  result:=GetNetworkIDfromString(nw.Field('ip_net').asstring);
 end;
 
-
-function DummyGetServiceGroupID(const conn: IFRE_DB_Connection): TGUID;
-var coll:IFRE_DB_COLLECTION;
-    found:boolean;
-
-  procedure _find(const obj:IFRE_DB_Object);
-  begin
-   if found=false then begin
-    if obj.Field('objname').asstring='MAINSG' then begin
-     result:=obj.UID;
-     found :=true;
-    end;
-   end;
-  end;
-
-begin
- found:=false;
- coll:=conn.GetCollection('servicegroup');
- coll.ForAll(@_find);
-end;
-
 procedure SplitCIDR(const cidr:string;out ip,mask:string);
 begin
   mask:= Copy(cidr,Pos('/',cidr)+1,maxint);
@@ -299,17 +277,15 @@ begin
  // do nothing
 end;
 
-function TFRE_HAL_BaseService.GetHALObject(const conn: IFRE_DB_Connection; const service_guid: TGUID; const machine_id: TGUID): IFRE_DB_Object;
+function TFRE_HAL_BaseService.GetHALObject(const conn: IFRE_DB_Connection; const machine_id: TGUID): IFRE_DB_Object;
 var coll:IFRE_DB_Collection;
       ro:IFRE_DB_Object;
 
   procedure _find(const obj:IFRE_DB_object);
   begin
-   if FREDB_Guids_Same(obj.Field('servicegroup').AsObjectLink,service_guid) then begin
-    if FREDB_Guids_Same(obj.Field('machineid').AsObjectLink,machine_id) then begin
-     if obj.SchemeClass=ServiceSchemeName then begin
-      GetServiceHAL(conn,obj,ro);
-     end;
+   if FREDB_Guids_Same(obj.Field('machineid').AsObjectLink,machine_id) then begin
+    if obj.SchemeClass=ServiceSchemeName then begin
+     GetServiceHAL(conn,obj,ro);
     end;
    end;
   end;

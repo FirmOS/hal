@@ -83,12 +83,10 @@ var coll   :IFRE_DB_Collection;
  begin
 //  writeln(obj.SchemeClass);
 //  writeln(obj.DumpToString());
-  if FREDB_Guids_Same(obj.Field('servicegroup').AsObjectLink,serviceobj.Field('servicegroup').AsObjectLink) then begin
    if obj.SchemeClass='TFRE_DB_CMS' then begin
     cmsob:=obj;
     hlt:=true;
    end;
-  end;
  end;
 
 
