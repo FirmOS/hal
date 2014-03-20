@@ -110,7 +110,7 @@ dump_nvlist(nvlist_t *list, int indent)
 			/* ZFS stores disk state as a vdev_state_t structure
 			   that's claimed to be a UINT64 array. */
 		    case DATA_TYPE_UINT64_ARRAY:
-			if (strcmp(nvpair_name(elem), "stats") == 0) {
+			if (strcmp(nvpair_name(elem), "vdev_stats") == 0) {
 				printf("%*sstats:\n", indent, "");
 				dump_zfs_state(elem, indent+4);
 			} else
