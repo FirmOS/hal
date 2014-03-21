@@ -138,6 +138,7 @@ type
   TFRE_DB_SATA_DISK=class(TFRE_DB_PHYS_DISK)
   public
     procedure SetTargetPort                     (const targetport_1:string);
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_SAS_DISK }
@@ -145,6 +146,8 @@ type
   TFRE_DB_SAS_DISK=class(TFRE_DB_PHYS_DISK)
   public
     procedure SetTargetPorts                    (const targetport_1:string; const targetport_2:string);
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+
   end;
 
 
@@ -341,79 +344,79 @@ begin
   scheme.AddSchemeField('PROTOCOL_TP2_RUNNING_DISPARITY_EC',fdbft_int64);
   scheme.AddSchemeField('PROTOCOL_TP2_SAS_ADDRESS',fdbft_string);
 
-  group:=scheme.AddInputGroup('log_common').Setup('$scheme_TFRE_DB_SG_LOGS_common');
-  group.AddInput('NON_MEDIUM_ERROR_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_NON_MEDIUM_ERROR_COUNT'),true);
-  group.AddInput('TEMP_REFERENCE_TEMP',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_TEMP_REFERENCE_TEMP'),true);
-  group.AddInput('TEMP_CURRENT_TEMP',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_TEMP_CURRENT_TEMP'),true);
+  group:=scheme.AddInputGroup('log_common').Setup('scheme_common');
+  group.AddInput('NON_MEDIUM_ERROR_COUNT',GetTranslateableTextKey('scheme_NON_MEDIUM_ERROR_COUNT'),true);
+  group.AddInput('TEMP_REFERENCE_TEMP',GetTranslateableTextKey('scheme_TEMP_REFERENCE_TEMP'),true);
+  group.AddInput('TEMP_CURRENT_TEMP',GetTranslateableTextKey('scheme_TEMP_CURRENT_TEMP'),true);
 
-  group:=scheme.AddInputGroup('log_ec').Setup('$scheme_TFRE_DB_SG_LOGS_ec');
-  group.AddInput('EC_READ_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_EC_POSSIBLE_DELAYS'),true);
-  group.AddInput('EC_READ_EC_SUBSTANTIAL_DELAY',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_EC_SUBSTANTIAL_DELAY'),true);
-  group.AddInput('EC_READ_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_BYTES_PROCESSED'),true);
-  group.AddInput('EC_READ_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_ERRORS_CORRECTED'),true);
-  group.AddInput('EC_READ_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_REWRITES_OR_REREADS'),true);
-  group.AddInput('EC_READ_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_TIMES_CORR_ALGO_PROCESSED'),true);
-  group.AddInput('EC_READ_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_READ_TOTAL_UNCORRECTED_ERRORS'),true);
+  group:=scheme.AddInputGroup('log_ec').Setup('scheme_ec');
+  group.AddInput('EC_READ_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('scheme_EC_READ_EC_POSSIBLE_DELAYS'),true);
+  group.AddInput('EC_READ_EC_SUBSTANTIAL_DELAY',GetTranslateableTextKey('scheme_EC_READ_EC_SUBSTANTIAL_DELAY'),true);
+  group.AddInput('EC_READ_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('scheme_EC_READ_TOTAL_BYTES_PROCESSED'),true);
+  group.AddInput('EC_READ_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('scheme_EC_READ_TOTAL_ERRORS_CORRECTED'),true);
+  group.AddInput('EC_READ_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('scheme_EC_READ_TOTAL_REWRITES_OR_REREADS'),true);
+  group.AddInput('EC_READ_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('scheme_EC_READ_TOTAL_TIMES_CORR_ALGO_PROC'),true);
+  group.AddInput('EC_READ_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('scheme_EC_READ_TOTAL_UNCORRECTED_ERRORS'),true);
 
-  group.AddInput('EC_VERIFY_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_EC_POSSIBLE_DELAYS'),true);
-  group.AddInput('EC_VERIFY_EC_SUBSTANTIAL_DELAY',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_EC_SUBSTANTIAL_DELAY'),true);
-  group.AddInput('EC_VERIFY_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_BYTES_PROCESSED'),true);
-  group.AddInput('EC_VERIFY_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_ERRORS_CORRECTED'),true);
-  group.AddInput('EC_VERIFY_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_REWRITES_OR_REREADS'),true);
-  group.AddInput('EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROCESSED'),true);
-  group.AddInput('EC_VERIFY_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_VERIFY_TOTAL_UNCORRECTED_ERRORS'),true);
+  group.AddInput('EC_VERIFY_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('scheme_EC_VERIFY_EC_POSSIBLE_DELAYS'),true);
+  group.AddInput('EC_VERIFY_EC_SUBSTANTIAL_DELAY',GetTranslateableTextKey('scheme_EC_VERIFY_EC_SUBSTANTIAL_DELAY'),true);
+  group.AddInput('EC_VERIFY_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('scheme_EC_VERIFY_TOTAL_BYTES_PROCESSED'),true);
+  group.AddInput('EC_VERIFY_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('scheme_EC_VERIFY_TOTAL_ERRORS_CORRECTED'),true);
+  group.AddInput('EC_VERIFY_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('scheme_EC_VERIFY_TOTAL_REWRITES_OR_REREADS'),true);
+  group.AddInput('EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('scheme_EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROC'),true);
+  group.AddInput('EC_VERIFY_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('scheme_EC_VERIFY_TOTAL_UNCORRECTED_ERRORS'),true);
 
-  group.AddInput('EC_WRITE_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_EC_POSSIBLE_DELAYS'),true);
-  group.AddInput('EC_WRITE_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_BYTES_PROCESSED'),true);
-  group.AddInput('EC_WRITE_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_ERRORS_CORRECTED'),true);
-  group.AddInput('EC_WRITE_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_REWRITES_OR_REREADS'),true);
-  group.AddInput('EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROCESSED'),true);
-  group.AddInput('EC_WRITE_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_EC_WRITE_TOTAL_UNCORRECTED_ERRORS'),true);
+  group.AddInput('EC_WRITE_EC_POSSIBLE_DELAYS',GetTranslateableTextKey('scheme_EC_WRITE_EC_POSSIBLE_DELAYS'),true);
+  group.AddInput('EC_WRITE_TOTAL_BYTES_PROCESSED',GetTranslateableTextKey('scheme_EC_WRITE_TOTAL_BYTES_PROCESSED'),true);
+  group.AddInput('EC_WRITE_TOTAL_ERRORS_CORRECTED',GetTranslateableTextKey('scheme_EC_WRITE_TOTAL_ERRORS_CORRECTED'),true);
+  group.AddInput('EC_WRITE_TOTAL_REWRITES_OR_REREADS',GetTranslateableTextKey('scheme_EC_WRITE_TOTAL_REWRITES_OR_REREADS'),true);
+  group.AddInput('EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROCESSED',GetTranslateableTextKey('scheme_EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROC'),true);
+  group.AddInput('EC_WRITE_TOTAL_UNCORRECTED_ERRORS',GetTranslateableTextKey('scheme_EC_WRITE_TOTAL_UNCORRECTED_ERRORS'),true);
 
 
-  group:=scheme.AddInputGroup('log_tp1').Setup('$scheme_TFRE_DB_SG_LOGS_tp1');
+  group:=scheme.AddInputGroup('log_tp1').Setup('scheme_tp1');
 
-  group.AddInput('PROTOCOL_TP1_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_SAS_ADDRESS'),true);
-  group.AddInput('PROTOCOL_TP1_ATTACHED_DEVICE_TYPE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_DEVICE_TYPE'),true);
-  group.AddInput('PROTOCOL_TP1_ATTACHED_INITIATOR_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_INITIATOR_PORT'),true);
-  group.AddInput('PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER'),true);
-  group.AddInput('PROTOCOL_TP1_ATTACHED_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_REASON'),true);
-  group.AddInput('PROTOCOL_TP1_ATTACHED_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_SAS_ADDRESS'),true);
-  group.AddInput('PROTOCOL_TP1_ATTACHED_TARGET_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_ATTACHED_TARGET_PORT'),true);
-  group.AddInput('PROTOCOL_TP1_GENERATION_CODE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_GENERATION_CODE'),true);
-  group.AddInput('PROTOCOL_TP1_INVALID_DWORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_INVALID_DWORD_COUNT'),true);
-  group.AddInput('PROTOCOL_TP1_LOSS_DWORD_SYNC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_LOSS_DWORD_SYNC'),true);
-  group.AddInput('PROTOCOL_TP1_NEG_LINK_RATE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_NEG_LINK_RATE'),true);
-  group.AddInput('PROTOCOL_TP1_NUMBER_PHYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_NUMBER_PHYS'),true);
-  group.AddInput('PROTOCOL_TP1_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_IDENTIFIER'),true);
-  group.AddInput('PROTOCOL_TP1_PHY_INVALID_WORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_INVALID_WORD_COUNT'),true);
-  group.AddInput('PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT'),true);
-  group.AddInput('PROTOCOL_TP1_PHY_RESET_PROBLEM',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_RESET_PROBLEM'),true);
-  group.AddInput('PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT'),true);
-  group.AddInput('PROTOCOL_TP1_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_REASON'),true);
-  group.AddInput('PROTOCOL_TP1_RUNNING_DISPARITY_EC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP1_RUNNING_DISPARITY_EC'),true);
+  group.AddInput('PROTOCOL_TP1_SAS_ADDRESS',GetTranslateableTextKey('scheme_PROTOCOL_TP1_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_DEVICE_TYPE',GetTranslateableTextKey('scheme_PROTOCOL_TP1_ATTACHED_DEVICE_TYPE'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_INITIATOR_PORT',GetTranslateableTextKey('scheme_PROTOCOL_TP1_ATTACHED_INITIATOR_PORT'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER',GetTranslateableTextKey('scheme_PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_REASON',GetTranslateableTextKey('scheme_PROTOCOL_TP1_ATTACHED_REASON'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_SAS_ADDRESS',GetTranslateableTextKey('scheme_PROTOCOL_TP1_ATTACHED_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP1_ATTACHED_TARGET_PORT',GetTranslateableTextKey('scheme_PROTOCOL_TP1_ATTACHED_TARGET_PORT'),true);
+  group.AddInput('PROTOCOL_TP1_GENERATION_CODE',GetTranslateableTextKey('scheme_PROTOCOL_TP1_GENERATION_CODE'),true);
+  group.AddInput('PROTOCOL_TP1_INVALID_DWORD_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP1_INVALID_DWORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_LOSS_DWORD_SYNC',GetTranslateableTextKey('scheme_PROTOCOL_TP1_LOSS_DWORD_SYNC'),true);
+  group.AddInput('PROTOCOL_TP1_NEG_LINK_RATE',GetTranslateableTextKey('scheme_PROTOCOL_TP1_NEG_LINK_RATE'),true);
+  group.AddInput('PROTOCOL_TP1_NUMBER_PHYS',GetTranslateableTextKey('scheme_PROTOCOL_TP1_NUMBER_PHYS'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_IDENTIFIER',GetTranslateableTextKey('scheme_PROTOCOL_TP1_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_INVALID_WORD_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP1_PHY_INVALID_WORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_RESET_PROBLEM',GetTranslateableTextKey('scheme_PROTOCOL_TP1_PHY_RESET_PROBLEM'),true);
+  group.AddInput('PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT'),true);
+  group.AddInput('PROTOCOL_TP1_REASON',GetTranslateableTextKey('scheme_PROTOCOL_TP1_REASON'),true);
+  group.AddInput('PROTOCOL_TP1_RUNNING_DISPARITY_EC',GetTranslateableTextKey('scheme_PROTOCOL_TP1_RUNNING_DISPARITY_EC'),true);
 
-  group:=scheme.AddInputGroup('log_tp2').Setup('$scheme_TFRE_DB_SG_LOGS_tp2');
+  group:=scheme.AddInputGroup('log_tp2').Setup('scheme_tp2');
 
-  group.AddInput('PROTOCOL_TP2_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_SAS_ADDRESS'),true);
-  group.AddInput('PROTOCOL_TP2_ATTACHED_DEVICE_TYPE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_DEVICE_TYPE'),true);
-  group.AddInput('PROTOCOL_TP2_ATTACHED_INITIATOR_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_INITIATOR_PORT'),true);
-  group.AddInput('PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER'),true);
-  group.AddInput('PROTOCOL_TP2_ATTACHED_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_REASON'),true);
-  group.AddInput('PROTOCOL_TP2_ATTACHED_SAS_ADDRESS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_SAS_ADDRESS'),true);
-  group.AddInput('PROTOCOL_TP2_ATTACHED_TARGET_PORT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_ATTACHED_TARGET_PORT'),true);
-  group.AddInput('PROTOCOL_TP2_GENERATION_CODE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_GENERATION_CODE'),true);
-  group.AddInput('PROTOCOL_TP2_INVALID_DWORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_INVALID_DWORD_COUNT'),true);
-  group.AddInput('PROTOCOL_TP2_LOSS_DWORD_SYNC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_LOSS_DWORD_SYNC'),true);
-  group.AddInput('PROTOCOL_TP2_NEG_LINK_RATE',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_NEG_LINK_RATE'),true);
-  group.AddInput('PROTOCOL_TP2_NUMBER_PHYS',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_NUMBER_PHYS'),true);
-  group.AddInput('PROTOCOL_TP2_PHY_IDENTIFIER',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_IDENTIFIER'),true);
-  group.AddInput('PROTOCOL_TP2_PHY_INVALID_WORD_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_INVALID_WORD_COUNT'),true);
-  group.AddInput('PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT'),true);
-  group.AddInput('PROTOCOL_TP2_PHY_RESET_PROBLEM',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_RESET_PROBLEM'),true);
-  group.AddInput('PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT'),true);
-  group.AddInput('PROTOCOL_TP2_REASON',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_REASON'),true);
-  group.AddInput('PROTOCOL_TP2_RUNNING_DISPARITY_EC',GetTranslateableTextKey('$scheme_TFRE_DB_SG_LOGS_PROTOCOL_TP2_RUNNING_DISPARITY_EC'),true);
+  group.AddInput('PROTOCOL_TP2_SAS_ADDRESS',GetTranslateableTextKey('scheme_PROTOCOL_TP2_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_DEVICE_TYPE',GetTranslateableTextKey('scheme_PROTOCOL_TP2_ATTACHED_DEVICE_TYPE'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_INITIATOR_PORT',GetTranslateableTextKey('scheme_PROTOCOL_TP2_ATTACHED_INITIATOR_PORT'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER',GetTranslateableTextKey('scheme_PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_REASON',GetTranslateableTextKey('scheme_PROTOCOL_TP2_ATTACHED_REASON'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_SAS_ADDRESS',GetTranslateableTextKey('scheme_PROTOCOL_TP2_ATTACHED_SAS_ADDRESS'),true);
+  group.AddInput('PROTOCOL_TP2_ATTACHED_TARGET_PORT',GetTranslateableTextKey('scheme_PROTOCOL_TP2_ATTACHED_TARGET_PORT'),true);
+  group.AddInput('PROTOCOL_TP2_GENERATION_CODE',GetTranslateableTextKey('scheme_PROTOCOL_TP2_GENERATION_CODE'),true);
+  group.AddInput('PROTOCOL_TP2_INVALID_DWORD_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP2_INVALID_DWORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_LOSS_DWORD_SYNC',GetTranslateableTextKey('scheme_PROTOCOL_TP2_LOSS_DWORD_SYNC'),true);
+  group.AddInput('PROTOCOL_TP2_NEG_LINK_RATE',GetTranslateableTextKey('scheme_PROTOCOL_TP2_NEG_LINK_RATE'),true);
+  group.AddInput('PROTOCOL_TP2_NUMBER_PHYS',GetTranslateableTextKey('scheme_PROTOCOL_TP2_NUMBER_PHYS'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_IDENTIFIER',GetTranslateableTextKey('scheme_PROTOCOL_TP2_PHY_IDENTIFIER'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_INVALID_WORD_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP2_PHY_INVALID_WORD_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_RESET_PROBLEM',GetTranslateableTextKey('scheme_PROTOCOL_TP2_PHY_RESET_PROBLEM'),true);
+  group.AddInput('PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT',GetTranslateableTextKey('scheme_PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT'),true);
+  group.AddInput('PROTOCOL_TP2_REASON',GetTranslateableTextKey('scheme_PROTOCOL_TP2_REASON'),true);
+  group.AddInput('PROTOCOL_TP2_RUNNING_DISPARITY_EC',GetTranslateableTextKey('scheme_PROTOCOL_TP2_RUNNING_DISPARITY_EC'),true);
 
 end;
 
@@ -422,8 +425,82 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
-//    StoreTranslateableText(conn,'scheme_setting','Setting');
-//    StoreTranslateableText(conn,'scheme_uptime','Uptime');
+
+
+    StoreTranslateableText(conn,'scheme_common','General Information');
+    StoreTranslateableText(conn,'scheme_NON_MEDIUM_ERROR_COUNT','Non Medium Error Count');
+    StoreTranslateableText(conn,'scheme_TEMP_REFERENCE_TEMP','Reference Temperature [C]');
+    StoreTranslateableText(conn,'scheme_TEMP_CURRENT_TEMP','Current Temperature [C]');
+
+    StoreTranslateableText(conn,'scheme_ec','Error Correction Information');
+    StoreTranslateableText(conn,'scheme_EC_READ_EC_POSSIBLE_DELAYS','Read Errors corrected with possible delays');
+    StoreTranslateableText(conn,'scheme_EC_READ_EC_SUBSTANTIAL_DELAY','Read Errors corrected without substantial delay');
+    StoreTranslateableText(conn,'scheme_EC_READ_TOTAL_BYTES_PROCESSED','Read Total bytes processed');
+    StoreTranslateableText(conn,'scheme_EC_READ_TOTAL_ERRORS_CORRECTED','Read Total errors corrected');
+    StoreTranslateableText(conn,'scheme_EC_READ_TOTAL_REWRITES_OR_REREADS','Read Total rewrites or rereads');
+    StoreTranslateableText(conn,'scheme_EC_READ_TOTAL_TIMES_CORR_ALGO_PROC','Read Total times correction algorithm processed');
+    StoreTranslateableText(conn,'scheme_EC_READ_TOTAL_UNCORRECTED_ERRORS','Read Total uncorrected errors');
+
+    StoreTranslateableText(conn,'scheme_EC_WRITE_EC_POSSIBLE_DELAYS','Write Errors corrected with possible delays');
+    StoreTranslateableText(conn,'scheme_EC_WRITE_EC_SUBSTANTIAL_DELAY','Write Errors corrected without substantial delay');
+    StoreTranslateableText(conn,'scheme_EC_WRITE_TOTAL_BYTES_PROCESSED','Write Total bytes processed');
+    StoreTranslateableText(conn,'scheme_EC_WRITE_TOTAL_ERRORS_CORRECTED','Write Total errors corrected');
+    StoreTranslateableText(conn,'scheme_EC_WRITE_TOTAL_REWRITES_OR_REREADS','Write Total rewrites or rereads');
+    StoreTranslateableText(conn,'scheme_EC_WRITE_TOTAL_TIMES_CORR_ALGO_PROC','Write Total times correction algorithm processed');
+    StoreTranslateableText(conn,'scheme_EC_WRITE_TOTAL_UNCORRECTED_ERRORS','Write Total uncorrected errors');
+
+    StoreTranslateableText(conn,'scheme_EC_VERIFY_EC_POSSIBLE_DELAYS','Verify Errors corrected with possible delays');
+    StoreTranslateableText(conn,'scheme_EC_VERIFY_EC_SUBSTANTIAL_DELAY','Verify Errors corrected without substantial delay');
+    StoreTranslateableText(conn,'scheme_EC_VERIFY_TOTAL_BYTES_PROCESSED','Verify Total bytes processed');
+    StoreTranslateableText(conn,'scheme_EC_VERIFY_TOTAL_ERRORS_CORRECTED','VerifyTotal errors corrected');
+    StoreTranslateableText(conn,'scheme_EC_VERIFY_TOTAL_REWRITES_OR_REREADS','Verify Total rewrites or rereads');
+    StoreTranslateableText(conn,'scheme_EC_VERIFY_TOTAL_TIMES_CORR_ALGO_PROC','Verify Total times correction algorithm processed');
+    StoreTranslateableText(conn,'scheme_EC_VERIFY_TOTAL_UNCORRECTED_ERRORS','Verify Total uncorrected errors');
+
+    StoreTranslateableText(conn,'scheme_tp1','Target Port 1 Information');
+
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_SAS_ADDRESS','SAS address');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_ATTACHED_DEVICE_TYPE','Attached device type');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_ATTACHED_INITIATOR_PORT','Attached initiator port');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_ATTACHED_PHY_IDENTIFIER','Attached phy identifier');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_ATTACHED_REASON','Attached reason');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_ATTACHED_SAS_ADDRESS','Attached SAS address');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_ATTACHED_TARGET_PORT','Attached Target Port');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_GENERATION_CODE','Generation Code');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_INVALID_DWORD_COUNT','Invalid DWORD count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_LOSS_DWORD_SYNC','Loss of DWORD synchronization');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_NEG_LINK_RATE','Negotiated logical link rate');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_NUMBER_PHYS','Number of phys');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_PHY_IDENTIFIER','Phy identifier');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_PHY_INVALID_WORD_COUNT','Phy Invalid word count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_PHY_LOSS_DWORD_SYNC_COUNT','Phy Loss of dword synchronization count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_PHY_RESET_PROBLEM','Phy reset problem');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_PHY_RESET_PROBLEM_COUNT','Phy reset problem count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_REASON','Reason');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP1_RUNNING_DISPARITY_EC','Running disparity error count');
+
+    StoreTranslateableText(conn,'scheme_tp2','Target Port 2 Information');
+
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_SAS_ADDRESS','SAS address');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_ATTACHED_DEVICE_TYPE','Attached device type');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_ATTACHED_INITIATOR_PORT','Attached initiator port');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_ATTACHED_PHY_IDENTIFIER','Attached phy identifier');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_ATTACHED_REASON','Attached reason');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_ATTACHED_SAS_ADDRESS','Attached SAS address');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_ATTACHED_TARGET_PORT','Attached Target Port');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_GENERATION_CODE','Generation Code');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_INVALID_DWORD_COUNT','Invalid DWORD count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_LOSS_DWORD_SYNC','Loss of DWORD synchronization');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_NEG_LINK_RATE','Negotiated logical link rate');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_NUMBER_PHYS','Number of phys');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_PHY_IDENTIFIER','Phy identifier');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_PHY_INVALID_WORD_COUNT','Phy Invalid word count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_PHY_LOSS_DWORD_SYNC_COUNT','Phy Loss of dword synchronization count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_PHY_RESET_PROBLEM','Phy reset problem');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_PHY_RESET_PROBLEM_COUNT','Phy reset problem count');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_REASON','Reason');
+    StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_RUNNING_DISPARITY_EC','Running disparity error count');
+
   end;
   VersionInstallCheck(currentVersionId,newVersionId);
 end;
@@ -433,6 +510,33 @@ end;
 procedure TFRE_DB_SATA_DISK.SetTargetPort(const targetport_1: string);
 begin
   Field('target_port').AsString:=targetport_1;
+end;
+
+class procedure TFRE_DB_SATA_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+
+  if (currentVersionId='') then begin
+    currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_deviceidentifier','Device Identifier');
+    StoreTranslateableText(conn,'scheme_manufacturer','Manufacturer');
+    StoreTranslateableText(conn,'scheme_model_number','Model Number');
+    StoreTranslateableText(conn,'scheme_serial_number','Serial Number');
+    StoreTranslateableText(conn,'scheme_fw_revision','Firmware');
+    StoreTranslateableText(conn,'scheme_devicename','Devicename');
+    StoreTranslateableText(conn,'scheme_log_common','General Log Information');
+    StoreTranslateableText(conn,'scheme_log_ec','Error Correction Information');
+    StoreTranslateableText(conn,'scheme_log_tp1','Target Port 1 Information');
+    StoreTranslateableText(conn,'scheme_log_tp2','Target Port 2 Information');
+
+  end;
+  if (currentVersionId='1.0') then begin
+  //next update code
+  end;
+
+  VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 { TFRE_DB_ENCLOSURE }
@@ -496,6 +600,21 @@ end;
 class procedure TFRE_DB_ENCLOSURE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+
+  if (currentVersionId='') then begin
+    currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_enclosure','General Information');
+    StoreTranslateableText(conn,'scheme__deviceidentifier','Enclosure Identifier');
+    StoreTranslateableText(conn,'scheme_enclosure_nr','Enclosure Nr');
+    StoreTranslateableText(conn,'scheme_drive_slots','Drive Slots');
+
+  end;
+  if (currentVersionId='1.0') then begin
+  //next update code
+  end;
+
+  VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 class procedure TFRE_DB_ENCLOSURE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -515,10 +634,10 @@ begin
   scheme.AddCalcSchemeField('caption_mos',fdbft_String,@_getLayoutCaption);
   scheme.AddCalcSchemeField('status_icon_mos',fdbft_String,@_getStatusIcon);
 
-  group:=scheme.AddInputGroup('enclosure').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_ENCLOSURE_enclosure'));
-  group.AddInput('deviceidentifier',GetTranslateableTextKey('$scheme_TFRE_DB_ENCLOSURE_deviceidentifier'),true);
-  group.AddInput('enclosurenr',GetTranslateableTextKey('$scheme_TFRE_DB_ENCLOSURE_drive_slots'),true);
-  group.AddInput('drive_slots',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_drive_slots'),true);
+  group:=scheme.AddInputGroup('enclosure').Setup(GetTranslateableTextKey('scheme_enclosure'));
+  group.AddInput('deviceidentifier',GetTranslateableTextKey('scheme__deviceidentifier'),true);
+  group.AddInput('enclosurenr',GetTranslateableTextKey('scheme_enclosure_nr'),true);
+  group.AddInput('drive_slots',GetTranslateableTextKey('scheme_drive_slots'),true);
 end;
 
 procedure TFRE_DB_ENCLOSURE._getChildrenString(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -1619,24 +1738,24 @@ begin
 
   scheme.AddSchemeFieldSubscheme('log',TFRE_DB_SG_LOGS.Classname);
 
-  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_main'));
-  group.AddInput('deviceidentifier',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_deviceidentifier'),true);
-  group.AddInput('manufacturer',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_manufacturer'),true);
-  group.AddInput('model_number',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_model_number'),true);
-  group.AddInput('serial_number',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_serial_number'),true);
-  group.AddInput('fw_revision',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_fw_revision'),true);
-  group.AddInput('devicename',GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_devicename'),true);
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
+  group.AddInput('deviceidentifier',GetTranslateableTextKey('scheme_deviceidentifier'),true);
+  group.AddInput('manufacturer',GetTranslateableTextKey('scheme_manufacturer'),true);
+  group.AddInput('model_number',GetTranslateableTextKey('scheme_model_number'),true);
+  group.AddInput('serial_number',GetTranslateableTextKey('scheme_serial_number'),true);
+  group.AddInput('fw_revision',GetTranslateableTextKey('scheme_fw_revision'),true);
+  group.AddInput('devicename',GetTranslateableTextKey('scheme_devicename'),true);
 
-  group:=scheme.AddInputGroup('log_common').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_common'));
+  group:=scheme.AddInputGroup('log_common').Setup(GetTranslateableTextKey('scheme_log_common'));
   group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_common','log');
 
-  group:=scheme.AddInputGroup('log_ec').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_ec'));
+  group:=scheme.AddInputGroup('log_ec').Setup(GetTranslateableTextKey('scheme_log_ec'));
   group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_ec','log');
 
-  group:=scheme.AddInputGroup('log_tp1').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_tp1'));
+  group:=scheme.AddInputGroup('log_tp1').Setup(GetTranslateableTextKey('scheme_log_tp1'));
   group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_tp1','log');
 
-  group:=scheme.AddInputGroup('log_tp2').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_PHYS_DISK_log_tp2'));
+  group:=scheme.AddInputGroup('log_tp2').Setup(GetTranslateableTextKey('scheme_log_tp2'));
   group.UseInputGroup(TFRE_DB_SG_LOGS.ClassName,'log_tp2','log');
 
 end;
@@ -1710,6 +1829,33 @@ procedure TFRE_DB_SAS_DISK.SetTargetPorts(const targetport_1: string; const targ
 begin
   Field('target_port').AsString:=targetport_1;
   Field('target_port').AddString(targetport_2);
+end;
+
+class procedure TFRE_DB_SAS_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+
+  if (currentVersionId='') then begin
+    currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_deviceidentifier','Device Identifier');
+    StoreTranslateableText(conn,'scheme_manufacturer','Manufacturer');
+    StoreTranslateableText(conn,'scheme_model_number','Model Number');
+    StoreTranslateableText(conn,'scheme_serial_number','Serial Number');
+    StoreTranslateableText(conn,'scheme_fw_revision','Firmware');
+    StoreTranslateableText(conn,'scheme_devicename','Devicename');
+    StoreTranslateableText(conn,'scheme_log_common','General Log Information');
+    StoreTranslateableText(conn,'scheme_log_ec','Error Correction Information');
+    StoreTranslateableText(conn,'scheme_log_tp1','Target Port 1 Information');
+    StoreTranslateableText(conn,'scheme_log_tp2','Target Port 2 Information');
+
+  end;
+  if (currentVersionId='1.0') then begin
+  //next update code
+  end;
+
+  VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 { TFRE_DB_DRIVESLOT }
