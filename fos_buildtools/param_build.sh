@@ -84,14 +84,14 @@ if [ "$build32" = 1 ]; then
 #  [ $RETVAL -eq 0 ] && echo "OK:   Tests built. (32)"
 #  [ $RETVAL -ne 0 ] && echo "FAIL: Tests built. (32)"  1>&2  && exit 1
     
-  ./fpmake_products -C i386 -dc 1>>full_build_log.txt
-  RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_products (32)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_products (32)" 1>&2 && exit 1
-  ./fpmake_products -C i386 install -v "$cflags" "$buildsuf" $lstatic 1>>full_build_log.txt
-  RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Products built. (32)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: No Products built. (32)"  1>&2  && exit 1
+#  ./fpmake_products -C i386 -dc 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_products (32)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_products (32)" 1>&2 && exit 1
+#  ./fpmake_products -C i386 install -v "$cflags" "$buildsuf" $lstatic 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Products built. (32)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: No Products built. (32)"  1>&2  && exit 1
       
 fi
 if [ "$build64" = "1" ]; then 
@@ -113,14 +113,14 @@ if [ "$build64" = "1" ]; then
 #  [ $RETVAL -eq 0 ] && echo "OK:   Tests built. (64)"
 #  [ $RETVAL -ne 0 ] && echo "FAIL: Tests built. (64)"  1>&2  && exit 1
 
-  ./fpmake_products -C x86_64 -dc 1>>full_build_log.txt
-  RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_products (64)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_products (64)" 1>&2  && exit 1
-  ./fpmake_products -C x86_64 install -v "$cflags" "$buildsuf" $lstatic 1>>full_build_log.txt
-  RETVAL=$?
-  [ $RETVAL -eq 0 ] && echo "OK:   Products built. (64)"
-  [ $RETVAL -ne 0 ] && echo "FAIL: No Products built. (64)"  1>&2  && exit 1
+#  ./fpmake_products -C x86_64 -dc 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Clean fpmake_products (64)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: Clean fpmake_products (64)" 1>&2  && exit 1
+#  ./fpmake_products -C x86_64 install -v "$cflags" "$buildsuf" $lstatic 1>>full_build_log.txt
+#  RETVAL=$?
+#  [ $RETVAL -eq 0 ] && echo "OK:   Products built. (64)"
+#  [ $RETVAL -ne 0 ] && echo "FAIL: No Products built. (64)"  1>&2  && exit 1
 fi  
 echo "--> Building Done"
 exit 0
