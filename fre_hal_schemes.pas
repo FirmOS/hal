@@ -1836,12 +1836,12 @@ end;
 
 function TFRE_DB_DHCP.IMI_addSubnet(const input: IFRE_DB_Object): IFRE_DB_Object;
 var
-  res       :TFRE_DB_DIALOG_DESC;
+  res       :TFRE_DB_FORM_DIALOG_DESC;
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
   GFRE_DBI.GetSystemScheme(TFRE_DB_DHCP_SUBNET,scheme);
-  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Subnet');
+  res:=TFRE_DB_FORM_DIALOG_DESC.Create.Describe('Add Subnet');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.SetElementValue('dhcp',UID_String);
   serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_DHCP_SUBNET','newOperation');
@@ -1852,12 +1852,12 @@ end;
 
 function TFRE_DB_DHCP.IMI_addFixedHost(const input: IFRE_DB_Object): IFRE_DB_Object;
 var
-  res       : TFRE_DB_DIALOG_DESC;
+  res       : TFRE_DB_FORM_DIALOG_DESC;
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
   GFRE_DBI.GetSystemScheme(TFRE_DB_DHCP_FIXED,scheme);
-  res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Subnet');
+  res:=TFRE_DB_FORM_DIALOG_DESC.Create.Describe('Add Subnet');
   res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   res.SetElementValue('dhcp',UID_String);
   serverFunc:=TFRE_DB_SERVER_FUNC_DESC.Create.Describe('TFRE_DB_DHCP_FIXED','newOperation');
@@ -2826,13 +2826,13 @@ end;
 
 function TFRE_DB_Endpoint.IMI_addOpenWifiNetwork(const input: IFRE_DB_Object): IFRE_DB_Object;
 var
-  res       : TFRE_DB_DIALOG_DESC;
+  res       : TFRE_DB_FORM_DIALOG_DESC;
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
   abort;//FIXME
   //GFRE_DBI.GetSystemScheme(TFRE_DB_OpenWifiNetwork,scheme);
-  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add Open Wifi Network',0,0,true,true,false);
+  //res:=TFRE_DB_FORM_DIALOG_DESC.Create.Describe('Add Open Wifi Network',0,0,true,true,false);
   //res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   //res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
   //res.SetElementValue('hidden','false');
@@ -2852,13 +2852,13 @@ end;
 
 function TFRE_DB_Endpoint.IMI_addWPA2Network(const input: IFRE_DB_Object): IFRE_DB_Object;
 var
-  res       : TFRE_DB_DIALOG_DESC;
+  res       : TFRE_DB_FORM_DIALOG_DESC;
   scheme    : IFRE_DB_SchemeObject;
   serverFunc: TFRE_DB_SERVER_FUNC_DESC;
 begin
   abort;//FIXME
   //GFRE_DBI.GetSystemScheme(TFRE_DB_WPA2NETWORK,scheme);
-  //res:=TFRE_DB_DIALOG_DESC.Create.Describe('Add WPA2 Network',0,0,true,true,false);
+  //res:=TFRE_DB_FORM_DIALOG_DESC.Create.Describe('Add WPA2 Network',0,0,true,true,false);
   //res.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   //res.SetElementValue('endpoint',GFRE_BT.GUID_2_HexString(UID));
   //res.SetElementValue('hidden','true');

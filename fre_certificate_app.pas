@@ -289,13 +289,13 @@ end;
 function TFRE_CERTIFICATE_CA_MOD.WEB_addCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
   scheme     : IFRE_DB_SchemeObject;
-  res        : TFRE_DB_DIALOG_DESC;
+  res        : TFRE_DB_FORM_DIALOG_DESC;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   GFRE_DBI.GetSystemScheme(TFRE_DB_CA,scheme);
-  res:=TFRE_DB_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$ca_add_diag_cap'),600,0,true,true,false);
+  res:=TFRE_DB_FORM_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$ca_add_diag_cap'),600,true,true,false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_create'),ses,false,false);
   res.AddButton.Describe(app.FetchAppTextShort(ses,'$button_save'),CWSF(@WEB_newCertificateAuthority),fdbbt_submit);
   Result:=res;
@@ -333,13 +333,13 @@ end;
 function TFRE_CERTIFICATE_CA_MOD.WEB_addimportCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
   scheme     : IFRE_DB_SchemeObject;
-  res        : TFRE_DB_DIALOG_DESC;
+  res        : TFRE_DB_FORM_DIALOG_DESC;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
     raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
 
   GFRE_DBI.GetSystemScheme(TFRE_DB_CA,scheme);
-  res:=TFRE_DB_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$ca_import_diag_cap'),600,0,true,true,false);
+  res:=TFRE_DB_FORM_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$ca_import_diag_cap'),600,true,true,false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_import'),ses,false,false);
   res.AddButton.Describe(app.FetchAppTextShort(ses,'$button_save'),CWSF(@WEB_importCertificateAuthority),fdbbt_submit);
   Result:=res;
@@ -436,7 +436,7 @@ end;
 function TFRE_CERTIFICATE_CA_MOD.WEB_addCertificate(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
   scheme     : IFRE_DB_SchemeObject;
-  res        : TFRE_DB_DIALOG_DESC;
+  res        : TFRE_DB_FORM_DIALOG_DESC;
   ca         : TFRE_DB_String;
   dependend  : TFRE_DB_StringArray;
 begin
@@ -452,7 +452,7 @@ begin
   ca := dependend[0];
 
   GFRE_DBI.GetSystemScheme(TFRE_DB_Certificate,scheme);
-  res:=TFRE_DB_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$crt_add_diag_cap'),600,0,true,true,false);
+  res:=TFRE_DB_FORM_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$crt_add_diag_cap'),600,true,true,false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_create'),GetSession(input),false,false);
   res.SetElementValue('ca',ca);
   res.AddButton.Describe(app.FetchAppTextShort(ses,'$button_save'),CWSF(@WEB_newCertificate),fdbbt_submit);
@@ -515,7 +515,7 @@ end;
 
 function TFRE_CERTIFICATE_CA_MOD.WEB_restoreCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
-  res        : TFRE_DB_DIALOG_DESC;
+  res        : TFRE_DB_FORM_DIALOG_DESC;
 begin
 
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_Certificate) then
@@ -528,7 +528,7 @@ end;
 function TFRE_CERTIFICATE_CA_MOD.WEB_backupCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
   scheme     : IFRE_DB_SchemeObject;
-  res        : TFRE_DB_DIALOG_DESC;
+  res        : TFRE_DB_FORM_DIALOG_DESC;
   ca_uid     : TGUID;
   caobj      : IFRE_DB_Object;
 
