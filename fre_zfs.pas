@@ -139,6 +139,8 @@ type
     procedure _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+
   public
     procedure removeFromPool          ;
     function  getPool                 (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_ROOTOBJ; virtual;
@@ -891,8 +893,26 @@ begin
 
   scheme.AddSchemeField('state',fdbft_String);
 
-  group:=scheme.AddInputGroup('zfs').Setup('$scheme_TFRE_DB_ZFS_zfs');
-  group.AddInput('state','$scheme_TFRE_DB_ZFS_state');
+  group:=scheme.AddInputGroup('zfs').Setup(GetTranslateableTextKey('scheme_zfs'));
+  group.AddInput('state',GetTranslateableTextKey('scheme_state'));
+end;
+
+class procedure TFRE_DB_ZFS_OBJ.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+ newVersionId:='1.0';
+
+ if (currentVersionId='') then begin
+   currentVersionId := '1.0';
+
+   StoreTranslateableText(conn,'scheme_zfs','General Information');
+   StoreTranslateableText(conn,'scheme_state','State');
+
+ end;
+ if (currentVersionId='1.0') then begin
+ //next update code
+ end;
+
+ VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.removeFromPool;
@@ -1437,16 +1457,31 @@ begin
 
   //  scheme.AddSchemeFieldSubscheme('zpooliostat',TFRE_DB_ZPOOL_IOSTAT.Classname);
 
-  group:=scheme.AddInputGroup('zpool').Setup('$scheme_TFRE_DB_ZFS_POOL_zpool');
-  group.AddInput('pool','$scheme_TFRE_DB_ZFS_POOL_pool');
-  group.AddInput('scan','$scheme_TFRE_DB_ZFS_POOL_scan');
-  group.AddInput('errors','$scheme_TFRE_DB_ZFS_POOL_errors');
+  group:=scheme.AddInputGroup('zpool').Setup(GetTranslateableTextKey('scheme_zpool'));
+  group.AddInput('pool',GetTranslateableTextKey('scheme_pool'));
+  group.AddInput('scan',GetTranslateableTextKey('scheme_scan'));
+  group.AddInput('errors',GetTranslateableTextKey('scheme_errors'));
 
 end;
 
 class procedure TFRE_DB_ZFS_POOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+ newVersionId:='1.0';
+
+ if (currentVersionId='') then begin
+   currentVersionId := '1.0';
+
+   StoreTranslateableText(conn,'scheme_zpool','General Information');
+   StoreTranslateableText(conn,'scheme_pool','Pool name');
+   StoreTranslateableText(conn,'scheme_scan','Scan');
+   StoreTranslateableText(conn,'scheme_errors','Errors');
+
+ end;
+ if (currentVersionId='1.0') then begin
+ //next update code
+ end;
+
+ VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 procedure TFRE_DB_ZFS_POOL._getMOSCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);

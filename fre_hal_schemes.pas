@@ -275,6 +275,7 @@ type
    published
      procedure       CALC_GetDisplayName   (const setter: IFRE_DB_CALCFIELD_SETTER);
      property        Name                  : TFRE_DB_String read GetName write SetName;
+
    end;
 
   { TFRE_DB_DEVICE }
@@ -3402,18 +3403,20 @@ end;
    group.UseInputGroup('TFRE_DB_ADDRESS','main','address');
    group.UseInputGroup('TFRE_DB_GEOPOSITION','main','position');
 
-   group:=scheme.AddInputGroup('machine').Setup(GetTranslateableTextKey('$scheme_TFRE_DB_MACHINE_main'));
-   group.AddInput('objname',GetTranslateableTextKey('$scheme_TFRE_DB_MACHINE_name'),true);
+   group:=scheme.AddInputGroup('machine').Setup(GetTranslateableTextKey('scheme_main'));
+   group.AddInput('objname',GetTranslateableTextKey('scheme_name'),true);
 
 end;
 
  class procedure TFRE_DB_MACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   inherited;
    newVersionId:='1.0';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
      StoreTranslateableText(conn,'scheme_address_group','Site Address');
+     StoreTranslateableText(conn,'scheme_main','General');
+     StoreTranslateableText(conn,'scheme_name','Machine Name');
+     StoreTranslateableText(conn,'machine_content_header_short','Machine Information');
    end;
    VersionInstallCheck(currentVersionId,newVersionId);
  end;
