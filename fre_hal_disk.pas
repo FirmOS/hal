@@ -174,10 +174,10 @@ var unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
 
           for i:=low(targetports) to high(targetports) do
             begin
-              if driveslotcollection.GetIndexedUIDs(targetports[i],guida,CFRE_DB_DRIVESLOT_TP1_INDEX) then
+              if driveslotcollection.GetIndexedUID(targetports[i],guida,CFRE_DB_DRIVESLOT_TP1_INDEX) then
                 _CheckSlot
               else
-                if driveslotcollection.GetIndexedUIDs(targetports[i],guida,CFRE_DB_DRIVESLOT_TP2_INDEX) then
+                if driveslotcollection.GetIndexedUID(targetports[i],guida,CFRE_DB_DRIVESLOT_TP2_INDEX) then
                   _CheckSlot;
             end;
           if slotguid<>CFRE_DB_NullGUID then
