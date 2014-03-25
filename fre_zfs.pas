@@ -901,7 +901,7 @@ class procedure TFRE_DB_ZFS_OBJ.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECT
 begin
  newVersionId:='1.0';
 
- if (currentVersionId='') then begin
+ if (currentVersionId='') or (currentVersionId='UNUSED') then begin
    currentVersionId := '1.0';
 
    StoreTranslateableText(conn,'scheme_zfs','General Information');
