@@ -410,7 +410,7 @@ type
     constructor    Create;
     destructor     Destroy;
     function       GetPoolStatus               (const poolname: string; out error : string; out outpool: IFRE_DB_Object) : integer;
-
+    function       GetActivePools              (out error: string; out pools:IFRE_DB_Object) : integer;
   end;
 
   { TFRE_DB_ZFS }
@@ -784,7 +784,10 @@ var zp         : Pzpool_handle_t;
                    end;
                  end
                else
-                 writeln(StringOfChar(' ',indent),name,' <array of uint64_t>')
+                 begin
+                   // skipping
+                   // writeln(StringOfChar(' ',indent),name,' <array of uint64_t>');
+                 end;
              end;
          else
            begin
@@ -807,13 +810,55 @@ begin
     parsestate := psVdev;
     zs         := zpool_get_config(zp, nil);
     pool.Field('config_ts').AsDateTimeUTC:=GFRE_DT.Now_UTC;
-
     parse_nvlist(zs, 4, pool);
     outpool := pool;
+    result     :=0;
   finally
     if assigned(zp) then
       zpool_close(zp);
   end;
+end;
+
+function _zpoolGetActiveIterator(_ph:Pzpool_handle_t; _para2:pointer):cint;cdecl;
+var poolname   : string;
+    pcpoolname : pcchar;
+    poolstate  : cint;
+    poolstate_s: string;
+    pools      : IFRE_DB_Object;
+    zfs_guid   : Uint64;
+    src        : zprop_source_t;
+    pool       : IFRE_DB_Object;
+begin
+//  writeln('SWL:POOLHANDLE',Int64(_ph),' ',int64(_para2));
+  poolstate  := zpool_get_state(_ph);
+
+  if pool_state_t(poolstate)=POOL_STATE_ACTIVE then
+    begin
+      pcpoolname := zpool_get_name(_ph);
+      poolname   := StrPas(PChar(pcpoolname));
+
+      WriteStr(poolstate_s,pool_state_t(poolstate));
+
+      src := ZPROP_SRC_DEFAULT;
+      zfs_guid   := zpool_get_prop_int(_ph,ZPOOL_PROP_GUID,@src);
+
+      pool                              := GFRE_DBI.NewObject;
+      pool.Field('zfs_guid').asstring   := inttostr(zfs_guid);
+      pool.Field('state').asstring      := poolstate_s;
+      pool.Field('state_ord').asUint64  := poolstate;
+      pool.Field('name').asstring       := poolname;
+
+      pools := IFRE_DB_Object(_para2);
+      pools.Field(inttostr(zfs_guid)).AsObject := pool;
+    //  writeln(poolname,' ',poolstate_s,' ',zfs_guid);
+    end;
+end;
+
+function TFRE_DB_ZFSLib.GetActivePools(out error: string; out pools: IFRE_DB_Object): integer;
+var res: cint;
+begin
+ pools := GFRE_DBI.NewObject;
+ res := zpool_iter(fzlibph,@_zpoolGetActiveIterator,pools);
 end;
 
 { TFRE_DB_OS_BLOCKDEVICE }

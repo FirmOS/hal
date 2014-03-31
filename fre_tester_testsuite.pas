@@ -132,8 +132,9 @@ type
     procedure ZTCPGetLastSnapShot;
     procedure ZTCPReplicateJob;
     procedure SNMPTest;
-  published
     procedure ZPoolStatus;
+  published
+    procedure ZPoolGetPools;
   end;
 
 
@@ -182,6 +183,21 @@ begin
   po     := TFRE_DB_ZFSLib.create;
 //po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
   res    := po.GetPoolStatus('testpool',error,obj);
+  if res <> 0 then
+    writeln(error);
+  writeln(obj.DumpToString());
+  po.Free;
+end;
+
+procedure TFRE_Tester_Tests.ZPoolGetPools;
+var po     : TFRE_DB_ZFSLib;
+    res    : integer;
+    obj    : IFRE_DB_Object;
+    error  : string;
+begin
+  po     := TFRE_DB_ZFSLib.create;
+//po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
+  res    := po.GetActivePools(error,obj);
   if res <> 0 then
     writeln(error);
   writeln(obj.DumpToString());
