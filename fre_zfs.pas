@@ -45,7 +45,12 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,fre_testcase,fre_system,fre_monitoring,cthreads, nvpair,libzfs,zfs, fos_illumos_defs,ctypes,strutils;
+  FOS_TOOL_INTERFACES,fre_testcase,fre_system,fre_monitoring,cthreads, ctypes,strutils
+  {$IFDEF SOLARIS}
+   nvpair,libzfs,zfs, fos_illumos_defs;
+  {$ELSE}
+   ;
+  {$ENDIF}
 
 type
 
@@ -126,7 +131,9 @@ type
     procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
 
+    {$IFDEF SOLARIS}
     function  _MapNVElementNameToFieldName (const elementname: string) : string ; virtual;
+    {$ENDIF}
 
     procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
@@ -151,7 +158,9 @@ type
     procedure SetMOSStatus            (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
     function  GetMOSStatus            : TFRE_DB_MOS_STATUS_TYPE;
 
+    {$IFDEF SOLARIS}
     procedure SetFieldFromNVElement   (const elem : Pnvpair_t);
+    {$ENDIF}
 
 
     property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
@@ -403,6 +412,8 @@ type
 
   { TFRE_DB_ZFSLib }
 
+
+  {$IFDEF SOLARIS}
   TFRE_DB_ZFSLib = class (TFRE_DB_ObjectEx)
   private
     fzlibph : Plibzfs_handle_t;
@@ -412,6 +423,7 @@ type
     function       GetPoolStatus               (const poolname: string; out error : string; out outpool: IFRE_DB_Object) : integer;
     function       GetActivePools              (out error: string; out pools:IFRE_DB_Object) : integer;
   end;
+  {$ENDIF}
 
   { TFRE_DB_ZFS }
 
@@ -482,7 +494,7 @@ type
 
 implementation
 
-
+{$IFDEF SOLARIS}
 function FOSNVPAIR_NAME(const elem:Pnvpair_t):string;
 begin
   result := pchar(nvpair_name(elem));
@@ -510,6 +522,7 @@ function FOSNVGET_NVARR(const elem:Pnvpair_t ; var nvlistarr : PPnvlist_t ; var 
 begin
   result := nvpair_value_nvlist_array(elem,@nvlistarr,@cnt)=0;
 end;
+{$ENDIF}
 
 { TFRE_DB_ZFS_FILEBLOCKDEVICE }
 
@@ -520,7 +533,7 @@ end;
 
 
 { TFRE_DB_ZFSLib }
-
+{$IFDEF SOLARIS}
 constructor TFRE_DB_ZFSLib.Create;
 begin
  inherited;
@@ -860,6 +873,7 @@ begin
  pools := GFRE_DBI.NewObject;
  res := zpool_iter(fzlibph,@_zpoolGetActiveIterator,pools);
 end;
+{$ENDIF}
 
 { TFRE_DB_OS_BLOCKDEVICE }
 
@@ -1414,12 +1428,14 @@ begin
   calcfieldsetter.SetAsString(caption+' '+Field('state').asstring);     //DEBUG
 end;
 
+{$IFDEF SOLARIS}
 function TFRE_DB_ZFS_OBJ._MapNVElementNameToFieldName(const elementname: string): string;
 begin
   result := elementname;
   result := StringReplace(result,'.','_',[rfReplaceAll]);
   if (elementname= ZPOOL_CONFIG_GUID) or (elementname= ZPOOL_CONFIG_POOL_GUID) then result := 'zfs_guid';
 end;
+{$ENDIF}
 
 procedure TFRE_DB_ZFS_OBJ._getStatusIcon(const calc: IFRE_DB_CALCFIELD_SETTER);
 begin
@@ -1502,6 +1518,7 @@ begin
   Result:=String2DBMOSStatus(Field('status_mos').AsString);
 end;
 
+{$IFDEF SOLARIS}
 procedure TFRE_DB_ZFS_OBJ.SetFieldFromNVElement(const elem: Pnvpair_t);
 var nvdatatype: string;
     pc        : pchar;
@@ -1535,6 +1552,7 @@ begin
    end;
  end;
 end;
+{$ENDIF}
 
 function TFRE_DB_ZFS_OBJ.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
