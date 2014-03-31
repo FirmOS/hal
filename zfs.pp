@@ -638,6 +638,7 @@ type
       pss_pass_start : uint64_t;
     end;
   pool_scan_stat_t = pool_scan_stat;
+  Ppool_scan_stat_t = ^pool_scan_stat_t;
 
   dsl_scan_state = (DSS_NONE,DSS_SCANNING,DSS_FINISHED,DSS_CANCELED,
     DSS_NUM_STATES);
