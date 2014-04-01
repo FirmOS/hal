@@ -46,7 +46,7 @@ uses
   Classes, SysUtils,fpcunit,testregistry,testdecorator,FRE_DB_INTERFACE,
   FOS_TOOL_INTERFACES,FRE_DBBASE,FRE_PROCESS, fre_testmethod, FRE_ZFS,
   fre_testcase, fre_do_safejob,FRE_SYSTEM,
-  FRE_OPENVPN,fre_alert,fre_scsi;
+  FRE_OPENVPN,fre_alert,fre_scsi,fosillu_hal_dbo_common,fosillu_hal_dbo_zfs_pool;
 
 const
 
@@ -132,9 +132,10 @@ type
     procedure ZTCPGetLastSnapShot;
     procedure ZTCPReplicateJob;
     procedure SNMPTest;
-    procedure ZPoolStatus;
+
   published
     procedure ZPoolGetPools;
+    procedure ZPoolStatus;
   end;
 
 
@@ -175,33 +176,29 @@ begin
 end;
 
 procedure TFRE_Tester_Tests.ZPoolStatus;
-var po     : TFRE_DB_ZFSLib;
-    res    : integer;
+var res    : integer;
     obj    : IFRE_DB_Object;
     error  : string;
 begin
-  po     := TFRE_DB_ZFSLib.create;
-//po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
-  res    := po.GetPoolStatus('testpool',error,obj);
+  InitIllumosLibraryHandles;
+  res    := fosillu_zfs_GetPoolStatusDBO('testpool',error,obj);
   if res <> 0 then
     writeln(error);
   writeln(obj.DumpToString());
-  po.Free;
+  FinishIllumosLibraryHandles;
 end;
 
 procedure TFRE_Tester_Tests.ZPoolGetPools;
-var po     : TFRE_DB_ZFSLib;
-    res    : integer;
+var res    : integer;
     obj    : IFRE_DB_Object;
     error  : string;
 begin
-  po     := TFRE_DB_ZFSLib.create;
-//po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
-  res    := po.GetActivePools(error,obj);
+  InitIllumosLibraryHandles;
+  res    := fosillu_zfs_GetActivePoolsDBO(error,obj);
   if res <> 0 then
     writeln(error);
   writeln(obj.DumpToString());
-  po.Free;
+  FinishIllumosLibraryHandles;
 end;
 
 
