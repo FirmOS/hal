@@ -1,4 +1,4 @@
-unit zfs;
+unit fosillu_zfs;
 interface
 
 uses

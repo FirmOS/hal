@@ -1,4 +1,4 @@
-unit nvpair; { includes libnvpair }
+unit fosillu_nvpair; { includes libnvpair }
 
 {
  * CDDL HEADER START

@@ -77,7 +77,7 @@ type
 
     { TFRE_DB_SERVICEDOMAIN }
 
-    TFRE_DB_SERVICE_DOMAIN=class(TFRE_DB_ObjectEx)
+    TFRE_DB_SERVICE_DOMAIN=class(TFRE_DB_ObjectEx) { TODO: Think about link with original(system) domain }
     private
       function  GetName: TFRE_DB_String;
       procedure SetName(AValue: TFRE_DB_String);
@@ -89,7 +89,7 @@ type
       property        Name                : TFRE_DB_String read GetName write SetName;
     end;
 
-    { TFRE_DB_SERVICE }
+   { TFRE_DB_SERVICE, todo -> remove Name property use Objectname,Description from NamedObject Interface provide in Base ObjectEx }
 
    TFRE_DB_SERVICE=class(TFRE_DB_ObjectEx)
    private
@@ -101,6 +101,32 @@ type
    published
      procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER);
      property        Name                : TFRE_DB_String read GetName write SetName;
+   end;
+
+   { TFRE_DB_SERVICE_INSTANCE }
+
+   TFRE_DB_SERVICE_INSTANCE=class(TFRE_DB_ObjectEx)
+   private
+     function  GetFMRI: TFRE_DB_String;
+     function  GetLogfileName: TFRE_DB_String;
+     function  GetServiceDescription: TFRE_DB_String;
+     function  GetState: TFRE_DB_String;
+     function  GetStateTime: TFRE_DB_DateTime64;
+     procedure SetFMRI(AValue: TFRE_DB_String);
+     procedure SetLogfileName(AValue: TFRE_DB_String);
+     procedure SetServiceDescription(AValue: TFRE_DB_String);
+     procedure SetState(AValue: TFRE_DB_String);
+     procedure SetStateTime(AValue: TFRE_DB_DateTime64);
+   protected
+     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     property FMRI               : TFRE_DB_String read GetFMRI write SetFMRI;
+     property State              : TFRE_DB_String read GetState write SetState;
+     property ServiceDescription : TFRE_DB_String read GetServiceDescription write SetServiceDescription;
+     property StateTime          : TFRE_DB_DateTime64 read GetStateTime write SetStateTime;
+     property LogfileName        : TFRE_DB_String read GetLogfileName write SetLogfileName;
+   published
    end;
 
    { TFRE_DB_MACHINE }
@@ -275,7 +301,6 @@ type
    published
      procedure       CALC_GetDisplayName   (const setter: IFRE_DB_CALCFIELD_SETTER);
      property        Name                  : TFRE_DB_String read GetName write SetName;
-
    end;
 
   { TFRE_DB_DEVICE }
@@ -838,6 +863,72 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_SERVICE_INSTANCE }
+
+function TFRE_DB_SERVICE_INSTANCE.GetFMRI: TFRE_DB_String;
+begin
+
+end;
+
+function TFRE_DB_SERVICE_INSTANCE.GetLogfileName: TFRE_DB_String;
+begin
+
+end;
+
+function TFRE_DB_SERVICE_INSTANCE.GetServiceDescription: TFRE_DB_String;
+begin
+
+end;
+
+function TFRE_DB_SERVICE_INSTANCE.GetState: TFRE_DB_String;
+begin
+
+end;
+
+function TFRE_DB_SERVICE_INSTANCE.GetStateTime: TFRE_DB_DateTime64;
+begin
+
+end;
+
+procedure TFRE_DB_SERVICE_INSTANCE.SetFMRI(AValue: TFRE_DB_String);
+begin
+
+end;
+
+procedure TFRE_DB_SERVICE_INSTANCE.SetLogfileName(AValue: TFRE_DB_String);
+begin
+
+end;
+
+procedure TFRE_DB_SERVICE_INSTANCE.SetServiceDescription(AValue: TFRE_DB_String);
+begin
+
+end;
+
+procedure TFRE_DB_SERVICE_INSTANCE.SetState(AValue: TFRE_DB_String);
+begin
+
+end;
+
+procedure TFRE_DB_SERVICE_INSTANCE.SetStateTime(AValue: TFRE_DB_DateTime64);
+begin
+
+end;
+
+class procedure TFRE_DB_SERVICE_INSTANCE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+class procedure TFRE_DB_SERVICE_INSTANCE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+  VersionInstallCheck(currentVersionId,newVersionId);
+end;
 
 { TFRE_DB_SERVICE_DOMAIN }
 
@@ -3581,6 +3672,7 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_STUB);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_DOMAIN);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_INSTANCE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMachine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONE);

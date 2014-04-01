@@ -1,4 +1,4 @@
-unit libzfs;
+unit fosillu_libzfs;
 
 {
  * CDDL HEADER START
@@ -32,7 +32,7 @@ unit libzfs;
 interface
 
 uses
-  unix,baseunix,fos_illumos_defs,zfs,nvpair;
+  unix,baseunix,fos_illumos_defs,fosillu_zfs,fosillu_nvpair;
 
 const
   external_zfs_library='zfs';
