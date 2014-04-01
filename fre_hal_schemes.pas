@@ -648,6 +648,31 @@ type
   published
   end;
 
+  { TFRE_DB_FILESERVER }
+
+  TFRE_DB_FILESERVER=class(TFRE_DB_SERVICE)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_GLOBAL_FILESERVER }
+
+  TFRE_DB_GLOBAL_FILESERVER=class(TFRE_DB_SERVICE)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_VIRTUAL_FILESERVER }
+
+  TFRE_DB_VIRTUAL_FILESERVER=class(TFRE_DB_SERVICE)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+
 procedure Register_DB_Extensions;
 
 implementation
@@ -3657,8 +3682,76 @@ end;
    setter.SetAsString(Field('objname').AsString);
  end;
 
- procedure Register_DB_Extensions;
- begin
+
+ { TFRE_DB_VIRTUAL_FILESERVER }
+
+class procedure TFRE_DB_VIRTUAL_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('ip',fdbft_String).required:=true;
+  scheme.AddSchemeField('pool',fdbft_String).required:=true;
+  scheme.AddSchemeField('interface',fdbft_String);
+  scheme.AddSchemeField('vlan',fdbft_UInt16);
+
+  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('vfs_scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_fileservername'),false);
+  group.AddInput('pool',GetTranslateableTextKey('scheme_pool'),true);
+  group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
+  group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
+  group.AddInput('interface',GetTranslateableTextKey('scheme_interface'));
+  group.AddInput('vlan',GetTranslateableTextKey('scheme_vlan'));
+end;
+
+class procedure TFRE_DB_VIRTUAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  inherited InstallDBObjects(conn, currentVersionId, newVersionId);
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'vfs_scheme_main_group','Virtual Fileserver Properties');
+    StoreTranslateableText(conn,'scheme_fileservername','Servername');
+    StoreTranslateableText(conn,'scheme_pool','Diskpool');
+    StoreTranslateableText(conn,'scheme_description','Description');
+    StoreTranslateableText(conn,'scheme_ip','IP');
+    StoreTranslateableText(conn,'scheme_interface','Interface');
+    StoreTranslateableText(conn,'scheme_vlan','Vlan');
+  end;
+  VersionInstallCheck(currentVersionId,newVersionId);
+end;
+
+
+{ TFRE_DB_GLOBAL_FILESERVER }
+
+class procedure TFRE_DB_GLOBAL_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
+end;
+
+class procedure TFRE_DB_GLOBAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
+{ TFRE_DB_FILESERVER }
+
+class procedure TFRE_DB_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.Classname);
+end;
+
+class procedure TFRE_DB_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
+
+procedure Register_DB_Extensions;
+begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_POWER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_MAIL);
@@ -3713,8 +3806,12 @@ end;
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_REDIRECTION_FLOW);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HALCONFIG);
    GFRE_DBI.RegisterObjectClassEx(TFRE_ZIP_STATUS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FILESERVER);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_GLOBAL_FILESERVER);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUAL_FILESERVER);
    GFRE_DBI.Initialize_Extension_Objects;
  end;
+
 
 
 

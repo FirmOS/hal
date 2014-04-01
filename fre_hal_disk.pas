@@ -1016,14 +1016,14 @@ var mdata: IFRE_DB_Object;
     feed_pool   := obj.Implementor_HC as TFRE_DB_ZFS_POOL;
     new_pool    := (feed_pool.CloneToNewObject.Implementor_HC as TFRE_DB_ZFS_POOL);
 //    writeln('SWL: NEW POOL ',new_pool.DumpToString());
-    if mdata.FetchObjWithStringFieldValue('POOL',feed_pool.Field('pool').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
+    if mdata.FetchObjWithStringFieldValue('name',feed_pool.Field('name').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
       begin
         new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
-        mdata.Field('pools').AsObject.Field(feed_pool.Field('pool').asstring).AsObject := new_pool;
+        mdata.Field('pools').AsObject.Field(feed_pool.Field('name').asstring).AsObject := new_pool;
       end
     else
       begin
-        mdata.Field('pools').AsObject.Field(feed_pool.Field('pool').asstring).AsObject:=feed_pool.CloneToNewObject;
+        mdata.Field('pools').AsObject.Field(feed_pool.Field('name').asstring).AsObject:=feed_pool.CloneToNewObject;
       end;
   end;
 
@@ -1038,7 +1038,7 @@ begin
 //    writeln('ZPOOLSTATUS',dbo.DumpToString());
 
     dbo.ForAllObjects(@_updatepools);
-//    writeln('SWL: MDATA POOLS',mdata.Field('pools').AsObject.DumpToString());
+    writeln('SWL: MDATA POOLS',mdata.Field('pools').AsObject.DumpToString());
 
   finally
     ReleaseLockedData;
