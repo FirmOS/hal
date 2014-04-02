@@ -108,7 +108,6 @@ type
     function  GetTransferRead  : TFRE_DB_String;
     function  GetTransferWrite : TFRE_DB_String;
     function  getCaption       : TFRE_DB_String; virtual;
-    procedure setCaption       (avalue: TFRE_DB_String); virtual;
     procedure SetParentInZFSId (AValue: TGuid);
     procedure SetPoolId        (AValue: TGuid);
     procedure SetMachineID          (AValue: TGUID);
@@ -148,9 +147,9 @@ type
     procedure embedChildrenRecursive  (const conn: IFRE_DB_CONNECTION);
     procedure SetMOSStatus            (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
     function  GetMOSStatus            : TFRE_DB_MOS_STATUS_TYPE;
-
+    procedure SetName                 (const avalue:TFRE_DB_String);
     property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
-    property  caption                 : TFRE_DB_String read GetCaption       write SetCaption;
+    property  caption                 : TFRE_DB_String read GetCaption;
     property  iopsR                   : TFRE_DB_String read GetIopsRead;
     property  iopsW                   : TFRE_DB_String read GetIopsWrite;
     property  transferR               : TFRE_DB_String read GetTransferRead;
@@ -174,6 +173,7 @@ type
     function  getisUnassigned       : Boolean;
     procedure setIsOffline          (AValue: Boolean);
     procedure setIsUnassgined       (AValue: Boolean);
+    function  getCaption            : TFRE_DB_String; override;
   protected
     function  getDeviceIdentifier               : TFRE_DB_String;
     function  getDeviceName                     : TFRE_DB_String;
@@ -349,8 +349,6 @@ type
 
   TFRE_DB_ZFS_POOL=class(TFRE_DB_ZFS_ROOTOBJ)
   private
-    function  getCaption       : TFRE_DB_String; override;
-    procedure setCaption       (avalue: TFRE_DB_String); override;
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -988,13 +986,9 @@ end;
 
 function TFRE_DB_ZFS_OBJ.getCaption: TFRE_DB_String;
 begin
-  Result:=Field('name').AsString;
+  Result:=Field('objname').AsString;
 end;
 
-procedure TFRE_DB_ZFS_OBJ.setCaption(avalue: TFRE_DB_String);
-begin
-  Field('name').AsString:=avalue;
-end;
 
 procedure TFRE_DB_ZFS_OBJ.SetParentInZFSId(AValue: TGuid);
 begin
@@ -1178,6 +1172,11 @@ end;
 function TFRE_DB_ZFS_OBJ.GetMOSStatus: TFRE_DB_MOS_STATUS_TYPE;
 begin
   Result:=String2DBMOSStatus(Field('status_mos').AsString);
+end;
+
+procedure TFRE_DB_ZFS_OBJ.SetName(const avalue: TFRE_DB_String);
+begin
+  field('objname').asstring := avalue;
 end;
 
 function TFRE_DB_ZFS_OBJ.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -1390,6 +1389,11 @@ begin
   Field('isUnassigned').AsBoolean:=AValue;
 end;
 
+function TFRE_DB_ZFS_BLOCKDEVICE.getCaption: TFRE_DB_String;
+begin
+  Result:=Field('devicename').asstring;
+end;
+
 procedure TFRE_DB_ZFS_BLOCKDEVICE.setDeviceIdentifier(AValue: TFRE_DB_String);
 begin
   Field('deviceIdentifier').AsString := AValue;
@@ -1497,14 +1501,13 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ZFS_OBJ.ClassName);
 
-  scheme.AddSchemeField('pool',fdbft_String);
   scheme.AddSchemeField('scan',fdbft_String);
   scheme.AddSchemeField('errors',fdbft_String);
 
   //  scheme.AddSchemeFieldSubscheme('zpooliostat',TFRE_DB_ZPOOL_IOSTAT.Classname);
 
   group:=scheme.AddInputGroup('zpool').Setup(GetTranslateableTextKey('scheme_zpool'));
-  group.AddInput('pool',GetTranslateableTextKey('scheme_pool'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_pool'));
   group.AddInput('scan',GetTranslateableTextKey('scheme_scan'));
   group.AddInput('errors',GetTranslateableTextKey('scheme_errors'));
 
@@ -1569,16 +1572,6 @@ begin
        zo.Free;
      end;
 
-end;
-
-function TFRE_DB_ZFS_POOL.getCaption: TFRE_DB_String;
-begin
-  Result:=Field('pool').AsString;
-end;
-
-procedure TFRE_DB_ZFS_POOL.setCaption(avalue: TFRE_DB_String);
-begin
-  Field('pool').AsString:=avalue;
 end;
 
 function TFRE_DB_ZFS_POOL.createDatastorage: TFRE_DB_ZFS_DATASTORAGE;
@@ -3834,7 +3827,7 @@ begin
        collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
        unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
        unassigned_disks.setZFSGuid(GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
-       unassigned_disks.caption:= 'Unassigned disks';  //FIXXME: should be a languge key ?!?
+       unassigned_disks.SetName('Unassigned disks');  //FIXXME: should be a languge key ?!?
        unassigned_disks.poolId := unassigned_disks.UID;
        CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
      end;
