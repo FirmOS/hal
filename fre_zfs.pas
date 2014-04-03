@@ -210,7 +210,7 @@ type
 
   { TFRE_DB_ZFS_FILEBLOCKDEVICE }
 
-  TFRE_DB_ZFS_FILEBLOCKDEVICE = class(TFRE_DB_ZFS_BLOCKDEVICE)
+  TFRE_DB_ZFS_FILEBLOCKDEVICE = class(TFRE_DB_OS_BLOCKDEVICE)
   public
     function  mayHaveZFSChildren: Boolean; override;
   end;
@@ -1901,6 +1901,38 @@ var poolcollection       : IFRE_DB_COLLECTION;
           (obj.Implementor_HC as TFRE_DB_ZFS_OBJ).SetMOSStatus(fdbstat_error,nil,nil,nil,conn);
     end;
 
+    procedure _deletepool;
+    begin
+      (obj.Implementor_HC as TFRE_DB_ZFS_POOL).DeleteReferencingVdevToMe(conn);
+      CheckDbResult(conn.Delete(obj.UID),'could not delete pool uid ['+obj.UID_String+']');
+    end;
+
+    procedure _updatepool;
+    begin
+      db_pool_uid := obj.UID;
+      dbpool_obj  := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
+      dbpool_obj.Field('mosparentIds').AsObjectLinkArray := self.Field('mosparentIds').AsObjectLinkArray;
+      writeln('SWL: UPDATEPOOL BEFORE SET ALL SIMPLE OBJECT FIELDS DOMAINID:',dbpool_obj.Field('domainid').asstring,' FDOMAINID ', FREDB_G2H(dbpool_obj.DomainID));
+      dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
+      writeln('SWL: UPDATEPOOL AFTER SET ALL SIMPLE OBJECT FIELDS DOMAINID:',dbpool_obj.Field('domainid').asstring,' FDOMAINID ', FREDB_G2H(dbpool_obj.DomainID));
+      CheckDbResult(poolcollection.Update(dbpool_obj),'could not update pool');
+      __setmosstatus;
+      __updatepoolVdevs;
+    end;
+
+    procedure _insertpool;
+    begin
+      dbpool_obj        := TFRE_DB_ZFS_POOL.CreateForDB;
+      dbpool_obj.Field('UID').AsGUID := UID;
+      dbpool_obj.MachineID           := MachineID;
+      dbpool_obj.Field('mosparentIds').AsObjectLinkArray := self.Field('mosparentIds').AsObjectLinkArray;
+      dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
+      db_pool_uid       := dbpool_obj.UID;
+      CheckDbResult(poolcollection.Store(dbpool_obj),'could not store pool');
+      __SetMOSStatus;
+      __updatepoolVdevs;
+    end;
+
 begin
    poolcollection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
    vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
@@ -1910,33 +1942,17 @@ begin
      begin
        if obj.UID<>UID then
          begin
-           abort;
-           //delete db pool
+           _deletepool;
+           _insertpool;
          end
        else
          begin
-           db_pool_uid := obj.UID;
-           dbpool_obj  := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
-           dbpool_obj.Field('mosparentIds').AsObjectLinkArray := self.Field('mosparentIds').AsObjectLinkArray;
-           dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
-//           writeln('SWL: POOOL UPDATE',dbpool_obj.DumpToString());
-           CheckDbResult(poolcollection.Update(dbpool_obj),'could not update pool');
-           __setmosstatus;
-           __updatepoolVdevs;
+           _updatepool;
          end;
      end
    else
      begin
-       // Add to DB
-       dbpool_obj        := TFRE_DB_ZFS_POOL.CreateForDB;
-       dbpool_obj.Field('UID').AsGUID := UID;
-       dbpool_obj.MachineID           := MachineID;
-       dbpool_obj.Field('mosparentIds').AsObjectLinkArray := self.Field('mosparentIds').AsObjectLinkArray;
-       dbpool_obj.SetAllSimpleObjectFieldsFromObject(self);
-       db_pool_uid       := dbpool_obj.UID;
-       CheckDbResult(poolcollection.Store(dbpool_obj),'could not store pool');
-       __SetMOSStatus;
-       __updatepoolVdevs;
+       _insertpool;
      end;
 end;
 
