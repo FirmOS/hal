@@ -153,6 +153,8 @@ type
      function  WEB_MOSContent                   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
      function  WEB_MOSChildStatusChanged        (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
      function  WEB_MOSStatus                    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+     function        WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+
    end;
 
    { TFRE_DB_MACHINE_SETTING }
@@ -3644,6 +3646,12 @@ function TFRE_DB_MACHINE.WEB_MOSStatus(const input: IFRE_DB_Object; const ses: I
 begin
   Result:=GFRE_DBI.NewObject;
   Result.Field('status_mos').AsString:=Field('status_mos').AsString;
+end;
+
+function TFRE_DB_MACHINE.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_MACHINE_COLLECTION;
 end;
 
 

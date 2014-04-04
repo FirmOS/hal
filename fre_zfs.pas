@@ -57,10 +57,13 @@ const
   CFRE_DB_MACHINE_COLLECTION             = 'machine';
   CFRE_DB_ZFS_POOL_COLLECTION            = 'pool';
   CFRE_DB_ZFS_VDEV_COLLECTION            = 'vdev';
-  CFRE_DB_ENCLOSURE_COLLECTION       = 'enclosure';
-  CFRE_DB_SAS_EXPANDER_COLLECTION    = 'expander';
-  CFRE_DB_DRIVESLOT_COLLECTION       = 'driveslot';
-  CFRE_DB_DEVICE_COLLECTION     = 'blockdevice';
+  CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION     = 'blockdevice';
+  CFRE_DB_ZFS_IOSTAT_COLLECTION          = 'ziostat';
+  CFRE_DB_ENCLOSURE_COLLECTION           = 'enclosure';
+  CFRE_DB_SAS_EXPANDER_COLLECTION        = 'expander';
+  CFRE_DB_DRIVESLOT_COLLECTION           = 'driveslot';
+  CFRE_DB_DEVICE_COLLECTION              = 'device';
+  CFRE_DB_DEVICE_IOSTAT_COLLECTION       = 'iostat';
 
   CFRE_DB_DEVICE_DEV_ID_INDEX   = 'deviceId';
 
@@ -86,7 +89,10 @@ type
   private
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+  published
+    function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_IOSTAT }
@@ -94,7 +100,10 @@ type
   TFRE_DB_IOSTAT=class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+  published
+    function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_ZFS_OBJ }
@@ -199,6 +208,8 @@ type
     property  DeviceIdentifier  : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
     property  IsUnassigned      : Boolean read getisUnassigned write setIsUnassgined;
+  published
+    function        WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_OS_BLOCKDEVICE }
@@ -206,6 +217,8 @@ type
   TFRE_DB_OS_BLOCKDEVICE = class(TFRE_DB_ZFS_BLOCKDEVICE)
   public
     function  mayHaveZFSChildren: Boolean; override;
+  published
+    function        WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_ZFS_FILEBLOCKDEVICE }
@@ -230,7 +243,6 @@ type
     function  addBlockdevice            (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
     function  addBlockdeviceEmbedded    (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
     function  createBlockdeviceEmbedded                     (const devicename:TFRE_DB_String): TFRE_DB_ZFS_BLOCKDEVICE; virtual;
-    function  createFileBlockdeviceEmbedded                 (const devicename:TFRE_DB_String): TFRE_DB_ZFS_FILEBLOCKDEVICE; virtual;
     function  createDiskReplaceContainerEmbedded            (const devicename:TFRE_DB_String) : TFRE_DB_ZFS_DISKREPLACECONTAINER; virtual;
     function  createDiskSpareContainerEmbedded              (const devicename:TFRE_DB_String) : TFRE_DB_ZFS_DISKSPARECONTAINER; virtual;
     function  mayHaveZFSChildren       : Boolean; override;
@@ -238,6 +250,8 @@ type
     function  getLastChildId            (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
     procedure DeleteReferencingVdevToMe (const conn: IFRE_DB_CONNECTION);
     property  raidLevel                 : TFRE_DB_ZFS_RAID_LEVEL read GetRaidLevel write SetRaidLevel;
+  published
+    function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
 
@@ -371,7 +385,10 @@ type
     procedure FlatEmbeddedAndStoreInCollections      (const conn: IFRE_DB_CONNECTION);
     procedure DeleteReferencingVdevToMe              (const conn: IFRE_DB_CONNECTION);
   published
-    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSContent                         (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+   published
+    function  WEB_GetDefaultCollection               (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+
   end;
 
   { TFRE_DB_ZFS_UNASSIGNED }
@@ -550,6 +567,12 @@ begin
   Result:=false;
 end;
 
+function TFRE_DB_OS_BLOCKDEVICE.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+ result:=GFRE_DBI.NewObject;
+ result.Field('collection').asstring:=CFRE_DB_DEVICE_COLLECTION;
+end;
+
 { TFRE_DB_ZFS_DISKSPARECONTAINER }
 
 class procedure TFRE_DB_ZFS_DISKSPARECONTAINER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -616,10 +639,32 @@ begin
 
 end;
 
+class procedure TFRE_DB_ZPOOL_IOSTAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
+function TFRE_DB_ZPOOL_IOSTAT.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_ZFS_IOSTAT_COLLECTION;
+end;
+
 
 class procedure TFRE_DB_IOSTAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
+end;
+
+class procedure TFRE_DB_IOSTAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+end;
+
+function TFRE_DB_IOSTAT.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_DEVICE_IOSTAT_COLLECTION;
 end;
 
 { TFRE_DB_ZFS_UNASSIGNED }
@@ -734,24 +779,24 @@ end;
 function TFRE_DB_ZFS_DISKCONTAINER.createBlockdeviceEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
   Result:=TFRE_DB_ZFS_BLOCKDEVICE.CreateForDB;
+  Result.parentInZFSId:=UID;
+  Result.poolId:=poolId;
   Field(devicename).AsObject := Result;
-end;
-
-function TFRE_DB_ZFS_DISKCONTAINER.createFileBlockdeviceEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_FILEBLOCKDEVICE;
-begin
- Result:=TFRE_DB_ZFS_FILEBLOCKDEVICE.CreateForDB;
- Field(devicename).AsObject := Result;
 end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.createDiskReplaceContainerEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_DISKREPLACECONTAINER;
 begin
  Result:=TFRE_DB_ZFS_DISKREPLACECONTAINER.CreateForDB;
+ Result.parentInZFSId:=UID;
+ Result.poolId:=poolId;
  Field(devicename).AsObject := Result;
 end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.createDiskSpareContainerEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_DISKSPARECONTAINER;
 begin
  Result:=TFRE_DB_ZFS_DISKSPARECONTAINER.CreateForDB;
+ Result.parentInZFSId:=UID;
+ Result.poolId:=poolId;
  Field(devicename).AsObject := Result;
 end;
 
@@ -809,6 +854,12 @@ begin
           obj.Finalize;
         end;
     end;
+end;
+
+function TFRE_DB_ZFS_DISKCONTAINER.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_ZFS_VDEV_COLLECTION;
 end;
 
 { TFRE_DB_ZFS_RAIDCONTAINER }
@@ -1458,6 +1509,12 @@ begin
   Result:=true;
 end;
 
+function TFRE_DB_ZFS_BLOCKDEVICE.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+ result:=GFRE_DBI.NewObject;
+ result.Field('collection').asstring:=CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION;
+end;
+
 { TFRE_DB_ZFS_POOL }
 
 function TFRE_DB_ZFS_POOL.GetDatastorage(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_DATASTORAGE;
@@ -1586,6 +1643,8 @@ end;
 function TFRE_DB_ZFS_POOL.createDatastorageEmbedded: TFRE_DB_ZFS_DATASTORAGE;
 begin
   Result:=TFRE_DB_ZFS_DATASTORAGE.CreateForDB;
+  Result.poolId:=UID;
+  Result.parentInZFSId:=UID;
   Field('datastorage').asObject := Result;
 end;
 
@@ -1599,6 +1658,8 @@ end;
 function TFRE_DB_ZFS_POOL.createCacheEmbedded: TFRE_DB_ZFS_CACHE;
 begin
   Result:=TFRE_DB_ZFS_CACHE.CreateForDB;
+  Result.poolId:=UID;
+  Result.parentInZFSId:=UID;
   Field('cache').asObject := Result;
 end;
 
@@ -1612,6 +1673,8 @@ end;
 function TFRE_DB_ZFS_POOL.createLogEmbedded: TFRE_DB_ZFS_LOG;
 begin
   Result:=TFRE_DB_ZFS_LOG.CreateForDB;
+  Result.poolId:=UID;
+  Result.parentInZFSId:=UID;
   Field('logs').asObject := Result;
 end;
 
@@ -1627,6 +1690,8 @@ end;
 function TFRE_DB_ZFS_POOL.createSpareEmbedded: TFRE_DB_ZFS_SPARE;
 begin
   Result:=TFRE_DB_ZFS_SPARE.CreateForDB;
+  Result.poolId:=UID;
+  Result.parentInZFSId:=UID;
   Field('spares').asobject := Result;
 end;
 
@@ -1995,6 +2060,12 @@ begin
 //  panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool_iostat'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
+end;
+
+function TFRE_DB_ZFS_POOL.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+ result:=GFRE_DBI.NewObject;
+ result.Field('collection').asstring:=CFRE_DB_ZFS_POOL_COLLECTION;
 end;
 
 { TFRE_DB_ZFSJob }
@@ -3854,11 +3925,29 @@ begin
        collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
      end;
 
+   if not conn.CollectionExists(CFRE_DB_ZFS_IOSTAT_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_ZFS_IOSTAT_COLLECTION);
+//       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+     end;
+
+   if not conn.CollectionExists(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION);
+       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+     end;
+
    if not conn.CollectionExists(CFRE_DB_DEVICE_COLLECTION) then
      begin
        collection  := conn.CreateCollection(CFRE_DB_DEVICE_COLLECTION);
        collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
        collection.DefineIndexOnField('machinedeviceIdentifier',fdbft_String,true,false,CFRE_DB_DEVICE_DEV_ID_INDEX,true);
+     end;
+
+   if not conn.CollectionExists(CFRE_DB_DEVICE_IOSTAT_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_DEVICE_IOSTAT_COLLECTION);
+//       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
      end;
 
    if not conn.CollectionExists(CFRE_DB_ENCLOSURE_COLLECTION) then
