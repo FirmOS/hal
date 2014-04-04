@@ -52,6 +52,7 @@ var
 
 procedure InitIllumosLibraryHandles;
 procedure FinishIllumosLibraryHandles;
+procedure CheckIllumosZFSLib;
 
 function  FOSNVPAIR_NAME   (const elem:Pnvpair_t):string;
 function  FOSNVGET_STRING  (const elem:Pnvpair_t ; var val:string):boolean;
@@ -62,10 +63,17 @@ function  FOSNVGET_NVARR   (const elem:Pnvpair_t ; var nvlistarr : PPnvlist_t ; 
 
 implementation
 
+procedure CheckIllumosZFSLib;
+begin
+  if not Assigned(GILLUMOS_LIBZFS_HANDLE) then
+    raise EXception.Create('error : libzfshandle not assigned');
+end;
+
 procedure InitIllumosLibraryHandles;
 begin
   if not Assigned(GILLUMOS_LIBZFS_HANDLE) then
     GILLUMOS_LIBZFS_HANDLE := libzfs_init();
+  CheckIllumosZFSLib;
 end;
 
 procedure FinishIllumosLibraryHandles;

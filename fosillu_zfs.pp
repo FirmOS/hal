@@ -50,10 +50,11 @@ Puint64_t  = ^uint64_t;
  * combined into masks that can be passed to various functions.
   }
 const
-  ZFS_TYPE_FILESYSTEM = 1;
-  ZFS_TYPE_SNAPSHOT   = 2;
-  ZFS_TYPE_VOLUME     = 4;
-  ZFS_TYPE_POOL       = 8;
+  ZFS_TYPE_FILESYSTEM =  1;
+  ZFS_TYPE_SNAPSHOT   =  2;
+  ZFS_TYPE_VOLUME     =  4;
+  ZFS_TYPE_POOL       =  8;
+  ZFS_TYPE_BOOKMARK   = 16;
 
 type
   zfs_type_t = cint; { FOS: was enum }
@@ -67,9 +68,9 @@ type
   dmu_objset_type_t = dmu_objset_type;
 
 const
-  ZFS_TYPE_DATASET = (ZFS_TYPE_FILESYSTEM or ZFS_TYPE_VOLUME) or ZFS_TYPE_SNAPSHOT;  
-  ZAP_MAXNAMELEN = 256;  
-  ZAP_MAXVALUELEN = 1024*8;  
+  ZFS_TYPE_DATASET   = (ZFS_TYPE_FILESYSTEM or ZFS_TYPE_VOLUME) or ZFS_TYPE_SNAPSHOT;
+  ZAP_MAXNAMELEN     = 256;
+  ZAP_MAXVALUELEN    = 1024*8;
   ZAP_OLDMAXVALUELEN = 1024;  
 {
  * Dataset properties are identified by these constants and must be added to
@@ -172,48 +173,48 @@ const
 {
  * Dataset property functions shared between libzfs and kernel.
   }
-(* Const before type ignored *)
 
-function zfs_prop_default_string(_para1:zfs_prop_t):Pcchar;cdecl;external External_library name 'zfs_prop_default_string';
+
+function zfs_prop_default_string(_para1:zfs_prop_t):pchar;cdecl;external External_library name 'zfs_prop_default_string';
 function zfs_prop_default_numeric(_para1:zfs_prop_t):uint64_t;cdecl;external External_library name 'zfs_prop_default_numeric';
 function zfs_prop_readonly_(_para1:zfs_prop_t):boolean_t;cdecl;external External_library name 'zfs_prop_readonly';
 function zfs_prop_inheritable(_para1:zfs_prop_t):boolean_t;cdecl;external External_library name 'zfs_prop_inheritable';
 function zfs_prop_setonce(_para1:zfs_prop_t):boolean_t;cdecl;external External_library name 'zfs_prop_setonce';
-(* Const before type ignored *)
-function zfs_prop_to_name(_para1:zfs_prop_t):Pcchar;cdecl;external External_library name 'zfs_prop_to_name';
-(* Const before type ignored *)
-function zfs_name_to_prop(_para1:Pcchar):zfs_prop_t;cdecl;external External_library name 'zfs_name_to_prop';
-(* Const before type ignored *)
-function zfs_prop_user(_para1:Pcchar):boolean_t;cdecl;external External_library name 'zfs_prop_user';
-(* Const before type ignored *)
-function zfs_prop_userquota_(_para1:Pcchar):boolean_t;cdecl;external External_library name 'zfs_prop_userquota';
-(* Const before type ignored *)
-function zfs_prop_written_(_para1:Pcchar):boolean_t;cdecl;external External_library name 'zfs_prop_written';
-(* Const before type ignored *)
-function zfs_prop_index_to_string(_para1:zfs_prop_t; _para2:uint64_t; _para3:PPcchar):cint;cdecl;external External_library name 'zfs_prop_index_to_string';
-(* Const before type ignored *)
-function zfs_prop_string_to_index(_para1:zfs_prop_t; _para2:Pcchar; _para3:Puint64_t):cint;cdecl;external External_library name 'zfs_prop_string_to_index';
+
+function zfs_prop_to_name(_para1:zfs_prop_t):pchar;cdecl;external External_library name 'zfs_prop_to_name';
+
+function zfs_name_to_prop(_para1:pchar):zfs_prop_t;cdecl;external External_library name 'zfs_name_to_prop';
+
+function zfs_prop_user(_para1:pchar):boolean_t;cdecl;external External_library name 'zfs_prop_user';
+
+function zfs_prop_userquota_(_para1:pchar):boolean_t;cdecl;external External_library name 'zfs_prop_userquota';
+
+function zfs_prop_written_(_para1:pchar):boolean_t;cdecl;external External_library name 'zfs_prop_written';
+
+function zfs_prop_index_to_string(_para1:zfs_prop_t; _para2:uint64_t; _para3:Ppchar):cint;cdecl;external External_library name 'zfs_prop_index_to_string';
+
+function zfs_prop_string_to_index(_para1:zfs_prop_t; _para2:pchar; _para3:Puint64_t):cint;cdecl;external External_library name 'zfs_prop_string_to_index';
 function zfs_prop_random_value(_para1:zfs_prop_t; seed:uint64_t):uint64_t;cdecl;external External_library name 'zfs_prop_random_value';
 function zfs_prop_valid_for_type(_para1:cint; _para2:zfs_type_t):boolean_t;cdecl;external External_library name 'zfs_prop_valid_for_type';
 {
  * Pool property functions shared between libzfs and kernel.
   }
-(* Const before type ignored *)
-function zpool_name_to_prop(_para1:Pcchar):zpool_prop_t;cdecl;external External_library name 'zpool_name_to_prop';
-(* Const before type ignored *)
-function zpool_prop_to_name(_para1:zpool_prop_t):Pcchar;cdecl;external External_library name 'zpool_prop_to_name';
-(* Const before type ignored *)
-function zpool_prop_default_string(_para1:zpool_prop_t):Pcchar;cdecl;external External_library name 'zpool_prop_default_string';
+
+function zpool_name_to_prop(_para1:pchar):zpool_prop_t;cdecl;external External_library name 'zpool_name_to_prop';
+
+function zpool_prop_to_name(_para1:zpool_prop_t):pchar;cdecl;external External_library name 'zpool_prop_to_name';
+
+function zpool_prop_default_string(_para1:zpool_prop_t):pchar;cdecl;external External_library name 'zpool_prop_default_string';
 function zpool_prop_default_numeric(_para1:zpool_prop_t):uint64_t;cdecl;external External_library name 'zpool_prop_default_numeric';
 function _zpool_prop_readonly(_para1:zpool_prop_t):boolean_t;cdecl;external External_library name 'zpool_prop_readonly';
-(* Const before type ignored *)
-function zpool_prop_feature(_para1:Pcchar):boolean_t;cdecl;external External_library name 'zpool_prop_feature';
-(* Const before type ignored *)
-function zpool_prop_unsupported(name:pcchar):boolean_t;cdecl;external External_library name 'zpool_prop_unsupported';
-(* Const before type ignored *)
-function zpool_prop_index_to_string(_para1:zpool_prop_t; _para2:uint64_t; _para3:PPcchar):cint;cdecl;external External_library name 'zpool_prop_index_to_string';
-(* Const before type ignored *)
-function zpool_prop_string_to_index(_para1:zpool_prop_t; _para2:Pcchar; _para3:Puint64_t):cint;cdecl;external External_library name 'zpool_prop_string_to_index';
+
+function zpool_prop_feature(_para1:pchar):boolean_t;cdecl;external External_library name 'zpool_prop_feature';
+
+function zpool_prop_unsupported(name:pchar):boolean_t;cdecl;external External_library name 'zpool_prop_unsupported';
+
+function zpool_prop_index_to_string(_para1:zpool_prop_t; _para2:uint64_t; _para3:Ppchar):cint;cdecl;external External_library name 'zpool_prop_index_to_string';
+
+function zpool_prop_string_to_index(_para1:zpool_prop_t; _para2:pchar; _para3:Puint64_t):cint;cdecl;external External_library name 'zpool_prop_string_to_index';
 function zpool_prop_random_value(_para1:zpool_prop_t; seed:uint64_t):uint64_t;cdecl;external External_library name 'zpool_prop_random_value';
 {
  * Definitions for the Delegation.
