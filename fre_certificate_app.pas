@@ -119,7 +119,8 @@ begin
     end;
     dc_crt := session.NewDerivedCollection('crt_grid');
     with dc_crt do begin
-      SetReferentialLinkMode(['TFRE_DB_CERTIFICATE<CA'],'uids',conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION));
+      SetDeriveParent(conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION));
+      SetUseDependencyAsRefLinkFilter(['TFRE_DB_CERTIFICATE<CA'],false);
       SetDeriveTransformation(crt_Grid);
       SetDisplayType(cdt_Listview,[],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
     end;
