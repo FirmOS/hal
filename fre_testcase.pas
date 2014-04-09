@@ -101,7 +101,7 @@ type
     property        Config                      : IFRE_DB_Object read GetConfig write SetConfig;
     property        Report                      : IFRE_DB_Object read GetReport write SetReport;
     function        JobKey                      : string;
-    procedure       SetJobkeyDescription        (const newjobkey : string; const description: string);
+    procedure       SetJobkeyDescription        (const newjobkey : string; const description_: string);
     procedure       SetPeriodic                 (const periodic  : TFRE_TestPeriodic);
     function        GetPeriodic                 : TFRE_TestPeriodic;
   published
@@ -1403,10 +1403,10 @@ begin
  SetStatus(status,statussummary);
 end;
 
-procedure TFRE_DB_Testcase.SetJobkeyDescription(const newjobkey: string; const description: string);
+procedure TFRE_DB_Testcase.SetJobkeyDescription(const newjobkey: string; const description_: string);
 begin
  FNamedObject.ObjectName  := newjobkey;
- FNamedObject.Description.SetupText(newjobkey,description);
+ FNamedObject.Description.SetupText(newjobkey,description_);
 end;
 
 procedure TFRE_DB_Testcase.SetPeriodic(const periodic: TFRE_TestPeriodic);
