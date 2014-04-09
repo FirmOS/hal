@@ -54,7 +54,6 @@ type
 const
 
   CFRE_DB_ZFS_RAID_LEVEL      : array [TFRE_DB_ZFS_RAID_LEVEL] of string        = ('rl_stripe','rl_mirror','rl_z1','rl_z2','rl_z3','rl_undefined');
-  CFRE_DB_MACHINE_COLLECTION             = 'machine';
   CFRE_DB_ZFS_POOL_COLLECTION            = 'pool';
   CFRE_DB_ZFS_VDEV_COLLECTION            = 'vdev';
   CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION     = 'blockdevice';
@@ -113,12 +112,12 @@ type
     function  GetIopsRead      : TFRE_DB_String;
     function  GetIopsWrite     : TFRE_DB_String;
     function  GetParentInZFS   : TGuid;
-    function  GetPoolId        : TGuid;
+    function  GetPoolId        : TGuid; virtual;
     function  GetTransferRead  : TFRE_DB_String;
     function  GetTransferWrite : TFRE_DB_String;
     function  getCaption       : TFRE_DB_String; virtual;
     procedure SetParentInZFSId (AValue: TGuid);
-    procedure SetPoolId        (AValue: TGuid);
+    procedure SetPoolId        (AValue: TGuid); virtual;
     procedure SetMachineID          (AValue: TGUID);
     function  getIOStat             : TFRE_DB_IOSTAT;
     procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
@@ -350,6 +349,8 @@ type
 
   TFRE_DB_ZFS_ROOTOBJ=class(TFRE_DB_ZFS_OBJ)
   protected
+    function  GetPoolId        : TGuid; override;
+    procedure SetPoolId        (AValue: TGuid); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     function mayHaveZFSChildren    : Boolean; override;
@@ -704,6 +705,16 @@ end;
 
 { TFRE_DB_ZFS_ROOTOBJ }
 
+function TFRE_DB_ZFS_ROOTOBJ.GetPoolId: TGuid;
+begin
+  Result:=UID;
+end;
+
+procedure TFRE_DB_ZFS_ROOTOBJ.SetPoolId(AValue: TGuid);
+begin
+  //dont change UID of Pool
+end;
+
 class procedure TFRE_DB_ZFS_ROOTOBJ.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
@@ -929,7 +940,7 @@ end;
 
 function TFRE_DB_ZFS_OBJ.GetPoolId: TGuid;
 begin
-  Result:=Field('pool_uid').AsGUID;
+  Result:=Field('pool_uid').AsObjectLink;
 end;
 
 function TFRE_DB_ZFS_OBJ.GetTransferRead: TFRE_DB_String;
@@ -1050,7 +1061,7 @@ end;
 
 procedure TFRE_DB_ZFS_OBJ.SetPoolId(AValue: TGuid);
 begin
-  Field('pool_uid').AsGUID:=AValue;
+  Field('pool_uid').AsObjectLink:=AValue;
 end;
 
 procedure TFRE_DB_ZFS_OBJ.SetMachineID(AValue: TGUID);
@@ -3902,11 +3913,6 @@ var
 
 begin
 
-   if not conn.CollectionExists(CFRE_DB_MACHINE_COLLECTION) then
-     begin
-       collection  := conn.CreateCollection(CFRE_DB_MACHINE_COLLECTION);
-       collection.DefineIndexOnField('objname',fdbft_String,true,true);
-     end;
 
    if not conn.CollectionExists(CFRE_DB_ZFS_POOL_COLLECTION) then
      begin

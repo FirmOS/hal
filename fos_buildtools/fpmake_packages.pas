@@ -32,7 +32,7 @@ program fpmake_packages;
          AddUnit('fre_scsi.pas');
          AddUnit('fre_hal_disk.pas');
          AddUnit('fre_monitoring.pas');
-         AddUnit('fre_hal_update.pas');
+         AddUnit('fre_diff_transport.pas');
          AddUnit('fre_hal_mos.pas');
          AddUnit('fos_stats_control_interface.pas');
          AddUnit('fos_vm_control_interface.pas');

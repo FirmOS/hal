@@ -46,7 +46,7 @@ interface
 uses
   Classes, SysUtils,
   FRE_DB_INTERFACE,
-  FRE_DB_COMMON,snmpsend,fos_tool_interfaces,fre_system,fre_hal_update,fre_monitoring,fre_hal_schemes;
+  FRE_DB_COMMON,snmpsend,fos_tool_interfaces,fre_system,fre_diff_transport,fre_monitoring,fre_hal_schemes;
 
 type
 

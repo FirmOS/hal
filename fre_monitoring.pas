@@ -19,7 +19,7 @@ interface
 uses
   Classes, SysUtils,
   FRE_DB_INTERFACE,
-  FRE_DB_COMMON,fos_tool_interfaces,fre_system,fre_hal_update;
+  FRE_DB_COMMON,fos_tool_interfaces,fre_system,fre_diff_transport;
 
 type
 

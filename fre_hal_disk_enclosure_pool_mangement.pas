@@ -47,13 +47,16 @@ interface
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
   FOS_TOOL_INTERFACES,FRE_ZFS,fre_scsi,fre_base_parser,FRE_SYSTEM,fre_hal_schemes,fre_monitoring,
-  fre_hal_update;
+  fre_diff_transport;
 
 
 type
 
+  { TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT }
+
   TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT = class (TFRE_DB_Base)
   private
+    finitialized_from_db               : boolean;
 
     hdata_lock                         : IFOS_LOCK;
     hdata                              : IFRE_DB_Object;
@@ -73,8 +76,10 @@ type
     procedure UpdateZpoolStatus                     (const dbo:IFRE_DB_Object;const machinename : TFRE_DB_NameType);
     procedure UpdateMpath                           (const dbo:IFRE_DB_Object;const machinename : TFRE_DB_NameType);
 
-    function  GetUpdateDataAndTakeStatusSnaphot     : IFRE_DB_Object;
+    function  GetUpdateDataAndTakeStatusSnaphot     (const machine: string): IFRE_DB_Object;
     procedure ClearStatusSnapshotAndUpdates         ;
+    procedure ResetToUnInitialized                  ;
+    procedure ServerDiskEncPoolDataAnswer           (const data:IFRE_DB_Object);
 
     function  GetPools                  (const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
     function  CreateDiskpool            (const input:IFRE_DB_Object; const remoteuser:string='';const remotehost:string='';const remotekey:string=''): IFRE_DB_OBJECT;
@@ -89,12 +94,7 @@ implementation
 
 function Common_Disk_DataFeed(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 
-var update_obj      : IFRE_DB_Object;
-
-
-
-
-
+var
     unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
     ua_obj               : IFRE_DB_Object;
     machinecollection    : IFRE_DB_COLLECTION;
@@ -543,105 +543,7 @@ var update_obj      : IFRE_DB_Object;
     end;
 
 
-    procedure _processDiff(const diffstep:IFRE_DB_Object);
-    var insert_step     : TFRE_DB_INSERT_TRANSPORT;
-        update_step     : TFRE_DB_UPDATE_TRANSPORT;
-        delete_step     : TFRE_DB_DELETE_TRANSPORT;
 
-        insert_obj      : IFRE_DB_Object;
-        collection_name : string;
-        collection      : IFRE_DB_COLLECTION;
-
-        function GetDefaultCollectionName(const obj:IFRE_DB_Object) : string;
-        var  res_obj         : IFRE_DB_Object;
-        begin
-          if obj.MethodExists('GetDefaultCollection') then
-            begin
-              res_obj   := obj.Invoke('GetDefaultCollection',nil,ses,app,conn);
-              result    := res_obj.Field('collection').asstring;
-              res_obj.Finalize;
-  //            writeln('SWL: COLLECTION NAME:',collection_name);
-            end
-          else
-            begin
-            //raise EFRE_DB_Exception.Create('No GetDefaultCollection Method for Diff Insert '+obj.DumpToString);
-              GFRE_DBI.LogError(dblc_APPLICATION,'No GetDefaultCollection Method for Diff Insert '+obj.Schemeclass);
-              result     := '';
-              exit;
-            end;
-        end;
-
-    begin
-      if (diffstep.Implementor_HC is TFRE_DB_INSERT_TRANSPORT) then
-        begin
-          insert_step := (diffstep.Implementor_HC as TFRE_DB_INSERT_TRANSPORT);
-          if insert_step.GetInsertObject.SchemeClass='TFRE_DB_OBJECT' then
-            begin
-              GFRE_DBI.LogInfo(dblc_APPLICATION,'Skipping %s uid [%s]', [insert_step.GetInsertObject.SchemeClass,insert_step.UID_String]);
-              exit;
-            end;
-          collection_name := GetDefaultCollectionName(insert_step.GetInsertObject);
-          if collection_name='' then
-            exit;
-
-          insert_obj  := insert_step.GetInsertObject.CloneToNewObject;
-          collection := conn.GetCollection(collection_name);
-//          if insert_obj.FieldExists('zfs_guid') then
-//            writeln('SWL: ZFS_GUID',insert_obj.Field('zfs_guid').AsString);
-          CheckDbResult(collection.Store(insert_obj),'store '+insert_step.GetInsertObject.SchemeClass+' in '+ collection_name);
-          GFRE_DBI.LogInfo(dblc_APPLICATION,'Added %s uid [%s] to db', [insert_step.GetInsertObject.SchemeClass,insert_step.UID_String]);
-        end
-      else if (diffstep.Implementor_HC is TFRE_DB_DELETE_TRANSPORT) then
-        begin
-          delete_step := (diffstep.Implementor_HC as TFRE_DB_DELETE_TRANSPORT);
-          abort;
-        end
-      else if (diffstep.Implementor_HC is TFRE_DB_UPDATE_TRANSPORT) then
-        begin
-          update_step := (diffstep.Implementor_HC as TFRE_DB_UPDATE_TRANSPORT);
-          case update_step.GetType of
-            cev_UpdateBlockStart: begin
-              if Assigned(update_obj) then
-                raise EFRE_DB_Exception.Create('UpdateBlockStart for already assigned UpdateObject in Diff Update '+update_step.DumpToString);
-              CheckDBResult(conn.Fetch(update_step.UID,update_obj),'Could not fetch Update Object in Diff Update '+update_step.UID_String);
-              GFRE_DBI.LogInfo(dblc_APPLICATION,'Fetched %s uid [%s] for UpdateBlockStart', [update_obj.SchemeClass,update_obj.UID_String]);
-            end;
-            cev_UpdateBlockEnd: begin
-              if not Assigned(update_obj) then
-                raise EFRE_DB_Exception.Create('UpdateBlockEnd for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
-              collection_name:=GetDefaultCollectionName(update_obj);
-              if collection_name='' then
-                exit;
-              collection := conn.GetCollection(collection_name);
-              CheckDBResult(collection.Update(update_obj),'Could not Update Object in Diff Update '+update_step.UID_String);
-              update_obj := nil;
-              GFRE_DBI.LogInfo(dblc_APPLICATION,'Updated uid [%s] for UpdateBlockEnd', [update_step.UID_String]);
-            end;
-            cev_FieldAdded: begin
-              if not Assigned(update_obj) then
-                raise EFRE_DB_Exception.Create('FieldAdded for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
-              update_obj.Field(update_step.GetNewFieldName).CloneFromField(update_step.GetNewField);
-              GFRE_DBI.LogInfo(dblc_APPLICATION,'FieldAdded [%s]', [update_step.GetNewFieldName]);
-            end;
-            cev_FieldChanged: begin
-              if not Assigned(update_obj) then
-                raise EFRE_DB_Exception.Create('FieldChanged for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
-               update_obj.Field(update_step.GetNewFieldName).CloneFromField(update_step.GetNewField);
-               GFRE_DBI.LogInfo(dblc_APPLICATION,'FieldChanged [%s]', [update_step.GetNewFieldName]);
-            end;
-            cev_FieldDeleted: begin
-              if not Assigned(update_obj) then
-                raise EFRE_DB_Exception.Create('FieldDeleted for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
-              update_obj.DeleteField(update_step.GetOldFieldName);
-              GFRE_DBI.LogInfo(dblc_APPLICATION,'FieldDeleted [%s]', [update_step.GetOldFieldName]);
-            end;
-          else
-            raise EFRE_DB_Exception.Create('Undefined UpdateType in Diff Update '+update_step.DumpToString);
-          end;
-        end
-      else
-        raise EFRE_DB_Exception.Create('INVALID DIFF STEP IN DIFF SYNC');
-    end;
 
 //    procedure _processDiff(const diffstep:IFRE_DB_Object);
 //    var obj_id      : TGUID;
@@ -818,19 +720,11 @@ begin
 //  expandercollection     := conn.GetCollection(CFRE_DB_SAS_EXPANDER_COLLECTION);
 //  driveslotcollection    := conn.GetCollection(CFRE_DB_DRIVESLOT_COLLECTION);
 //
-////  writeln('SWL: DISKDATA',input.DumpToString());
+// writeln('SWL: DISKDATA',input.DumpToString());
 //
 //  unassigned_disks       := TFRE_DB_ZFS_UNASSIGNED.FetchUnassigned(conn);
 //
-  update_obj := nil;
-
-  if input.FieldExists('diff') then
-    begin
-      for i := 0 to input.Field('diff').ValueCount-1 do
-        begin
-          _processDiff(input.Field('diff').AsObjectItem[i]);
-        end;
-    end;
+  FREDIFF_ApplyTransportObjectToDB(input,conn);
 
   result := GFRE_DB_NIL_DESC;
 end;
@@ -842,9 +736,11 @@ var indbo:IFRE_DB_Object;
 begin
   inherited;
   GFRE_TF.Get_Lock(hdata_lock);
+  finitialized_from_db := false;
   hdata       :=GFRE_DBI.NewObject;
   update_data :=GFRE_DBI.NewObject;
   snap_data   :=hdata.CloneToNewObject();
+
 end;
 
 destructor TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.Destroy;
@@ -881,7 +777,7 @@ procedure TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ReceivedDBO(const dbo: IFRE_DB
 var subfeedmodule : string;
     machinename   : TFRE_DB_NameType;
 begin
-//  writeln('SWL:',dbo.DumpToString());
+//  writeln('SWL: RECEIVED',dbo.DumpToString());
   subfeedmodule := dbo.Field('SUBFEED').asstring;
   machinename   := dbo.Field('MACHINENAME').asstring;
   if subfeedmodule='DISKENCLOSURE' then
@@ -1070,16 +966,48 @@ var mdata: IFRE_DB_Object;
     var zfs_guid     : string;
         zfs_obj      : IFRE_DB_Object;
         zpool_iostat : TFRE_DB_ZPOOL_IOSTAT;
+
+
+      procedure _UpdateObjectLinks(const fld:IFRE_DB_Field);
+      var feed_link: IFRE_DB_Object;
+          lzfs_guid : string;
+          old_link: IFRE_DB_Object;
+      begin
+        if (fld.FieldType=fdbft_ObjLink) then
+          begin
+//            writeln('SWL: CHECK FIELD',fld.FieldName);
+            if feed_pool.FetchObjByUID(fld.AsObjectLink,feed_link)=False then
+              begin
+                GFRE_DBI.LogError(dblc_APPLICATION,'OBJECT HAS INVALID OBJLINK OBJ [%s %s]',[fld.fieldname,fld.AsString]);
+//                writeln('SWL:INVO ',feed_pool.DumpToString());
+//                writeln('SWL:INVO OLD ',old_pool.DumpToString());
+                exit;
+              end;
+            lzfs_guid:=feed_link.Field('zfs_guid').asstring;
+            if old_pool.FetchObjWithStringFieldValue('ZFS_GUID',lzfs_guid,old_link,'') then
+              begin
+//                writeln('SWL: FOUND OLD LINK ',fld.FieldName,' ',old_link.UID_String);
+                fld.AsObjectLink := old_link.UID;
+              end
+            else
+              begin
+                GFRE_DBI.LogError(dblc_APPLICATION,'COULD NOT FIND OLD LINK IN LAST POOL WITH ZFS_GUID [%s]',[lzfs_guid]);
+              end;
+          end;
+      end;
+
     begin
       halt :=false;
       if not (new_obj.Implementor_HC is TFRE_DB_ZFS_OBJ) then
         exit;
+//      writeln('SWL: CLASS ',new_obj.SchemeClass);
       zfs_guid := new_obj.Field('zfs_guid').asstring;
       if zfs_guid<>'' then
         begin
           if old_pool.FetchObjWithStringFieldValue('ZFS_GUID',zfs_guid,zfs_obj,'') then
             begin
               new_obj.Field('UID').AsGUID := zfs_obj.UID;
+              new_obj.ForAllFields(@_UpdateObjectLinks);
               if (zfs_obj.Implementor_HC is TFRE_DB_ZFS_OBJ) then
                 begin
                   zpool_iostat :=(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).ZPoolIostat;
@@ -1099,7 +1027,8 @@ var mdata: IFRE_DB_Object;
   begin
     feed_pool   := obj.Implementor_HC as TFRE_DB_ZFS_POOL;
     new_pool    := (feed_pool.CloneToNewObject.Implementor_HC as TFRE_DB_ZFS_POOL);
-  //  writeln('SWL: NEW POOL ',new_pool.DumpToString());
+//    writeln('SWL: NEW POOL ',new_pool.DumpToString());
+//    abort;
     if mdata.FetchObjWithStringFieldValue('objname',feed_pool.Field('objname').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
       begin
         new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
@@ -1122,7 +1051,7 @@ begin
 //    writeln('ZPOOLSTATUS',dbo.DumpToString());
 
     dbo.ForAllObjects(@_updatepools);
- //   writeln('SWL: MDATA POOLS',mdata.Field('pools').AsObject.DumpToString());
+//    writeln('SWL: MDATA POOLS',mdata.Field('pools').AsObject.DumpToString());
 
   finally
     ReleaseLockedData;
@@ -1162,36 +1091,65 @@ begin
 end;
 
 
-function TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.GetUpdateDataAndTakeStatusSnaphot: IFRE_DB_Object;
+function TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.GetUpdateDataAndTakeStatusSnaphot (const machine:string) : IFRE_DB_Object;
 begin
-  hdata_lock.Acquire;
-  try
+  if finitialized_from_db then
+    begin
+      hdata_lock.Acquire;
+      try
 
-    GenerateDiffContainersandAddToObject(hdata,snap_data,update_data);
-    writeln('SWL: UPDATES:',update_data.DumpToString());
-    writeln('SWL: STRUCTURE:',hdata.DumpToString());
+        FREDIFF_GenerateDiffContainersandAddToObject(hdata,snap_data,update_data);
+        writeln('SWL: UPDATES:',update_data.DumpToString());
+//        writeln('SWL: STRUCTURE:',hdata.DumpToString());
 
-    snap_data.Finalize;
+        snap_data.Finalize;
 
-    snap_data := hdata.CloneToNewObject;
+        snap_data := hdata.CloneToNewObject;
 
-    result := update_data.CloneToNewObject;
-    update_data.ClearAllFields;
-  finally
-    hdata_lock.Release;
-  end;
+        result := update_data.CloneToNewObject;
+        update_data.ClearAllFields;
+      finally
+        hdata_lock.Release;
+      end;
+    end
+  else
+    result := GFRE_DBI.NewObject;   //DEBUG TODO
 end;
 
 procedure TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ClearStatusSnapshotAndUpdates;
 begin
   hdata_lock.Acquire;
   try
+    hdata.ClearAllFields;
     snap_data.ClearAllFields;
     update_data.ClearAllFields;
   finally
     hdata_lock.Release;
   end;
 
+end;
+
+procedure TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ResetToUnInitialized;
+begin
+  finitialized_from_db := false;
+  ClearStatusSnapshotAndUpdates;
+end;
+
+procedure TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ServerDiskEncPoolDataAnswer(const data: IFRE_DB_Object);
+var machinename : TFRE_DB_String;
+begin
+  writeln('SWL SERVERDISKENC ',data.DumpToString());
+  machinename := data.Field('objname').asstring;
+  assert(length(machinename)>0,'TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ServerDiskEncPoolDataAnswer no machiname provided!');
+  hdata_lock.Acquire;
+  try
+    hdata.Field(machinename).AsObject := data.CloneToNewObject;
+    snap_data.Finalize;
+    snap_data := hdata.CloneToNewObject;
+  finally
+    hdata_lock.Release;
+  end;
+  finitialized_from_db:=true;
 end;
 
 function TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.GetPools(const remoteuser: string; const remotehost: string; const remotekey: string): IFRE_DB_OBJECT;

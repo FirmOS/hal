@@ -1,4 +1,4 @@
-unit fre_hal_update;
+unit fre_diff_transport;
 
 {
 (§LIC)
@@ -46,8 +46,7 @@ interface
 
 uses
   Classes, SysUtils,FOS_TOOL_INTERFACES,
-  Process,   FRE_DB_COMMON,
-  FRE_DBBUSINESS,
+  FRE_DB_COMMON,
   FRE_DB_INTERFACE;
 
 
@@ -97,7 +96,8 @@ type
 
 
 
-procedure GenerateDiffContainersandAddToObject(const first_obj:IFRE_DB_Object;const second_obj:IFRE_DB_Object;const transport_list_obj:IFRE_DB_Object);
+procedure FREDIFF_GenerateDiffContainersandAddToObject  (const first_obj:IFRE_DB_Object;const second_obj:IFRE_DB_Object;const transport_list_obj:IFRE_DB_Object);
+procedure FREDIFF_ApplyTransportObjectToDB              (const transport_object: IFRE_DB_Object; const conn: IFRE_DB_CONNECTION);      // GetDefaultCollection must be defined on every object to insert in db
 
 procedure Register_DB_Extensions;
 
@@ -113,7 +113,8 @@ begin
 end;
 
 
-procedure GenerateDiffContainersandAddToObject(const first_obj: IFRE_DB_Object; const second_obj: IFRE_DB_Object; const transport_list_obj: IFRE_DB_Object);
+
+procedure FREDIFF_GenerateDiffContainersandAddToObject(const first_obj: IFRE_DB_Object; const second_obj: IFRE_DB_Object; const transport_list_obj: IFRE_DB_Object);
 var
   update_start:IFRE_DB_Object;
 
@@ -163,6 +164,117 @@ var
 
 begin
   GFRE_DBI.GenerateAnObjChangeList(first_obj,second_obj,@_Insert,@_Delete,@_Update);
+end;
+
+procedure FREDIFF_ApplyTransportObjectToDB(const transport_object: IFRE_DB_Object; const conn: IFRE_DB_CONNECTION);
+var update_obj : IFRE_DB_Object;
+    i          : NativeInt;
+
+  procedure _processDiff(const diffstep:IFRE_DB_Object);
+  var insert_step     : TFRE_DB_INSERT_TRANSPORT;
+      update_step     : TFRE_DB_UPDATE_TRANSPORT;
+      delete_step     : TFRE_DB_DELETE_TRANSPORT;
+
+      insert_obj      : IFRE_DB_Object;
+      collection_name : string;
+      collection      : IFRE_DB_COLLECTION;
+
+      function GetDefaultCollectionName(const obj:IFRE_DB_Object) : string;
+      var  res_obj         : IFRE_DB_Object;
+      begin
+        if obj.MethodExists('GetDefaultCollection') then
+          begin
+            res_obj   := obj.Invoke('GetDefaultCollection',nil,nil,nil,conn);
+            result    := res_obj.Field('collection').asstring;
+            res_obj.Finalize;
+  //            writeln('SWL: COLLECTION NAME:',collection_name);
+          end
+        else
+          begin
+            raise EFRE_DB_Exception.Create('No GetDefaultCollection Method for Diff Insert '+obj.DumpToString);
+            result     := '';
+            exit;
+          end;
+      end;
+
+  begin
+    if (diffstep.Implementor_HC is TFRE_DB_INSERT_TRANSPORT) then
+      begin
+        insert_step := (diffstep.Implementor_HC as TFRE_DB_INSERT_TRANSPORT);
+        if insert_step.GetInsertObject.IsA('TFRE_DB_OBJECT') then
+          begin
+            GFRE_DBI.LogInfo(dblc_APPLICATION,'Skipping %s uid [%s]', [insert_step.GetInsertObject.SchemeClass,insert_step.UID_String]);
+            exit;
+          end;
+        collection_name := GetDefaultCollectionName(insert_step.GetInsertObject);
+        if collection_name='' then
+          exit;
+
+        insert_obj  := insert_step.GetInsertObject.CloneToNewObject;
+        collection := conn.GetCollection(collection_name);
+        CheckDbResult(collection.Store(insert_obj),'store '+insert_step.GetInsertObject.SchemeClass+' in '+ collection_name);
+        GFRE_DBI.LogInfo(dblc_APPLICATION,'Added %s uid [%s] to db', [insert_step.GetInsertObject.SchemeClass,insert_step.UID_String]);
+      end
+    else if diffstep.isA(TFRE_DB_DELETE_TRANSPORT,delete_step) then
+      begin
+        abort;
+      end
+    else if (diffstep.Implementor_HC is TFRE_DB_UPDATE_TRANSPORT) then
+      begin
+        update_step := (diffstep.Implementor_HC as TFRE_DB_UPDATE_TRANSPORT);
+        case update_step.GetType of
+          cev_UpdateBlockStart: begin
+            if Assigned(update_obj) then
+              raise EFRE_DB_Exception.Create('UpdateBlockStart for already assigned UpdateObject in Diff Update '+update_step.DumpToString);
+            CheckDBResult(conn.Fetch(update_step.UID,update_obj),'Could not fetch Update Object in Diff Update '+update_step.UID_String);
+            GFRE_DBI.LogDebug(dblc_APPLICATION,'Fetched %s uid [%s] for UpdateBlockStart', [update_obj.SchemeClass,update_obj.UID_String]);
+          end;
+          cev_UpdateBlockEnd: begin
+            if not Assigned(update_obj) then
+              raise EFRE_DB_Exception.Create('UpdateBlockEnd for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
+            collection_name:=GetDefaultCollectionName(update_obj);
+            if collection_name='' then
+              exit;
+            collection := conn.GetCollection(collection_name);
+            CheckDBResult(collection.Update(update_obj),'Could not Update Object in Diff Update '+update_step.UID_String);
+            update_obj := nil;
+            GFRE_DBI.LogDebug(dblc_APPLICATION,'Updated uid [%s] for UpdateBlockEnd', [update_step.UID_String]);
+          end;
+          cev_FieldAdded: begin
+            if not Assigned(update_obj) then
+              raise EFRE_DB_Exception.Create('FieldAdded for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
+            update_obj.Field(update_step.GetNewFieldName).CloneFromField(update_step.GetNewField);
+            GFRE_DBI.LogDebug(dblc_APPLICATION,'FieldAdded [%s]', [update_step.GetNewFieldName]);
+          end;
+          cev_FieldChanged: begin
+            if not Assigned(update_obj) then
+              raise EFRE_DB_Exception.Create('FieldChanged for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
+             update_obj.Field(update_step.GetNewFieldName).CloneFromField(update_step.GetNewField);
+             GFRE_DBI.LogDebug(dblc_APPLICATION,'FieldChanged [%s]', [update_step.GetNewFieldName]);
+          end;
+          cev_FieldDeleted: begin
+            if not Assigned(update_obj) then
+              raise EFRE_DB_Exception.Create('FieldDeleted for not assigned UpdateObject in Diff Update '+update_step.DumpToString);
+            update_obj.DeleteField(update_step.GetOldFieldName);
+            GFRE_DBI.LogDebug(dblc_APPLICATION,'FieldDeleted [%s]', [update_step.GetOldFieldName]);
+          end;
+        else
+          raise EFRE_DB_Exception.Create('Undefined UpdateType in Diff Update '+update_step.DumpToString);
+        end;
+      end
+    else
+      raise EFRE_DB_Exception.Create('INVALID DIFF STEP IN DIFF SYNC');
+  end;
+
+begin
+  update_obj := nil;
+  if transport_object.FieldExists('diff') then
+    begin
+      for i := 0 to transport_object.Field('diff').ValueCount-1 do
+        begin
+          _processDiff(transport_object.Field('diff').AsObjectItem[i]);
+        end;
+    end;
 end;
 
 { TFRE_DB_DELETE_TRANSPORT }
