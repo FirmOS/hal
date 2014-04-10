@@ -906,6 +906,8 @@ end;
 function TFRE_DB_ZFS_VDEVCONTAINER.createVdevEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_VDEV;
 begin
   Result:=TFRE_DB_ZFS_VDEV.CreateForDB;
+  Result.parentInZFSId:=UID;
+  Result.poolId:=poolId;
   Field(devicename).asObject:=Result;
 end;
 

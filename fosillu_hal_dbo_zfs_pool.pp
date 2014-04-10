@@ -74,12 +74,16 @@ var zp         : Pzpool_handle_t;
       u64       : UInt64;
       elemname  : string;
       mapname   : string;
+      devicename: string;
+      poolstate : string;
 
     function _MapNVElementNameToFieldName(const elementname: string): string;
     begin
       result := elementname;
       result := StringReplace(result,'.','_',[rfReplaceAll]);
       if (elementname= ZPOOL_CONFIG_GUID) or (elementname= ZPOOL_CONFIG_POOL_GUID) then result := 'zfs_guid';
+      if (elementname= ZPOOL_CONFIG_POOL_NAME) then result := 'objname';
+
     end;
 
   begin
@@ -90,12 +94,35 @@ var zp         : Pzpool_handle_t;
           if nvpair_value_string(elem,@pc)<>0 then
             raise EFRE_DB_Exception.Create('invalid conversion of element'+elemname);
           obj.Field(mapname).AsString := pc;
+          if mapname=ZPOOL_CONFIG_PATH then
+            begin
+              if Pos('/dev/dsk',pc)=1 then
+                devicename:=ExtractFileName(pc)
+              else
+                devicename:=pc;
+//                writeln(Pos('s0',devicename), ' ',length(devicename)-1);
+              if Pos('s0',devicename)=(length(devicename)-1)then
+                devicename := Copy(devicename,1,length(devicename)-2);
+              obj.Field('devicename').asstring := devicename;
+//                writeln('SWL:DEVICENAME',devicename);
+            end;
         end;
       DATA_TYPE_UINT64: begin
           if nvpair_value_uint64(elem,@u64)<>0 then
             raise EFRE_DB_Exception.Create('invalid conversion of element'+elemname);
           if (mapname='zfs_guid') then
-            obj.Field(mapname).asstring := IntToStr(u64)
+            begin
+              obj.Field(mapname).asstring := IntToStr(u64);
+              if (obj.Implementor_HC is TFRE_DB_ZFS_DATASTORAGE) then
+                obj.Field(mapname).asstring := 'ROOTVDEV'+IntToStr(u64);
+            end
+          else if ((mapname='state') and (obj.Implementor_HC is TFRE_DB_ZFS_POOL)) then
+            begin
+              WriteStr(poolstate,pool_state_t(u64));
+              obj.Field('state').AsString     := poolstate;
+              obj.Field('state_ord').AsUInt64 := u64;
+              //writeln('SWL:POOLSTATE',poolstate);
+            end
           else
             obj.Field(mapname).asuint64 := u64;
       end;
@@ -223,6 +250,7 @@ var zp         : Pzpool_handle_t;
                          VDEV_TYPE_ROOT :
                            begin
                              actual_obj:=pool.createDatastorageEmbedded;
+                             actual_obj.SetName(VDEV_TYPE_ROOT);
                              parsestate:=psVdev;
                            end
                        else
@@ -249,7 +277,10 @@ var zp         : Pzpool_handle_t;
                                    actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                                    temp_obj.Finalize;
                                    if vtype=VDEV_TYPE_MIRROR then
-                                     (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror
+                                     begin
+                                      (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror;
+                                      actual_obj.SetName(VDEV_TYPE_MIRROR);
+                                     end
                                    else
                                      begin
                                        case actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64 of
@@ -260,30 +291,29 @@ var zp         : Pzpool_handle_t;
                                          raise EFRE_DB_Exception.Create('invalid parity nparity '+inttostr(actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64));
                                        end;
                                        (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).RaidLevel:=rl;
+                                       actual_obj.SetName(VDEV_TYPE_RAIDZ+inttostr(actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64));
                                      end
                                  end
                                else
                                  begin
                                    actual_obj:=pool.createLogEmbedded;
+                                   actual_obj.setZFSGuid('LOG'+pool.getZFSGuid);
+                                   actual_obj.setname('logs');
                                    actual_obj:=(actual_obj as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(temp_obj.Field('zfs_guid').asstring);
                                    actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                                    temp_obj.Finalize;
                                    if vtype=VDEV_TYPE_MIRROR then
-                                     (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror;
+                                     begin
+                                      (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror;
+                                      actual_obj.SetName(VDEV_TYPE_MIRROR);
+                                     end;
                                  end;
                                parsestate:=psVdev;
                              end;
                          end;
-                       VDEV_TYPE_DISK :
+                       VDEV_TYPE_DISK, VDEV_TYPE_FILE :
                          begin
                            actual_obj:=(parent_obj as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded(temp_obj.Field('zfs_guid').asstring);
-                           actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
-                           temp_obj.Finalize;
-                           parsestate:=psVdev;
-                         end;
-                       VDEV_TYPE_FILE :
-                         begin
-                           actual_obj:=(parent_obj as TFRE_DB_ZFS_DISKCONTAINER).createFileBlockdeviceEmbedded(temp_obj.Field('zfs_guid').asstring);
                            actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                            temp_obj.Finalize;
                            parsestate:=psVdev;
@@ -291,6 +321,7 @@ var zp         : Pzpool_handle_t;
                        VDEV_TYPE_SPARE :
                          begin
                            actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEV).createDiskSpareContainerEmbedded(temp_obj.Field('zfs_guid').asstring);
+                           actual_obj.setname(VDEV_TYPE_SPARE);
                            actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                            temp_obj.Finalize;
                            parsestate:=psVdev;
@@ -298,6 +329,7 @@ var zp         : Pzpool_handle_t;
                        VDEV_TYPE_REPLACING :
                          begin
                            actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEV).createDiskReplaceContainerEmbedded(temp_obj.Field('zfs_guid').asstring);
+                           actual_obj.setname(VDEV_TYPE_REPLACING);
                            actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                            temp_obj.Finalize;
                            parsestate:=psVdev;
@@ -323,9 +355,17 @@ var zp         : Pzpool_handle_t;
            begin
              if FOSNVGET_NVARR(elem,nvlistarr,count) then
                if name=ZPOOL_CONFIG_SPARES then
-                 newparent_obj := pool.createSpareEmbedded
+                 begin
+                   newparent_obj := pool.createSpareEmbedded;
+                   newparent_obj.setZFSGuid('SPARE'+pool.getZFSGuid);
+                   newparent_obj.setname('spares');
+                 end
                else if name=ZPOOL_CONFIG_L2CACHE then
-                 newparent_obj := pool.createCacheEmbedded
+                 begin
+                   newparent_obj := pool.createCacheEmbedded;
+                   newparent_obj.setZFSGuid('CACHE'+pool.getZFSGuid);
+                   newparent_obj.setname('cache');
+                 end
                else
                  newparent_obj := actual_obj;
                for i := 0 to count-1 do
@@ -363,7 +403,7 @@ var zp         : Pzpool_handle_t;
 
 begin
   parsestate := psUndefined;
-  zp := zpool_open(GILLUMOS_LIBZFS_HANDLE, Pcchar(@poolname[1]));
+  zp := zpool_open(GILLUMOS_LIBZFS_HANDLE, Pchar(@poolname[1]));
   try
     if not assigned(zp) then
       begin
@@ -386,7 +426,7 @@ end;
 
 function _zpoolGetActiveIterator(_ph:Pzpool_handle_t; _para2:pointer):cint;cdecl;
 var poolname   : string;
-    pcpoolname : pcchar;
+    pcpoolname : pchar;
     poolstate  : cint;
     poolstate_s: string;
     pools      : IFRE_DB_Object;

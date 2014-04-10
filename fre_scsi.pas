@@ -1191,9 +1191,10 @@ begin
         end
       else
         begin
-          disk   := nil;
-          GFRE_DBI.LogError(dblc_APPLICATION,'SG3 Inquire for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
-          exit(res);
+          // eg. vmware
+          disk  := GFRE_DBI.NewObjectScheme(TFRE_DB_SAS_DISK);
+          GFRE_DBI.LogInfo(dblc_APPLICATION,'SG3 Inquire for %s failed with resultcode %d, %s',[devicepath,res,errstring]);
+          //exit(res);
         end;
     end;
 

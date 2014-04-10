@@ -67,6 +67,7 @@ program fpmake_packages;
          AddUnit('fosillu_libscf.pp');
          AddUnit('fosillu_hal_dbo_common.pp');
          AddUnit('fosillu_hal_dbo_zfs_dataset.pas');
+         AddUnit('fosillu_hal_dbo_zfs_pool.pp');
        end;
     end;
     {$ENDIF}
