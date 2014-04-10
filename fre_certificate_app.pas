@@ -105,7 +105,7 @@ begin
      end;
     DC_CA := session.NewDerivedCollection('ca_grid');
     with DC_CA do begin
-      SetDeriveParent           (conn.GetDomainCollection(CFRE_DB_CA_COLLECTION));
+      SetDeriveParent           (conn.GetCollection(CFRE_DB_CA_COLLECTION));
       SetDeriveTransformation   (ca_Grid);
       SetDisplayType            (cdt_Listview,[],'',nil,'',CWSF(@WEB_CAMenu),nil,CWSF(@WEB_CAContent));
     end;
@@ -119,7 +119,7 @@ begin
     end;
     dc_crt := session.NewDerivedCollection('crt_grid');
     with dc_crt do begin
-      SetDeriveParent(conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION));
+      SetDeriveParent(conn.GetCollection(CFRE_DB_CERTIFICATE_COLLECTION));
       SetUseDependencyAsRefLinkFilter(['TFRE_DB_CERTIFICATE<CA'],false);
       SetDeriveTransformation(crt_Grid);
       SetDisplayType(cdt_Listview,[],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
@@ -215,24 +215,24 @@ function TFRE_CERTIFICATE_CA_MOD.WEB_CAContent(const input: IFRE_DB_Object; cons
 var
   panel         : TFRE_DB_FORM_PANEL_DESC;
   scheme        : IFRE_DB_SchemeObject;
-  coll          : IFRE_DB_COLLECTION;
   ca            : IFRE_DB_Object;
   sel_guid      : TGUID;
 begin
 
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
     sel_guid := input.Field('SELECTED').AsGUID;
-    coll     := conn.GetDomainCollection(CFRE_DB_CA_COLLECTION);
-    if coll.Fetch(sel_guid,ca) then begin
-      GFRE_DBI.GetSystemSchemeByName(ca.SchemeClass,scheme);
-      panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$ca_content_header'));
-      panel.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
-      panel.FillWithObjectValues(ca,GetSession(input));
-      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_stream',true,'application/octet-stream','ca.crt'),false);
-      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_stream',true,'application/octet-stream','ca.key'),false);
-      panel.contentId:='CA_CONTENT';
-      Result:=panel;
-    end;
+
+    CheckDbResult(conn.Fetch(sel_guid,ca),'could not fetch ca from database');
+
+    GFRE_DBI.GetSystemSchemeByName(ca.SchemeClass,scheme);
+    panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$ca_content_header'));
+    panel.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
+    panel.FillWithObjectValues(ca,GetSession(input));
+    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_stream',true,'application/octet-stream','ca.crt'),false);
+    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_stream',true,'application/octet-stream','ca.key'),false);
+    panel.contentId:='CA_CONTENT';
+    Result:=panel;
+
   end else begin
     panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$ca_content_header'));
     panel.contentId:='CA_CONTENT';
@@ -249,23 +249,20 @@ function TFRE_CERTIFICATE_CA_MOD.WEB_CrtContent(const input: IFRE_DB_Object; con
 var
   panel         : TFRE_DB_FORM_PANEL_DESC;
   scheme        : IFRE_DB_SchemeObject;
-  coll          : IFRE_DB_COLLECTION;
   crt           : IFRE_DB_Object;
   sel_guid      : TGUID;
 begin
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
     sel_guid := input.Field('SELECTED').AsGUID;
-    coll     := conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION);
-    if coll.Fetch(sel_guid,crt) then begin
-      GFRE_DBI.GetSystemSchemeByName(crt.SchemeClass,scheme);
-      panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$crt_content_header'));
-      panel.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
-      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_Stream',true,'application/octet-stream','certificate.crt'),false);
-      panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_Stream',true,'application/octet-stream','certificate.key'),false);
-      panel.FillWithObjectValues(crt,GetSession(input));
-      panel.contentId:='CRT_CONTENT';
-      Result:=panel;
-    end;
+    CheckDBResult(conn.Fetch(sel_guid,crt),'could not fetch certificate from db');
+    GFRE_DBI.GetSystemSchemeByName(crt.SchemeClass,scheme);
+    panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$crt_content_header'));
+    panel.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
+    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_Stream',true,'application/octet-stream','certificate.crt'),false);
+    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_Stream',true,'application/octet-stream','certificate.key'),false);
+    panel.FillWithObjectValues(crt,GetSession(input));
+    panel.contentId:='CRT_CONTENT';
+    Result:=panel;
   end else begin
     panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$crt_content_header'));
     panel.contentId:='CRT_CONTENT';
@@ -322,7 +319,7 @@ begin
 
   if (caob.Implementor_HC as TFRE_DB_CA).Create_SSL_CA then
     begin
-      if conn.GetDomainCollection(CFRE_DB_CA_COLLECTION).Store(caob)=edb_OK then
+      if conn.GetCollection(CFRE_DB_CA_COLLECTION).Store(caob)=edb_OK then
         Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
       else
         raise EFRE_DB_Exception.Create('could not store created ca object');
@@ -379,7 +376,7 @@ begin
 
   if (caob.Implementor_HC as TFRE_DB_CA).Import_SSL_CA(ca_crt_file,serial_file,ca_key_file,random_file,index_file,crl_number_file,import_status) then
     begin
-      if conn.GetDomainCollection(CFRE_DB_CA_COLLECTION).Store(caob)=edb_OK then
+      if conn.GetCollection(CFRE_DB_CA_COLLECTION).Store(caob)=edb_OK then
         Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
       else
         raise EFRE_DB_Exception.Create('could not store created ca object');
@@ -480,7 +477,7 @@ begin
 
   if crtob.Create_SSL_Certificate(conn) then
     begin
-      if conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION).Store(crtob)=edb_OK then
+      if conn.GetCollection(CFRE_DB_CERTIFICATE_COLLECTION).Store(crtob)=edb_OK then
         Result:=TFRE_DB_CLOSE_DIALOG_DESC.create.Describe()
       else
         raise EFRE_DB_Exception.Create('could not store created certificate object');
@@ -541,13 +538,9 @@ begin
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then
     begin
       ca_uid := input.Field('SELECTED').AsGUID;
-      if conn.GetDomainCollection(CFRE_DB_CA_COLLECTION).Fetch(ca_uid,caobj) then
-        begin
-          (caobj.Implementor_HC as TFRE_DB_CA).BackupCA(conn,'/fre/hal/ca_backup.cfg');
-          Result:=GFRE_DB_NIL_DESC;
-        end
-      else
-        raise EFRE_DB_Exception.Create('could not fetch ca');
+      CheckDBResult(conn.Fetch(ca_uid,caobj),'could not fetch ca');
+      (caobj.Implementor_HC as TFRE_DB_CA).BackupCA(conn,'/fre/hal/ca_backup.cfg');
+      Result:=GFRE_DB_NIL_DESC;
     end
   else
     result := GFRE_DB_NIL_DESC;
@@ -695,11 +688,17 @@ var
 begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
-    coll := conn.CreateDomainCollection(CFRE_DB_CA_COLLECTION,false,'',FREDB_G2H(domainUID));
-    //coll.DefineIndexOnField('name',fdbft_String,true,true);
-    coll := conn.CreateDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION,false,'',FREDB_G2H(domainUID));
-    //coll.DefineIndexOnField('name',fdbft_String,true,true);
   end;
+  if currentVersionID = '1.0' then
+    begin
+      currentVersionId := '1.1';
+      if not conn.CollectionExists(CFRE_DB_CA_COLLECTION) then
+        conn.CreateCollection(CFRE_DB_CA_COLLECTION,false);
+        //coll.DefineIndexOnField('name',fdbft_String,true,true);
+      if not conn.CollectionExists(CFRE_DB_CERTIFICATE_COLLECTION) then
+        conn.CreateCollection(CFRE_DB_CERTIFICATE_COLLECTION,false);
+      //coll.DefineIndexOnField('name',fdbft_String,true,true);
+    end;
 end;
 
 procedure Register_DB_Extensions;

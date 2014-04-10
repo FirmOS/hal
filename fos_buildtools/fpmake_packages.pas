@@ -30,7 +30,7 @@ program fpmake_packages;
          AddUnit('fre_alert.pas');
          AddUnit('fre_zfs.pas');
          AddUnit('fre_scsi.pas');
-         AddUnit('fre_hal_disk.pas');
+         AddUnit('fre_hal_disk_enclosure_pool_mangement.pas');
          AddUnit('fre_monitoring.pas');
          AddUnit('fre_diff_transport.pas');
          AddUnit('fre_hal_mos.pas');
@@ -44,6 +44,32 @@ program fpmake_packages;
          AddUnit('fre_certificate_app.pas');
        end;
     end;
+    {$IFDEF SOLARIS}
+    P := AddPackage('FRE_HAL_ILLU');
+    with p do begin
+       OSes      := cFOS_BUILD_OSes;
+       Directory := cFOS_BUILD_PREFIX;
+       Dependencies.Add('FRE_CORE');
+       Dependencies.Add('FRE_DB');
+       Dependencies.Add('FRE_INTF');
+       Dependencies.Add('FRE_BLKCOM');
+       Dependencies.Add('fcl-process');
+       Dependencies.Add('FRE_HAL');
+       with Targets do begin
+         AddUnit('fos_illumos_defs.pas');
+         AddUnit('fosillu_zfs.pp');
+         AddUnit('fosillu_priv_names.pp');
+         AddUnit('fosillu_priv.pp');
+         AddUnit('fosillu_nvpair.pp');
+         AddUnit('fosillu_mnttab.pp');
+         AddUnit('fosillu_libzonecfg.pp');
+         AddUnit('fosillu_libzfs.pp');
+         AddUnit('fosillu_libscf.pp');
+         AddUnit('fosillu_hal_dbo_common.pp');
+         AddUnit('fosillu_hal_dbo_zfs_dataset.pas');
+       end;
+    end;
+    {$ENDIF}
     Run;
    end;
  end.

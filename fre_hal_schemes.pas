@@ -2216,6 +2216,7 @@ var
   halo  : IFRE_DB_Object;
   caobj : IFRE_DB_Object;
   crtobj: IFRE_DB_Object;
+  ldomainid : TGUID;
 
   procedure _allCA(const fld:IFRE_DB_Field);
   var ca: IFRE_DB_Object;
@@ -2233,6 +2234,7 @@ var
             ca.Field('key_stream').AsStream.SetFromRawByteString(ca.Field('key').asstring);
             ca.DeleteField('key');
           end;
+        ca.Field('DomainID').AsGUID:= ldomainid;
         CheckDbResult(coll.Store(ca),'could not store ca');
       end;
   end;
@@ -2254,13 +2256,15 @@ var
             crt.DeleteField('key');
           end;
 //        writeln(crt.DumpToString);
+        crt.Field('DomainID').AsGUID:= ldomainid;
         CheckDbResult(collc.Store(crt),'could not store crt');
       end;
   end;
 
 begin
-  COLL  := CONN.GetDomainCollection(CFRE_DB_CA_COLLECTION,domainName);
-  COLLC := CONN.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION,domainName);
+  ldomainid := conn.SYS.DomainID(domainName);
+  COLL  := CONN.GetCollection(CFRE_DB_CA_COLLECTION);
+  COLLC := CONN.GetCollection(CFRE_DB_CERTIFICATE_COLLECTION);
   halo   := GFRE_DBI.CreateFromFile(filename);
   caobj  := halo.Field('ca').AsObject;
   caobj.ForAllFields(@_allCA);
@@ -2336,7 +2340,7 @@ begin
             import_error := import_error+#13+#10+crt_error;
             result       := false;
           end;
-        CheckDbResult(conn.GetDomainCollection(CFRE_DB_CERTIFICATE_COLLECTION).Store(crt),'could not store certificate');
+        CheckDbResult(conn.GetCollection(CFRE_DB_CERTIFICATE_COLLECTION).Store(crt),'could not store certificate');
       until FindNext(info)<>0;
     FindClose(info);
   except on E:Exception do begin

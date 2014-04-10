@@ -217,11 +217,11 @@ var update_obj : IFRE_DB_Object;
       end
     else if diffstep.isA(TFRE_DB_DELETE_TRANSPORT,delete_step) then
       begin
-        abort;
+        CheckDbResult(conn.Delete(delete_step.UID),'delete '+delete_step.UID_String);
+        GFRE_DBI.LogInfo(dblc_APPLICATION,'Deleted uid [%s] from db', [delete_step.UID_String]);
       end
-    else if (diffstep.Implementor_HC is TFRE_DB_UPDATE_TRANSPORT) then
+    else if diffstep.isA(TFRE_DB_UPDATE_TRANSPORT,update_step) then
       begin
-        update_step := (diffstep.Implementor_HC as TFRE_DB_UPDATE_TRANSPORT);
         case update_step.GetType of
           cev_UpdateBlockStart: begin
             if Assigned(update_obj) then
@@ -268,6 +268,7 @@ var update_obj : IFRE_DB_Object;
 
 begin
   update_obj := nil;
+//  writeln('SWL DIFF:',transport_object.DumpToString);
   if transport_object.FieldExists('diff') then
     begin
       for i := 0 to transport_object.Field('diff').ValueCount-1 do
