@@ -230,6 +230,7 @@ begin
     panel.FillWithObjectValues(ca,GetSession(input));
     panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_stream',true,'application/octet-stream','ca.crt'),false);
     panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_stream',true,'application/octet-stream','ca.key'),false);
+    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'$crl_download'),ses.GetDownLoadLink4StreamField(sel_guid,'crl_stream',true,'application/octet-stream','crl.pem'),false);
     panel.contentId:='CA_CONTENT';
     Result:=panel;
 
@@ -629,6 +630,7 @@ begin
       CreateAppText(conn,'$crt_add_diag_cap','Create Certificate');
       CreateAppText(conn,'$crt_download_crt','Download Certificate');
       CreateAppText(conn,'$crt_download_key','Download Private Key');
+      CreateAppText(conn,'$crl_download','Download Certificate Revocation List');
       CreateAppText(conn,'$ca_add_diag_cap','Create CA');
       CreateAppText(conn,'$ca_add_no_ca_msg','Please select a Certificate Authority first.');
       CreateAppText(conn,'$ca_add_import_cap','Import CA');
