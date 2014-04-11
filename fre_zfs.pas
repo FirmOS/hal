@@ -101,6 +101,8 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+    procedure       SetBlockdevice              (const blockdevice:TGUID);
+    function        GetBlockdevice              : TGUID;
   published
     function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
@@ -153,6 +155,8 @@ type
     procedure setZFSGuid              (const avalue:String);
     function  canIdentify             : Boolean; virtual;
     procedure embedChildrenRecursive  (const conn: IFRE_DB_CONNECTION);
+    procedure addChildEmbedded        (const child : TFRE_DB_ZFS_OBJ);
+    procedure embedIostat             (const conn: IFRE_DB_Connection);
     procedure SetMOSStatus            (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
     function  GetMOSStatus            : TFRE_DB_MOS_STATUS_TYPE;
     procedure SetName                 (const avalue:TFRE_DB_String);
@@ -369,7 +373,7 @@ type
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
-    class function  CreateEmbeddedPoolObjectfromCollection (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID): TFRE_DB_ZFS_POOL;
+    class function  CreateEmbeddedPoolObjectfromDB (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID): TFRE_DB_ZFS_POOL;
     function  GetDatastorage            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_DATASTORAGE;
     function  GetDatastorageEmbedded    : TFRE_DB_ZFS_DATASTORAGE;
     function  GetSpare                  (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_SPARE;
@@ -377,12 +381,16 @@ type
     function  GetLog                    (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_LOG;
     function  createDatastorage         : TFRE_DB_ZFS_DATASTORAGE;
     function  createDatastorageEmbedded : TFRE_DB_ZFS_DATASTORAGE;
+    procedure addDataStorageEmbedded    (const ds: TFRE_DB_ZFS_DATASTORAGE);
     function  createCache               : TFRE_DB_ZFS_CACHE;
     function  createCacheEmbedded       : TFRE_DB_ZFS_CACHE;
+    procedure addCacheEmbedded           (const ds: TFRE_DB_ZFS_CACHE);
     function  createLog                 : TFRE_DB_ZFS_LOG;
     function  createLogEmbedded         : TFRE_DB_ZFS_LOG;
+    procedure addLogEmbedded            (const ds: TFRE_DB_ZFS_LOG);
     function  createSpare               : TFRE_DB_ZFS_SPARE;
     function  createSpareEmbedded       : TFRE_DB_ZFS_SPARE;
+    procedure addSpareEmbedded          (const ds: TFRE_DB_ZFS_SPARE);
     procedure FlatEmbeddedAndStoreInCollections      (const conn: IFRE_DB_CONNECTION);
     procedure DeleteReferencingVdevToMe              (const conn: IFRE_DB_CONNECTION);
   published
@@ -660,6 +668,16 @@ end;
 class procedure TFRE_DB_IOSTAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+end;
+
+procedure TFRE_DB_IOSTAT.SetBlockdevice(const blockdevice: TGUID);
+begin
+  field('blockdeviceid').AsObjectLink := blockdevice;
+end;
+
+function TFRE_DB_IOSTAT.GetBlockdevice: TGUID;
+begin
+  result := field('blockdeviceid').AsObjectLink;
 end;
 
 function TFRE_DB_IOSTAT.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -1217,16 +1235,82 @@ procedure TFRE_DB_ZFS_OBJ.embedChildrenRecursive(const conn: IFRE_DB_CONNECTION)
 var
     children             : IFRE_DB_ObjectArray;
     i                    : NativeInt;
-
+    ds_obj               : TFRE_DB_ZFS_DATASTORAGE;
+    s_obj                : TFRE_DB_ZFS_SPARE;
+    l_obj                : TFRE_DB_ZFS_LOG;
+    c_obj                : TFRE_DB_ZFS_CACHE;
+    zfs_obj              : TFRE_DB_ZFS_OBJ;
+    zio_obj              : TFRE_DB_ZPOOL_IOSTAT;
 begin
- abort;
  children := getZFSChildren(conn);
  for i:= 0 to high(children) do
    begin
-     Field('vdev').AddObject(children[i]);
-     if (children[i].Implementor_HC is TFRE_DB_ZFS_OBJ) then
-       (children[i].Implementor_HC as TFRE_DB_ZFS_OBJ).embedChildrenRecursive(conn);
+     writeln('SWL EMBED :',children[i].SchemeClass);
+     if children[i].IsA(TFRE_DB_ZFS_DATASTORAGE,ds_obj) then
+       begin
+         (self.Implementor_HC as TFRE_DB_ZFS_POOL).addDatastorageEmbedded(ds_obj);
+         ds_obj.embedChildrenRecursive(conn);
+         continue;
+       end;
+     if children[i].IsA(TFRE_DB_ZFS_SPARE,s_obj) then
+       begin
+         (self.Implementor_HC as TFRE_DB_ZFS_POOL).addSpareEmbedded(s_obj);
+         s_obj.embedChildrenRecursive(conn);
+         continue;
+       end;
+     if children[i].IsA(TFRE_DB_ZFS_LOG,l_obj) then
+       begin
+         (self.Implementor_HC as TFRE_DB_ZFS_POOL).addLogEmbedded(l_obj);
+         l_obj.embedChildrenRecursive(conn);
+         continue;
+       end;
+     if children[i].IsA(TFRE_DB_ZFS_CACHE,c_obj) then
+       begin
+         (self.Implementor_HC as TFRE_DB_ZFS_POOL).addCacheEmbedded(c_obj);
+         c_obj.embedChildrenRecursive(conn);
+         continue;
+       end;
+     if children[i].IsA(TFRE_DB_ZFS_OBJ,zfs_obj) then
+       begin
+         addChildEmbedded(zfs_obj);
+         zfs_obj.embedChildrenRecursive(conn);
+         continue;
+       end;
+     if children[i].IsA(TFRE_DB_ZPOOL_IOSTAT,zio_obj) then
+       begin
+         ZPoolIostat := zio_obj;
+         continue;
+       end;
+     raise EFRE_DB_Exception('unhandled class in TFRE_DB_ZFS_OBJ.embedChildrenRecursive '+ children[i].SchemeClass);
    end;
+end;
+
+procedure TFRE_DB_ZFS_OBJ.addChildEmbedded(const child: TFRE_DB_ZFS_OBJ);
+begin
+ child.parentInZFSId:=UID;
+ child.poolId:=poolId;
+ Field(child.Field('zfs_guid').asstring).AsObject := child;
+end;
+
+procedure TFRE_DB_ZFS_OBJ.embedIostat(const conn: IFRE_DB_Connection);
+var mo    : IFRE_DB_Object;
+   refs   : TFRE_DB_ObjectReferences;
+   i      : NativeInt;
+   obj    : IFRE_DB_Object;
+   liostat: TFRE_DB_IOSTAT;
+
+begin
+  refs := conn.GetReferencesDetailed(UID,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+FREDB_G2H(refs[i].linked_uid));
+      if obj.IsA(TFRE_DB_IOSTAT,liostat) then
+        begin
+          setIOStat(liostat);
+        end
+      else
+        liostat.Finalize;
+    end;
 end;
 
 procedure TFRE_DB_ZFS_OBJ.SetMOSStatus(const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
@@ -1609,39 +1693,26 @@ begin
  calcfieldsetter.SetAsString('Zpool '+caption+' '+Field('state').asstring);
 end;
 
-class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromCollection(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TGUID): TFRE_DB_ZFS_POOL;
+class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TGUID): TFRE_DB_ZFS_POOL;
 var
-    poolcolletion        : IFRE_DB_COLLECTION;
-    vdevcollection       : IFRE_DB_COLLECTION;
-    blockcollection      : IFRE_DB_COLLECTION;
     obj                  : IFRE_DB_Object;
-    emb_obj              : TFRE_DB_ZFS_OBJ;
+    pool                 : TFRE_DB_ZFS_POOL;
 
-    zo                   : TFRE_DB_ZFS;  //DEBUG
-    error                : string;
-    resobj               : IFRE_DB_Object;
 
 begin
-   poolcolletion  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
-   vdevcollection  := conn.GetCollection(CFRE_DB_ZFS_VDEV_COLLECTION);
-   blockcollection := conn.GetCollection(CFRE_DB_DEVICE_COLLECTION);
+   CheckDbResult(conn.Fetch(db_zfs_pool_id,obj),'Could not find pool for CreateEmbeddedPoolObjectfromDB');
+   pool := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
+   pool.embedChildrenRecursive(conn);
+   result := pool;
 
-   if poolcolletion.Fetch(db_zfs_pool_id,obj)=false then
-     raise EFRE_DB_Exception.Create(edb_NOT_FOUND,'Could not find pool for CreateEmbeddedPoolObjectfromCollection');
-
-   emb_obj := (obj.Implementor_HC as TFRE_DB_ZFS_OBJ);
-   emb_obj.embedChildrenRecursive(conn);
-   emb_obj.Field('debug').asboolean:=true;
-//   writeln('SWL:',emb_obj.DumpToString());
-
-     zo     := TFRE_DB_ZFS.create;
-     try
-//       zo.SetRemoteSSH(remoteuser, remotehost, remotekey);
-       zo.CreateDiskpool(emb_obj,error,resobj);
-//       writeln('SWL:',resobj.DumpToString());
-     finally
-       zo.Free;
-     end;
+//     zo     := TFRE_DB_ZFS.create;
+//     try
+////       zo.SetRemoteSSH(remoteuser, remotehost, remotekey);
+//       zo.CreateDiskpool(emb_obj,error,resobj);
+////       writeln('SWL:',resobj.DumpToString());
+//     finally
+//       zo.Free;
+//     end;
 
 end;
 
@@ -1662,6 +1733,13 @@ begin
   Field('datastorage').asObject := Result;
 end;
 
+procedure TFRE_DB_ZFS_POOL.addDataStorageEmbedded(const ds: TFRE_DB_ZFS_DATASTORAGE);
+begin
+ ds.poolId:=UID;
+ ds.parentInZFSId:=UID;
+ Field('datastorage').asObject := ds;
+end;
+
 function TFRE_DB_ZFS_POOL.createCache: TFRE_DB_ZFS_CACHE;
 begin
   Result:=TFRE_DB_ZFS_CACHE.CreateForDB;
@@ -1675,6 +1753,13 @@ begin
   Result.poolId:=UID;
   Result.parentInZFSId:=UID;
   Field('cache').asObject := Result;
+end;
+
+procedure TFRE_DB_ZFS_POOL.addCacheEmbedded(const ds: TFRE_DB_ZFS_CACHE);
+begin
+ ds.poolId:=UID;
+ ds.parentInZFSId:=UID;
+ Field('cache').asObject := ds;
 end;
 
 function TFRE_DB_ZFS_POOL.createLog: TFRE_DB_ZFS_LOG;
@@ -1692,6 +1777,13 @@ begin
   Field('logs').asObject := Result;
 end;
 
+procedure TFRE_DB_ZFS_POOL.addLogEmbedded(const ds: TFRE_DB_ZFS_LOG);
+begin
+ ds.poolId:=UID;
+ ds.parentInZFSId:=UID;
+ Field('logs').asObject := ds;
+end;
+
 function TFRE_DB_ZFS_POOL.createSpare: TFRE_DB_ZFS_SPARE;
 var
   coll: IFRE_DB_COLLECTION;
@@ -1707,6 +1799,13 @@ begin
   Result.poolId:=UID;
   Result.parentInZFSId:=UID;
   Field('spares').asobject := Result;
+end;
+
+procedure TFRE_DB_ZFS_POOL.addSpareEmbedded(const ds: TFRE_DB_ZFS_SPARE);
+begin
+ ds.poolId:=UID;
+ ds.parentInZFSId:=UID;
+ Field('spares').asObject := ds;
 end;
 
 procedure TFRE_DB_ZFS_POOL.FlatEmbeddedAndStoreInCollections(const conn: IFRE_DB_CONNECTION);

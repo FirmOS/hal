@@ -3659,9 +3659,49 @@ begin
 end;
 
 function TFRE_DB_MACHINE.WEB_REQUEST_DISK_ENC_POOL_DATA(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var mo   : IFRE_DB_Object;
+    refs  : TFRE_DB_ObjectReferences;
+    pool  : TFRE_DB_ZFS_POOL;
+    i     : NativeInt;
+    obj   : IFRE_DB_Object;
+    pools : IFRE_DB_Object;
+    disks : IFRE_DB_Object;
+    disk  : TFRE_DB_OS_BLOCKDEVICE;
 begin
-  result := CloneToNewObject;
-//  result.Field('MACHINEDATA').asstring:='TEST';
+  result := GFRE_DBI.NewObject;
+
+  mo     := CloneToNewObject;
+  result.Field(field('objname').asstring).AsObject := mo;
+
+  pools  := GFRE_DBI.NewObject;
+  disks  := GFRE_DBI.NewObject;
+  mo.Field('POOLS').asObject := pools;
+  mo.Field('DISKS').asObject := disks;
+
+  refs := conn.GetReferencesDetailed(UID,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+FREDB_G2H(refs[i].linked_uid));
+      if obj.IsA(TFRE_DB_ZFS_POOL,pool) then
+        begin
+          pools.Field(pool.GetName).AsObject:=TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(conn,refs[i].linked_uid);
+          pool.Finalize;
+        end
+      else if obj.IsA(TFRE_DB_OS_BLOCKDEVICE,disk) then
+        begin
+          disk.embedIostat(conn);
+          disks.Field(disk.DeviceIdentifier).AsObject := disk;
+        end
+      else
+        obj.Finalize;
+    end;
+
+
+  mo.Field('ENCLOSURES').asObject := GFRE_DBI.NewObject;
+
+
+  writeln('SWL REQUEST_DISC_ENC_POOL: ',result.DumpToString);
+
 end;
 
 
