@@ -1094,6 +1094,7 @@ end;
 
 procedure TFRE_DB_ZFS_OBJ.setZpoolIoStat(const AValue: TFRE_DB_ZPOOL_IOSTAT);
 begin
+  AValue.Field('parent_in_zfs_uid').AsObjectLink:=UID;
   Field('zpooliostat').AsObject:=AValue;
 end;
 
