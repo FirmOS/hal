@@ -49,6 +49,10 @@ uses
   FRE_DB_COMMON,
   FRE_DB_INTERFACE;
 
+const
+   CDIFF_INSERT_LIST = 'insert';
+   CDIFF_UPDATE_LIST = 'update';
+   CDIFF_DELETE_LIST = 'delete';
 
 type
 
@@ -140,10 +144,10 @@ var
               end;
             if assigned(update_start) then
               begin
-                transport_list_obj.Field('diff').AddObject(update_start);
+                transport_list_obj.Field(CDIFF_UPDATE_LIST).AddObject(update_start);
                 update_start:=nil;
               end;
-            transport_list_obj.Field('diff').AddObject(diff_step);
+            transport_list_obj.Field(CDIFF_UPDATE_LIST).AddObject(diff_step);
           end;
       end;
   end;
@@ -152,14 +156,14 @@ var
   var diff_step : IFRE_DB_Object;
   begin
     diff_step := TFRE_DB_INSERT_TRANSPORT.CreateInsertObject(o);
-    transport_list_obj.Field('diff').AddObject(diff_step);
+    transport_list_obj.Field(CDIFF_INSERT_LIST).AddObject(diff_step);
   end;
 
   procedure _Delete(const o : IFRE_DB_Object);
   var diff_step : IFRE_DB_Object;
   begin
     diff_step := TFRE_DB_DELETE_TRANSPORT.CreateDeleteObject(o);
-    transport_list_obj.Field('diff').AddObject(diff_step);
+    transport_list_obj.Field(CDIFF_DELETE_LIST).AddObject(diff_step);
   end;
 
 begin
@@ -167,8 +171,12 @@ begin
 end;
 
 procedure FREDIFF_ApplyTransportObjectToDB(const transport_object: IFRE_DB_Object; const conn: IFRE_DB_CONNECTION);
-var update_obj : IFRE_DB_Object;
-    i          : NativeInt;
+var update_obj   : IFRE_DB_Object;
+    i            : NativeInt;
+    insert_array : TFRE_DB_GUIDArray;
+    insert_loops : NativeInt;
+    insert_count : NativeInt;
+    to_insert    : NativeInt;
 
   procedure _processDiff(const diffstep:IFRE_DB_Object);
   var insert_step     : TFRE_DB_INSERT_TRANSPORT;
@@ -178,6 +186,19 @@ var update_obj : IFRE_DB_Object;
       insert_obj      : IFRE_DB_Object;
       collection_name : string;
       collection      : IFRE_DB_COLLECTION;
+      res             : TFRE_DB_Errortype;
+
+      procedure _DumpDeleteReferences(const uid:TGUID);
+      var    i           : NativeInt;
+             ex_del_obj  : IFRE_DB_Object;
+             ex_refs     : TFRE_DB_ObjectReferences;
+      begin
+        ex_refs := conn.GetReferencesDetailed(uid,false);
+        for i:=0 to high(ex_refs) do
+          begin
+            GFRE_DBI.LogError(dblc_APPLICATION,'Object still linked by %s from %s uid %s', [ex_refs[i].fieldname, ex_refs[i].schemename, FREDB_G2H(ex_refs[i].linked_uid)]);
+          end;
+      end;
 
       function GetDefaultCollectionName(const obj:IFRE_DB_Object) : string;
       var  res_obj         : IFRE_DB_Object;
@@ -217,7 +238,17 @@ var update_obj : IFRE_DB_Object;
       end
     else if diffstep.isA(TFRE_DB_DELETE_TRANSPORT,delete_step) then
       begin
-        CheckDbResult(conn.Delete(delete_step.UID),'delete '+delete_step.UID_String);
+        try
+          res := conn.Delete(delete_step.UID);
+          CheckDbResult(res,'delete '+delete_step.UID_String);
+        except on E:Exception do
+          begin
+//            CheckDbResult(conn.Fetch(delete_step.UID,ex_del_obj));
+            _DumpDeleteReferences(delete_step.UID);
+            GFRE_DBI.LogError(dblc_APPLICATION,'Exception in delete uid [%s] from db %s', [delete_step.UID_String,E.Message]);
+            raise E;
+          end;
+        end;
         GFRE_DBI.LogInfo(dblc_APPLICATION,'Deleted uid [%s] from db', [delete_step.UID_String]);
       end
     else if diffstep.isA(TFRE_DB_UPDATE_TRANSPORT,update_step) then
@@ -266,14 +297,83 @@ var update_obj : IFRE_DB_Object;
       raise EFRE_DB_Exception.Create('INVALID DIFF STEP IN DIFF SYNC');
   end;
 
+  function _canInsert(const diffstep:IFRE_DB_Object):boolean;
+  var insert_step: TFRE_DB_INSERT_TRANSPORT;
+
+    procedure _checkobjectlink(const fld:IFRE_DB_Field);
+    var i: NativeInt;
+    begin
+//      writeln('SWL: FIELD ',fld.FieldName, CFRE_DB_FIELDTYPE[fld.FieldType]);
+      if fld.FieldType=fdbft_ObjLink then
+        begin
+          for i:=0 to high(insert_array) do
+            begin
+              if insert_array[i]=fld.AsObjectLink then
+                begin
+                  GFRE_DBI.LogDebug(dblc_APPLICATION,'Delaying Insert of [%s] because of Field %s referencing [%s]', [insert_step.UID_String,fld.FieldName,FREDB_G2H(fld.AsObjectLink)]);
+                  result :=false;
+                end;
+            end;
+        end;
+    end;
+
+  begin
+    if diffstep.UID=CFRE_DB_NullGUID then    // allready inserted
+      exit(false);
+
+    result := true;
+    if diffstep.IsA(TFRE_DB_INSERT_TRANSPORT,insert_step) then
+      begin
+        insert_step.GetInsertObject.ForAllFields(@_checkobjectlink);
+      end
+    else
+      raise EFRE_DB_Exception.Create('the entry in the insert_list is not TFRE_DB_INSERT_TRANSPORT');
+  end;
+
 begin
   update_obj := nil;
 //  writeln('SWL DIFF:',transport_object.DumpToString);
-  if transport_object.FieldExists('diff') then
+  if transport_object.FieldExists(CDIFF_INSERT_LIST) then
     begin
-      for i := 0 to transport_object.Field('diff').ValueCount-1 do
+      // setup insert array
+      insert_count := transport_object.Field(CDIFF_INSERT_LIST).ValueCount;
+      Setlength(insert_array,insert_count);
+      for i := 0 to insert_count-1 do
         begin
-          _processDiff(transport_object.Field('diff').AsObjectItem[i]);
+          insert_array[i] := transport_object.Field(CDIFF_INSERT_LIST).AsObjectItem[i].UID;
+        end;
+      // check and insert
+      insert_loops := 0;
+      to_insert    := insert_count;
+      repeat
+        for i := 0 to insert_count-1 do
+          begin
+            if _canInsert(transport_object.Field(CDIFF_INSERT_LIST).AsObjectItem[i]) then
+              begin
+                _processDiff(transport_object.Field(CDIFF_INSERT_LIST).AsObjectItem[i]);
+                transport_object.Field(CDIFF_INSERT_LIST).AsObjectItem[i].Field('UID').asGuid := CFRE_DB_NullGUID;
+                insert_array[i] := CFRE_DB_NullGUID;
+                dec(to_insert);
+              end
+          end;
+        inc(insert_loops);
+      until (insert_loops>insert_count) or (to_insert=0);
+//      writeln('SWL: INSERT LOOPS ',insert_loops);
+      if (to_insert>0) then
+        raise EFRE_DB_Exception.Create('Could not insert all insert_steps of insert_list, remaining '+inttostr(to_insert));
+    end;
+  if transport_object.FieldExists(CDIFF_UPDATE_LIST) then
+    begin
+      for i := 0 to transport_object.Field(CDIFF_UPDATE_LIST).ValueCount-1 do
+        begin
+          _processDiff(transport_object.Field(CDIFF_UPDATE_LIST).AsObjectItem[i]);
+        end;
+    end;
+  if transport_object.FieldExists(CDIFF_DELETE_LIST) then
+    begin
+      for i := transport_object.Field(CDIFF_DELETE_LIST).ValueCount-1 downto 0 do  // reverse order
+        begin
+          _processDiff(transport_object.Field(CDIFF_DELETE_LIST).AsObjectItem[i]);
         end;
     end;
 end;

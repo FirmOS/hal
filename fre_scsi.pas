@@ -67,6 +67,8 @@ type
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  published
+    function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_PHYS_DISK }
@@ -114,6 +116,7 @@ type
 
   public
     function  GetTargetPorts: TFRE_DB_StringArray;
+    function  hasParentinEnclosure               : boolean;
     procedure ClearSlotandEnclosureInformation   ;
     property WWN                                 : string read GetWWN write SetWWN;
     property Manufacturer                        : string read Getmanufacturer write Setmanufacturer;
@@ -168,11 +171,15 @@ type
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+    procedure AddMosParentID                    (const avalue : TGUID);
+    procedure RemoveMosParentID                 (const avalue : TGUID);
     property  Model_number         : string read Getmodel_number write Setmodel_number;
     property  Manufacturer         : string read Getmanufacturer write Setmanufacturer;
     property  Fw_revision          : string read Getfw_revision write Setfw_revision;
     property  DeviceIdentifier     : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
+  published
+    function  WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_DRIVESLOT }
@@ -192,6 +199,8 @@ type
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+    procedure AddMosParentID                    (const avalue : TGUID);
+    procedure RemoveMosParentID                 (const avalue : TGUID);
     procedure SetAttachedTo  (const port_nr:Byte; const AValue: string);
     procedure SetTargetPort  (const port_nr:Byte; const AValue: string);
     function  GetTargetPort  (const port_nr:Byte) : TFRE_DB_String;
@@ -201,6 +210,8 @@ type
     property  DeviceIdentifier     : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
     property  EnclosureNr          : Uint16 read GetEnclosureNr write SetEnclosureNr;
+  published
+    function  WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
 
@@ -230,6 +241,11 @@ type
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
     procedure DeleteReferencingToMe             (const conn:IFRE_DB_CONNECTION);
+    procedure EmbedSlotsAndExpanders            (const conn:IFRE_DB_CONNECTION);
+    procedure AddMosParentID                    (const avalue : TGUID);
+    procedure RemoveMosParentID                 (const avalue : TGUID);
+
+
     procedure SetMOSStatus                      (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
     function  GetMOSStatus                      : TFRE_DB_MOS_STATUS_TYPE;
 
@@ -242,7 +258,7 @@ type
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
-
+    function  WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_SCSI }
@@ -505,6 +521,12 @@ begin
   VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
+function TFRE_DB_SG_LOGS.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_SG_LOGS_COLLECTION;
+end;
+
 { TFRE_DB_SATA_DISK }
 
 procedure TFRE_DB_SATA_DISK.SetTargetPort(const targetport_1: string);
@@ -671,6 +693,7 @@ begin
     expander.DeviceIdentifier:=DeviceIdentifier+'_'+devicename;
   if not FieldExists('expanders') then
     Field('expanders').AsObject:= GFRE_DBI.NewObject;
+  expander.AddMosParentID(UID);
   Field('expanders').asObject.Field(expander.DeviceIdentifier).AsObject:=expander;
 end;
 
@@ -695,6 +718,7 @@ begin
     Field('slots').AsObject:= GFRE_DBI.NewObject;
   driveslot.SlotNr       := slotnr;
   driveslot.EnclosureNr  := EnclosureNr;
+  driveslot.AddMosParentID(UID);
   Field('slots').AsObject.Field('slot'+inttostr(slotnr)).AsObject:=driveslot;
 end;
 
@@ -715,6 +739,44 @@ begin
         end;
       CheckDbResult(conn.Delete(refs[i].linked_uid),'could not delete enclosure refs uid ['+FREDB_G2H(refs[i].linked_uid)+'] scheme ['+refs[i].schemename+']');
     end;
+end;
+
+procedure TFRE_DB_ENCLOSURE.EmbedSlotsAndExpanders(const conn: IFRE_DB_CONNECTION);
+var refs      : TFRE_DB_ObjectReferences;
+    i         : NativeInt;
+    obj       : IFRE_DB_Object;
+    lexpander : TFRE_DB_SAS_EXPANDER;
+    lslot     : TFRE_DB_DRIVESLOT;
+begin
+  refs := conn.GetReferencesDetailed(UID,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+FREDB_G2H(refs[i].linked_uid));
+      if obj.IsA(TFRE_DB_SAS_EXPANDER,lexpander) then
+        begin
+          AddExpanderEmbedded(lexpander);
+        end
+      else if obj.IsA(TFRE_DB_DRIVESLOT,lslot) then
+        begin
+          AddDriveSlotEmbedded(lslot.SlotNr,lslot);
+        end
+      else
+        obj.Finalize;
+    end;
+end;
+
+procedure TFRE_DB_ENCLOSURE.AddMosParentID(const avalue: TGUID);
+begin
+  if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
+    Field('mosparentIds').AddObjectLink(AValue);
+end;
+
+procedure TFRE_DB_ENCLOSURE.RemoveMosParentID(const avalue: TGUID);
+var lp:NativeInt;
+begin
+  lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
+  if lp>=0 then
+    Field('mosparentIds').RemoveObjectLink(lp);
 end;
 
 function TFRE_DB_ENCLOSURE.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -739,6 +801,12 @@ function TFRE_DB_ENCLOSURE.WEB_MOSStatus(const input: IFRE_DB_Object; const ses:
 begin
   Result:=GFRE_DBI.NewObject;
   Result.Field('status_mos').AsString:=Field('status_mos').AsString;
+end;
+
+function TFRE_DB_ENCLOSURE.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_ENCLOSURE_COLLECTION;
 end;
 
 function TFRE_DB_SCSI._SG3GetPage(const cmd: string; out output: string; out error: string; const params: TFRE_DB_StringArray): integer;
@@ -1671,7 +1739,11 @@ end;
 
 procedure TFRE_DB_PHYS_DISK.SetParentInEnclosureUID(AValue: TGUID);
 begin
-  Field('parent_in_enclosure_uid').AsObjectLink:=Avalue;
+  if FieldExists('parent_in_enclosure_uid') then
+    if AValue<>Field('parent_in_enclosure_uid').AsObjectLink then
+      RemoveMosParentID(Field('parent_in_enclosure_uid').AsObjectLink);
+  Field('parent_in_enclosure_uid').AsObjectLink:=AValue;
+  AddMosParentID(AValue);
 end;
 
 procedure TFRE_DB_PHYS_DISK.SetSlotNr(AValue: Uint16);
@@ -1797,6 +1869,11 @@ begin
     result := TFRE_DB_StringArray.Create;
 end;
 
+function TFRE_DB_PHYS_DISK.hasParentinEnclosure: boolean;
+begin
+  result := (FieldExists('parent_in_enclosure_uid')) and (not Field('parent_in_enclosure_uid').IsEmptyArray);
+end;
+
 procedure TFRE_DB_PHYS_DISK.ClearSlotandEnclosureInformation;
 begin
   if FieldExists('enclosure_uid') then
@@ -1861,7 +1938,7 @@ end;
 
 { TFRE_DB_DRIVESLOT }
 
-function TFRE_DB_DRIVESLOT.getDeviceIdentifier: TFRE_DB_String;
+function TFRE_DB_DRIVESLOT.GetDeviceIdentifier: TFRE_DB_String;
 begin
   result := Field('deviceIdentifier').AsString;
 end;
@@ -1916,6 +1993,20 @@ begin
   newVersionId:='1.0';
 end;
 
+procedure TFRE_DB_DRIVESLOT.AddMosParentID(const avalue: TGUID);
+begin
+  if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
+    Field('mosparentIds').AddObjectLink(AValue);
+end;
+
+procedure TFRE_DB_DRIVESLOT.RemoveMosParentID(const avalue: TGUID);
+var lp:NativeInt;
+begin
+  lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
+  if lp>=0 then
+    Field('mosparentIds').RemoveObjectLink(lp);
+end;
+
 procedure TFRE_DB_DRIVESLOT.SetAttachedTo(const port_nr: Byte; const AValue: string);
 begin
   Field('attached_to_'+inttostr(port_nr)).AsString := AValue;
@@ -1948,6 +2039,12 @@ begin
       else
         obj.Finalize;
     end;
+end;
+
+function TFRE_DB_DRIVESLOT.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_DRIVESLOT_COLLECTION;
 end;
 
 { TFRE_DB_SAS_EXPANDER }
@@ -2006,6 +2103,26 @@ end;
 class procedure TFRE_DB_SAS_EXPANDER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+end;
+
+procedure TFRE_DB_SAS_EXPANDER.AddMosParentID(const avalue: TGUID);
+begin
+  if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
+    Field('mosparentIds').AddObjectLink(AValue);
+end;
+
+procedure TFRE_DB_SAS_EXPANDER.RemoveMosParentID(const avalue: TGUID);
+var lp:NativeInt;
+begin
+  lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
+  if lp>=0 then
+    Field('mosparentIds').RemoveObjectLink(lp);
+end;
+
+function TFRE_DB_SAS_EXPANDER.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  result:=GFRE_DBI.NewObject;
+  result.Field('collection').asstring:=CFRE_DB_SAS_EXPANDER_COLLECTION;
 end;
 
 procedure Register_DB_Extensions;

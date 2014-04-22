@@ -3659,30 +3659,47 @@ begin
 end;
 
 function TFRE_DB_MACHINE.WEB_REQUEST_DISK_ENC_POOL_DATA(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var mo   : IFRE_DB_Object;
-    refs  : TFRE_DB_ObjectReferences;
-    pool  : TFRE_DB_ZFS_POOL;
-    i     : NativeInt;
-    obj   : IFRE_DB_Object;
-    pools : IFRE_DB_Object;
-    disks : IFRE_DB_Object;
-    disk  : TFRE_DB_OS_BLOCKDEVICE;
+var mo          : IFRE_DB_Object;
+    refs        : TFRE_DB_ObjectReferences;
+    pool        : TFRE_DB_ZFS_POOL;
+    i           : NativeInt;
+    obj         : IFRE_DB_Object;
+    pools       : IFRE_DB_Object;
+    disks       : IFRE_DB_Object;
+    enclosures  : IFRE_DB_Object;
+    disk        : TFRE_DB_OS_BLOCKDEVICE;
+    enclosure   : TFRE_DB_ENCLOSURE;
+    ua          : TFRE_DB_ZFS_UNASSIGNED;
+    foundua     : boolean;
+    ua_uid      : TGUID;
+    ua_name     : TFRE_DB_String;
+
 begin
   result := GFRE_DBI.NewObject;
 
   mo     := CloneToNewObject;
   result.Field(field('objname').asstring).AsObject := mo;
 
-  pools  := GFRE_DBI.NewObject;
-  disks  := GFRE_DBI.NewObject;
+  pools      := GFRE_DBI.NewObject;
+  disks      := GFRE_DBI.NewObject;
+  enclosures := GFRE_DBI.NewObject;
+
   mo.Field('POOLS').asObject := pools;
   mo.Field('DISKS').asObject := disks;
+  mo.Field('ENCLOSURES').asObject := enclosures;
+
+  foundua    := false;
 
   refs := conn.GetReferencesDetailed(UID,false);
   for i:=0 to high(refs) do
     begin
       CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+FREDB_G2H(refs[i].linked_uid));
-      if obj.IsA(TFRE_DB_ZFS_POOL,pool) then
+      if obj.IsA(TFRE_DB_ZFS_UNASSIGNED,ua) then
+        begin
+          foundua := true;
+          pools.Field(ua.GetName).AsObject:=ua;
+        end
+      else if obj.IsA(TFRE_DB_ZFS_POOL,pool) then
         begin
           pools.Field(pool.GetName).AsObject:=TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(conn,refs[i].linked_uid);
           pool.Finalize;
@@ -3692,13 +3709,25 @@ begin
           disk.embedIostat(conn);
           disks.Field(disk.DeviceIdentifier).AsObject := disk;
         end
+      else if obj.IsA(TFRE_DB_ENCLOSURE,enclosure) then
+        begin
+          enclosure.embedSlotsandExpanders(conn);
+          enclosures.Field(enclosure.DeviceIdentifier).AsObject := enclosure;
+        end
       else
         obj.Finalize;
     end;
 
-
-  mo.Field('ENCLOSURES').asObject := GFRE_DBI.NewObject;
-
+  if not foundua then
+    begin
+      ua := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
+      ua.InitforMachine(UID);
+      ua_uid       := ua.UID;
+      ua_name      := ua.GetName;
+      CheckDbResult(conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION).Store(ua),'could not store pool for unassigned disks');
+      CheckDbResult(conn.Fetch(ua_uid,obj),' could not fetch unassigned disk object '+FREDB_G2H(ua_uid));
+      pools.Field(ua_name).AsObject:=obj;
+    end;
 
   writeln('SWL REQUEST_DISC_ENC_POOL: ',result.DumpToString);
 

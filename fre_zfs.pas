@@ -63,6 +63,7 @@ const
   CFRE_DB_DRIVESLOT_COLLECTION           = 'driveslot';
   CFRE_DB_DEVICE_COLLECTION              = 'device';
   CFRE_DB_DEVICE_IOSTAT_COLLECTION       = 'iostat';
+  CFRE_DB_SG_LOGS_COLLECTION             = 'sglogs';
 
   CFRE_DB_DEVICE_DEV_ID_INDEX   = 'deviceId';
 
@@ -150,6 +151,7 @@ type
     function  getIsModified           : Boolean;
     function  getIsNew                : Boolean;
     function  getZFSGuid              : string;
+    function  hasParentInZFS          : boolean;
     procedure setIsModified           (const avalue:Boolean=true);
     procedure setIsNew                (const avalue:Boolean=true);
     procedure setZFSGuid              (const avalue:String);
@@ -159,6 +161,8 @@ type
     procedure embedIostat             (const conn: IFRE_DB_Connection);
     procedure SetMOSStatus            (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
     function  GetMOSStatus            : TFRE_DB_MOS_STATUS_TYPE;
+    procedure AddMosParentID          (const avalue : TGUID);
+    procedure RemoveMosParentID       (const avalue : TGUID);
     procedure SetName                 (const avalue:TFRE_DB_String);
     property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
     property  caption                 : TFRE_DB_String read GetCaption;
@@ -404,12 +408,13 @@ type
 
   TFRE_DB_ZFS_UNASSIGNED=class(TFRE_DB_ZFS_ROOTOBJ)
   protected
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure RegisterSystemScheme          (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects              (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    class function  FetchUnassigned     (const conn:IFRE_DB_CONNECTION) : TFRE_DB_ZFS_UNASSIGNED;
-    function  addBlockdevice            (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
-    function  addBlockdeviceEmbedded    (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
+    class function  FetchUnassigned               (const conn:IFRE_DB_CONNECTION) : TFRE_DB_ZFS_UNASSIGNED;
+    procedure InitforMachine                      (const avalue:TGUID);
+    function  addBlockdevice                      (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
+    function  addBlockdeviceEmbedded              (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
   end;
 
   { TFRE_DB_ZFS }
@@ -707,6 +712,13 @@ begin
     raise EFRE_DB_Exception.Create(edb_ERROR,'could not get unassigned disks object by index');
 end;
 
+procedure TFRE_DB_ZFS_UNASSIGNED.InitforMachine(const avalue: TGUID);
+begin
+ setZFSGuid(FREDB_G2H(avalue)+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
+ SetName('Unassigned disks');  //FIXXME: should be a languge key ?!?
+ MachineID := avalue;
+end;
+
 function TFRE_DB_ZFS_UNASSIGNED.addBlockdevice(const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
   blockdevice.parentInZFSId:=UID;
@@ -953,6 +965,11 @@ begin
   Result:=Field('zfs_guid').AsString;
 end;
 
+function TFRE_DB_ZFS_OBJ.hasParentInZFS: boolean;
+begin
+  result := (FieldExists('parent_in_zfs_uid')) and (not Field('parent_in_zfs_uid').IsEmptyArray);
+end;
+
 function TFRE_DB_ZFS_OBJ.GetParentInZFS: TGuid;
 begin
   Result:=Field('parent_in_zfs_uid').AsObjectLink;
@@ -1074,9 +1091,11 @@ end;
 
 procedure TFRE_DB_ZFS_OBJ.SetParentInZFSId(AValue: TGuid);
 begin
+  if (FieldExists('parent_in_zfs_uid')) and (not Field('parent_in_zfs_uid').IsEmptyArray) then
+    if AValue<>Field('parent_in_zfs_uid').AsObjectLink then
+      RemoveMosParentID(Field('parent_in_zfs_uid').AsObjectLink);
   Field('parent_in_zfs_uid').AsObjectLink:=AValue;
-  if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
-    Field('mosparentIds').AddObjectLink(AValue);
+  AddMosParentID(AValue);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.SetPoolId(AValue: TGuid);
@@ -1118,7 +1137,7 @@ end;
 
 function TFRE_DB_ZFS_OBJ.getMachineID: TGUID;
 begin
- if FieldExists('machineid') then
+ if (FieldExists('machineid')) and (not Field('machineid').IsEmptyArray) then
    result := Field('machineid').AsObjectLink
  else
    result := CFRE_DB_NullGUID;
@@ -1241,6 +1260,7 @@ var
     c_obj                : TFRE_DB_ZFS_CACHE;
     zfs_obj              : TFRE_DB_ZFS_OBJ;
     zio_obj              : TFRE_DB_ZPOOL_IOSTAT;
+    os_obj               : TFRE_DB_OS_BLOCKDEVICE;
 begin
  children := getZFSChildren(conn);
  for i:= 0 to high(children) do
@@ -1268,6 +1288,11 @@ begin
        begin
          (self.Implementor_HC as TFRE_DB_ZFS_POOL).addCacheEmbedded(c_obj);
          c_obj.embedChildrenRecursive(conn);
+         continue;
+       end;
+     if children[i].IsA(TFRE_DB_OS_BLOCKDEVICE,os_obj) then
+       begin
+         // do not embed
          continue;
        end;
      if children[i].IsA(TFRE_DB_ZFS_OBJ,zfs_obj) then
@@ -1309,7 +1334,7 @@ begin
           setIOStat(liostat);
         end
       else
-        liostat.Finalize;
+        obj.Finalize;
     end;
 end;
 
@@ -1321,6 +1346,20 @@ end;
 function TFRE_DB_ZFS_OBJ.GetMOSStatus: TFRE_DB_MOS_STATUS_TYPE;
 begin
   Result:=String2DBMOSStatus(Field('status_mos').AsString);
+end;
+
+procedure TFRE_DB_ZFS_OBJ.AddMosParentID(const avalue: TGUID);
+begin
+  if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
+    Field('mosparentIds').AddObjectLink(AValue);
+end;
+
+procedure TFRE_DB_ZFS_OBJ.RemoveMosParentID(const avalue: TGUID);
+var lp:NativeInt;
+begin
+  lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
+  if lp>=0 then
+    Field('mosparentIds').RemoveObjectLink(lp);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.SetName(const avalue: TFRE_DB_String);
@@ -1704,16 +1743,6 @@ begin
    pool := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
    pool.embedChildrenRecursive(conn);
    result := pool;
-
-//     zo     := TFRE_DB_ZFS.create;
-//     try
-////       zo.SetRemoteSSH(remoteuser, remotehost, remotekey);
-//       zo.CreateDiskpool(emb_obj,error,resobj);
-////       writeln('SWL:',resobj.DumpToString());
-//     finally
-//       zo.Free;
-//     end;
-
 end;
 
 function TFRE_DB_ZFS_POOL.createDatastorage: TFRE_DB_ZFS_DATASTORAGE;
@@ -4020,11 +4049,6 @@ begin
      begin
        collection  := conn.CreateCollection(CFRE_DB_ZFS_POOL_COLLECTION);
        collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
-       unassigned_disks := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
-       unassigned_disks.setZFSGuid(GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
-       unassigned_disks.SetName('Unassigned disks');  //FIXXME: should be a languge key ?!?
-       unassigned_disks.poolId := unassigned_disks.UID;
-       CheckDbResult(collection.Store(unassigned_disks),'could not store pool for unassigned disks');
      end;
 
    if not conn.CollectionExists(CFRE_DB_ZFS_VDEV_COLLECTION) then
@@ -4056,6 +4080,11 @@ begin
      begin
        collection  := conn.CreateCollection(CFRE_DB_DEVICE_IOSTAT_COLLECTION);
 //       collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+     end;
+
+   if not conn.CollectionExists(CFRE_DB_SG_LOGS_COLLECTION) then
+     begin
+       collection  := conn.CreateCollection(CFRE_DB_SG_LOGS_COLLECTION);
      end;
 
    if not conn.CollectionExists(CFRE_DB_ENCLOSURE_COLLECTION) then
