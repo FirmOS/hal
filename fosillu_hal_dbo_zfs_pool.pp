@@ -65,6 +65,7 @@ var zp         : Pzpool_handle_t;
     zs         : Pnvlist_t;
     parsestate : Tparsestate;
     pool       : TFRE_DB_ZFS_POOL;
+    zlog       : TFRE_DB_ZFS_LOG;
 
 
   procedure _SetFieldFromNVElement(const obj:IFRE_DB_Object;const elem: Pnvpair_t);
@@ -208,6 +209,13 @@ var zp         : Pzpool_handle_t;
   end;
 
 
+  function _createLog : TFRE_DB_ZFS_LOG;
+  begin
+    zlog:=pool.createLogEmbedded;
+    zlog.setZFSGuid('LOG'+pool.getZFSGuid);
+    zlog.setname('logs');
+    result := zlog;
+  end;
 
 
   procedure parse_nvlist(const list : Pnvlist_t ;  indent : cint; const parent_obj: TFRE_DB_ZFS_OBJ);
@@ -296,10 +304,8 @@ var zp         : Pzpool_handle_t;
                                  end
                                else
                                  begin
-                                   actual_obj:=pool.createLogEmbedded;
-                                   actual_obj.setZFSGuid('LOG'+pool.getZFSGuid);
-                                   actual_obj.setname('logs');
-                                   actual_obj:=(actual_obj as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(temp_obj.Field('zfs_guid').asstring);
+                                   actual_obj := _createLog;
+                                   actual_obj :=(actual_obj as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(temp_obj.Field('zfs_guid').asstring);
                                    actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                                    temp_obj.Finalize;
                                    if vtype=VDEV_TYPE_MIRROR then
@@ -313,7 +319,7 @@ var zp         : Pzpool_handle_t;
                          end;
                        VDEV_TYPE_DISK, VDEV_TYPE_FILE :
                          begin
-                           actual_obj:=(parent_obj as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded(temp_obj.Field('zfs_guid').asstring);
+                           actual_obj:=(actual_obj as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded(temp_obj.Field('zfs_guid').asstring);
                            actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                            temp_obj.Finalize;
                            parsestate:=psVdev;
@@ -333,7 +339,11 @@ var zp         : Pzpool_handle_t;
                            actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
                            temp_obj.Finalize;
                            parsestate:=psVdev;
-                         end
+                         end;
+                       VDEV_TYPE_HOLE :
+                         begin
+                           //ignoring hole
+                         end;
                        else
                            raise EFRE_DB_Exception.Create('unknown type of children vdev:'+vtype);
                      end;
@@ -401,6 +411,34 @@ var zp         : Pzpool_handle_t;
      until false;
    end;
 
+  procedure _checkLogDevices;
+  var ds: TFRE_DB_ZFS_DATASTORAGE;
+
+    procedure _checkdevices(const fld: IFRE_DB_Field);
+    var dev    : TFRE_DB_ZFS_BLOCKDEVICE;
+        co     : IFRE_DB_Object;
+    begin
+      if fld.FieldType=fdbft_Object then
+        if fld.AsObject.isA(TFRE_DB_ZFS_BLOCKDEVICE,dev) then
+          begin
+            if dev.FieldExists(ZPOOL_CONFIG_IS_LOG) then
+              if dev.Field(ZPOOL_CONFIG_IS_LOG).AsUInt64=1 then
+                begin
+                  //writeln('SWL: FOUND BLOCK LOG');
+                  if not assigned(zlog) then
+                    _createLog;
+                  co := fld.CheckOutObject;
+                  //writeln('SWL: ADDING EMBEDDED');
+                  zlog.addBlockdeviceEmbedded(co.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
+                end;
+          end;
+    end;
+
+  begin
+    ds := pool.GetDatastorageEmbedded;
+    ds.ForAllFields(@_checkdevices);
+  end;
+
 begin
   parsestate := psUndefined;
   zp := zpool_open(GILLUMOS_LIBZFS_HANDLE, Pchar(@poolname[1]));
@@ -410,11 +448,13 @@ begin
         error :='Could not open pool '+poolname;
         exit(-1);
       end;
+    zlog       := nil;
     pool       := TFRE_DB_ZFS_POOL.Create;
     parsestate := psVdev;
     zs         := zpool_get_config(zp, nil);
     pool.Field('config_ts').AsDateTimeUTC:=GFRE_DT.Now_UTC;
     parse_nvlist(zs, 4, pool);
+    _checkLogDevices;
     outpool := pool;
     result     :=0;
   finally

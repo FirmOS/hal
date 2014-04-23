@@ -813,8 +813,9 @@ end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.addBlockdeviceEmbedded(const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
 begin
-  abort;
-  Field('vdev').AddObject(blockdevice);
+  blockdevice.parentInZFSId:=UID;
+  blockdevice.poolId:=poolId;
+  Field(blockdevice.getZFSGuid).asobject := blockdevice;
 end;
 
 function TFRE_DB_ZFS_DISKCONTAINER.createBlockdeviceEmbedded(const devicename: TFRE_DB_String): TFRE_DB_ZFS_BLOCKDEVICE;
