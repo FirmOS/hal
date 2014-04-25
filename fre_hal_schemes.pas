@@ -92,7 +92,7 @@ type
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
-     procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER);
+     procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
    end;
 
    { TFRE_DB_SERVICE_INSTANCE }
@@ -271,12 +271,32 @@ type
 
    { TFRE_DB_VMACHINE }
 
-   TFRE_DB_VMACHINE=class(TFRE_DB_MACHINE)
+   TFRE_DB_VMACHINE=class(TFRE_DB_SERVICE)
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
-     procedure CALC_GetDisplayName          (const setter: IFRE_DB_CALCFIELD_SETTER);
+     procedure       CALC_GetDisplayName          (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+   end;
+
+   { TFRE_DB_DNS }
+
+   TFRE_DB_DNS=class(TFRE_DB_SERVICE)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     procedure       CALC_GetDisplayName          (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+   end;
+
+   { TFRE_DB_NAS }
+
+   TFRE_DB_NAS=class(TFRE_DB_SERVICE)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     procedure       CALC_GetDisplayName          (const setter: IFRE_DB_CALCFIELD_SETTER); override;
    end;
 
    { TFRE_DB_ZONE }
@@ -289,6 +309,8 @@ type
      procedure       CALC_GetDisplayName   (const setter: IFRE_DB_CALCFIELD_SETTER);
      class function  WBC_NewOperation      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
      function        WEB_SaveOperation     (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
+     function        hasNAS                (const conn: IFRE_DB_CONNECTION):Boolean;
+     function        hasDNS                (const conn: IFRE_DB_CONNECTION):Boolean;
    end;
 
   { TFRE_DB_DEVICE }
@@ -877,6 +899,44 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_NAS }
+
+class procedure TFRE_DB_NAS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+end;
+
+class procedure TFRE_DB_NAS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  Inherited;
+  newVersionId:='1.0';
+end;
+
+procedure TFRE_DB_NAS.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  setter.SetAsString('NAS: '+Field('objname').AsString);
+end;
+
+{ TFRE_DB_DNS }
+
+class procedure TFRE_DB_DNS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+end;
+
+class procedure TFRE_DB_DNS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  Inherited;
+  newVersionId:='1.0';
+end;
+
+procedure TFRE_DB_DNS.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  setter.SetAsString('DNS: '+Field('objname').AsString);
+end;
+
 { TFRE_DB_SERVICE_INSTANCE }
 
 function TFRE_DB_SERVICE_INSTANCE.GetFMRI: TFRE_DB_String;
@@ -967,7 +1027,7 @@ end;
 
 procedure TFRE_DB_SERVICE_DOMAIN.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  setter.SetAsString(Field('objname').AsString);
+  setter.SetAsString('Domain: ' + Field('objname').AsString);
 end;
 
 
@@ -3057,6 +3117,16 @@ begin
   Result:=inherited WEB_SaveOperation(input, ses, app, conn);
 end;
 
+ function TFRE_DB_ZONE.hasNAS(const conn: IFRE_DB_CONNECTION): Boolean;
+ begin
+   Result:=conn.IsReferenced(UID,false,TFRE_DB_NAS.ClassName,'serviceParent');
+ end;
+
+ function TFRE_DB_ZONE.hasDNS(const conn: IFRE_DB_CONNECTION): Boolean;
+ begin
+   Result:=conn.IsReferenced(UID,false,TFRE_DB_DNS.ClassName,'serviceParent');
+ end;
+
  { TFRE_DB_MACHINE_SETTING_TIME }
 
  class procedure TFRE_DB_MACHINE_SETTING_TIME.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -3467,7 +3537,7 @@ end;
  class procedure TFRE_DB_VMACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  begin
    inherited RegisterSystemScheme(scheme);
-   scheme.SetParentSchemeByName(TFRE_DB_MACHINE.ClassName);
+   scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
  end;
 
  class procedure TFRE_DB_VMACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3477,7 +3547,7 @@ end;
 
  procedure TFRE_DB_VMACHINE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
-   setter.SetAsString('VM '+Field('objname').AsString);
+   setter.SetAsString('VM: '+Field('objname').AsString);
  end;
 
  class procedure TFRE_DB_MACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -3713,9 +3783,11 @@ end;
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+   scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
    scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+   group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
  end;
 
  class procedure TFRE_DB_Service.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3724,6 +3796,7 @@ end;
    if currentVersionId='' then begin
      currentVersionId := '1.0';
      StoreTranslateableText(conn,'scheme_main_group','General Information');
+     StoreTranslateableText(conn,'scheme_objname','Servicename');
    end;
    VersionInstallCheck(currentVersionId,newVersionId);
  end;
@@ -3819,6 +3892,8 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_INSTANCE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMachine);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DNS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_NAS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Tester);
 
