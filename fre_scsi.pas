@@ -66,7 +66,7 @@ type
   TFRE_DB_SG_LOGS=class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
     function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
@@ -105,7 +105,7 @@ type
     procedure SetDiskLog(Avalue:TFRE_DB_SG_LOGS);
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
 
     procedure _getLayoutCaption                 (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutSubCaption              (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -141,7 +141,7 @@ type
   TFRE_DB_SATA_DISK=class(TFRE_DB_PHYS_DISK)
   public
     procedure SetTargetPort                     (const targetport_1:string);
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_SAS_DISK }
@@ -149,7 +149,7 @@ type
   TFRE_DB_SAS_DISK=class(TFRE_DB_PHYS_DISK)
   public
     procedure SetTargetPorts                    (const targetport_1:string; const targetport_2:string);
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
 
   end;
 
@@ -169,7 +169,7 @@ type
     procedure SetDeviceIdentifier(AValue: TFRE_DB_String);
     procedure SetParentInEnclosureUID(AValue: TGUID);
   public
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     procedure AddMosParentID                    (const avalue : TGUID);
     procedure RemoveMosParentID                 (const avalue : TGUID);
@@ -197,7 +197,7 @@ type
     procedure SetPortType(AValue: string);
     procedure SetSlotNr   (AValue: UInt16);
   public
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     procedure AddMosParentID                    (const avalue : TGUID);
     procedure RemoveMosParentID                 (const avalue : TGUID);
@@ -228,7 +228,7 @@ type
     procedure SetEnclosureNr                    (AValue: Uint16);
     procedure SetMachineID                      (AValue: TGUID);
   public
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure _getChildrenString                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutCaption                 (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
@@ -436,7 +436,7 @@ begin
 
 end;
 
-class procedure TFRE_DB_SG_LOGS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_SG_LOGS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
@@ -518,7 +518,7 @@ begin
     StoreTranslateableText(conn,'scheme_PROTOCOL_TP2_RUNNING_DISPARITY_EC','Running disparity error count');
 
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 function TFRE_DB_SG_LOGS.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -534,7 +534,7 @@ begin
   Field('target_port').AsString:=targetport_1;
 end;
 
-class procedure TFRE_DB_SATA_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_SATA_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
 
@@ -558,7 +558,7 @@ begin
   //next update code
   end;
 
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 { TFRE_DB_ENCLOSURE }
@@ -619,7 +619,7 @@ begin
   Result:=String2DBMOSStatus(Field('status_mos').AsString);
 end;
 
-class procedure TFRE_DB_ENCLOSURE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ENCLOSURE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
 
@@ -636,7 +636,7 @@ begin
   //next update code
   end;
 
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 class procedure TFRE_DB_ENCLOSURE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1831,9 +1831,12 @@ begin
 
 end;
 
-class procedure TFRE_DB_PHYS_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_PHYS_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newversionID:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 procedure TFRE_DB_PHYS_DISK._getLayoutCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -1907,7 +1910,7 @@ begin
   Field('target_port').AddString(targetport_2);
 end;
 
-class procedure TFRE_DB_SAS_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_SAS_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
 
@@ -1931,7 +1934,7 @@ begin
   //next update code
   end;
 
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 { TFRE_DB_DRIVESLOT }
@@ -1990,9 +1993,12 @@ begin
   Field('slotnr').AsUInt16:=Avalue;
 end;
 
-class procedure TFRE_DB_DRIVESLOT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_DRIVESLOT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 procedure TFRE_DB_DRIVESLOT.AddMosParentID(const avalue: TGUID);
@@ -2106,9 +2112,12 @@ begin
   AddMosParentID(AValue);
 end;
 
-class procedure TFRE_DB_SAS_EXPANDER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_SAS_EXPANDER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 procedure TFRE_DB_SAS_EXPANDER.AddMosParentID(const avalue: TGUID);

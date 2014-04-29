@@ -105,7 +105,7 @@ type
     fhal_mos        : TFRE_HAL_MOS;
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     procedure       Configure            (const oid: string; const host: string; const version: integer; const community: string);
     procedure       SendRequest          (const hal_mos:TFRE_HAL_MOS);
@@ -298,7 +298,7 @@ begin
   group.AddInput('res_string','$scheme_TFRE_DB_MOS_SNMP_result');
 end;
 
-class procedure TFRE_DB_MOS_SNMP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_MOS_SNMP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   inherited;
   newVersionId:='1.0';
@@ -306,7 +306,7 @@ begin
     begin
       currentVersionId:='1.0';
     end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+   
 end;
 
 procedure TFRE_DB_MOS_SNMP.Configure(const oid: string; const host: string; const version: integer; const community: string);

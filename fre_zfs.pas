@@ -89,7 +89,7 @@ type
   private
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
   published
     function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -100,7 +100,7 @@ type
   TFRE_DB_IOSTAT=class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     procedure       SetBlockdevice              (const blockdevice:TGUID);
     function        GetBlockdevice              : TGUID;
@@ -138,7 +138,7 @@ type
 
     procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
 
   public
     procedure removeFromPool          ;
@@ -204,7 +204,7 @@ type
     procedure _getMachineDeviceIdentifier (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
 
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     class function  GetMachineDeviceIdentifier  (const vmachine_uid: TGUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
     class function  GetMachineDeviceName        (const vmachine_uid: TGUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
@@ -267,7 +267,7 @@ type
   TFRE_DB_ZFS_DISKREPLACECONTAINER=class(TFRE_DB_ZFS_DISKCONTAINER)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function  mayHaveZFSChildren       : Boolean; override;
     function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
@@ -278,7 +278,7 @@ type
   TFRE_DB_ZFS_DISKSPARECONTAINER=class(TFRE_DB_ZFS_DISKCONTAINER)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function  mayHaveZFSChildren       : Boolean; override;
     function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
@@ -292,7 +292,7 @@ type
     procedure SetRaidLevel       (AValue: TFRE_DB_ZFS_RAID_LEVEL); override;
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function acceptsNewZFSChildren  (const conn: IFRE_DB_CONNECTION): Boolean; override;
   end;
@@ -305,7 +305,7 @@ type
     procedure SetRaidLevel                   (AValue: TFRE_DB_ZFS_RAID_LEVEL); override;
   protected
     class procedure RegisterSystemScheme     (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects         (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     function  createVdev         : TFRE_DB_ZFS_VDEV; virtual;
     function  createVdevEmbedded (const devicename:TFRE_DB_String): TFRE_DB_ZFS_VDEV; virtual;
@@ -316,7 +316,7 @@ type
   TFRE_DB_ZFS_DATASTORAGE=class(TFRE_DB_ZFS_VDEVCONTAINER)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
   end;
 
@@ -328,7 +328,7 @@ type
     procedure SetRaidLevel       (AValue: TFRE_DB_ZFS_RAID_LEVEL); override;
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
   end;
 
@@ -337,7 +337,7 @@ type
   TFRE_DB_ZFS_LOG=class(TFRE_DB_ZFS_VDEVCONTAINER)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
   end;
 
@@ -349,7 +349,7 @@ type
     procedure SetRaidLevel       (AValue: TFRE_DB_ZFS_RAID_LEVEL); override;
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
   end;
 
@@ -374,7 +374,7 @@ type
   private
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
     class function  CreateEmbeddedPoolObjectfromDB (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID): TFRE_DB_ZFS_POOL;
@@ -409,7 +409,7 @@ type
   TFRE_DB_ZFS_UNASSIGNED=class(TFRE_DB_ZFS_ROOTOBJ)
   protected
     class procedure RegisterSystemScheme          (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects              (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects              (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     class function  FetchUnassigned               (const conn:IFRE_DB_CONNECTION) : TFRE_DB_ZFS_UNASSIGNED;
     procedure InitforMachine                      (const avalue:TGUID);
@@ -483,7 +483,7 @@ type
   public
   protected
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_ZFS_DATASET }
@@ -491,7 +491,7 @@ type
   TFRE_DB_ZFS_DATASET=class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
     procedure CALC_GetDisplayName        (const setter : IFRE_DB_CALCFIELD_SETTER);
   end;
@@ -501,7 +501,7 @@ type
   TFRE_DB_ZFS_DATASET_FILE=class(TFRE_DB_ZFS_DATASET)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_ZFS_DATASET_ZVOL }
@@ -509,7 +509,7 @@ type
   TFRE_DB_ZFS_DATASET_ZVOL=class(TFRE_DB_ZFS_DATASET)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_NFS_FILESHARE }
@@ -517,7 +517,7 @@ type
   TFRE_DB_NFS_FILESHARE=class(TFRE_DB_ZFS_DATASET_FILE)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
   end;
 
@@ -526,7 +526,7 @@ type
   TFRE_DB_LUN=class(TFRE_DB_ZFS_DATASET_ZVOL)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_VIRTUAL_FILESHARE }
@@ -534,7 +534,7 @@ type
   TFRE_DB_VIRTUAL_FILESHARE=class(TFRE_DB_ZFS_DATASET)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
     procedure CALC_GetIcons              (const setter: IFRE_DB_CALCFIELD_SETTER);
   end;
@@ -544,7 +544,7 @@ type
   TFRE_DB_NFS_ACCESS=class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_LUN_VIEW }
@@ -552,7 +552,7 @@ type
   TFRE_DB_LUN_VIEW=class(TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
 
@@ -594,9 +594,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_DISKSPARECONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_DISKSPARECONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+   if currentVersionId='' then begin
+     currentVersionId := '1.0';
+   end;
 end;
 
 function TFRE_DB_ZFS_DISKSPARECONTAINER.mayHaveZFSChildren: Boolean;
@@ -616,9 +619,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_DISKREPLACECONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_DISKREPLACECONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+   if currentVersionId='' then begin
+     currentVersionId := '1.0';
+   end;
 end;
 
 function TFRE_DB_ZFS_DISKREPLACECONTAINER.mayHaveZFSChildren: Boolean;
@@ -653,9 +659,12 @@ begin
 
 end;
 
-class procedure TFRE_DB_ZPOOL_IOSTAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZPOOL_IOSTAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+   if currentVersionId='' then begin
+     currentVersionId := '1.0';
+   end;
 end;
 
 function TFRE_DB_ZPOOL_IOSTAT.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -670,9 +679,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_IOSTAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_IOSTAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+   if currentVersionId='' then begin
+     currentVersionId := '1.0';
+   end;
 end;
 
 procedure TFRE_DB_IOSTAT.SetBlockdevice(const blockdevice: TGUID);
@@ -698,9 +710,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_UNASSIGNED.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_UNASSIGNED.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 class function TFRE_DB_ZFS_UNASSIGNED.FetchUnassigned(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_UNASSIGNED;
@@ -922,9 +937,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_VDEVCONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_VDEVCONTAINER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 function TFRE_DB_ZFS_VDEVCONTAINER.createVdev: TFRE_DB_ZFS_VDEV;
@@ -949,9 +967,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_DATASTORAGE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_DATASTORAGE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 { TFRE_DB_ZFS_OBJ }
@@ -1040,22 +1061,17 @@ begin
   group.AddInput('state',GetTranslateableTextKey('scheme_state'));
 end;
 
-class procedure TFRE_DB_ZFS_OBJ.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_OBJ.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
- newVersionId:='1.0';
-
- if (currentVersionId='') or (currentVersionId='UNUSED') then begin
-   currentVersionId := '1.0';
-
-   StoreTranslateableText(conn,'scheme_zfs','General Information');
-   StoreTranslateableText(conn,'scheme_state','State');
-
- end;
- if (currentVersionId='1.0') then begin
+  newVersionId:='1.0';
+  if (currentVersionId='') or (currentVersionId='UNUSED') then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_zfs','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
+  end;
+  if (currentVersionId='1.0') then begin
  //next update code
- end;
-
- VersionInstallCheck(currentVersionId,newVersionId);
+  end;
 end;
 
 procedure TFRE_DB_ZFS_OBJ.removeFromPool;
@@ -1410,9 +1426,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_CACHE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_CACHE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 { TFRE_DB_ZFS_LOG }
@@ -1422,9 +1441,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_LOG.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_LOG.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 { TFRE_DB_ZFS_SPARE }
@@ -1445,9 +1467,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_SPARE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_SPARE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 { TFRE_DB_ZFS_VDEV }
@@ -1472,9 +1497,12 @@ begin
   inherited RegisterSystemScheme(scheme);
 end;
 
-class procedure TFRE_DB_ZFS_VDEV.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_VDEV.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 function TFRE_DB_ZFS_VDEV.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
@@ -1601,9 +1629,12 @@ begin
   scheme.AddCalcSchemeField('machinedeviceidentifier',fdbft_String,@_getMachineDeviceidentifier);
 end;
 
-class procedure TFRE_DB_ZFS_BLOCKDEVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_BLOCKDEVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
 end;
 
 class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(const vmachine_uid: TGUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
@@ -1708,10 +1739,9 @@ begin
 
 end;
 
-class procedure TFRE_DB_ZFS_POOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_POOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
  newVersionId:='1.0';
-
  if (currentVersionId='') then begin
    currentVersionId := '1.0';
 
@@ -1724,8 +1754,6 @@ begin
  if (currentVersionId='1.0') then begin
  //next update code
  end;
-
- VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 procedure TFRE_DB_ZFS_POOL._getMOSCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
@@ -3319,7 +3347,7 @@ begin
   group.AddInput('refer_mb',GetTranslateableTextKey('scheme_refer'),true);
 end;
 
-class procedure TFRE_DB_ZFS_SNAPSHOT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_SNAPSHOT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
@@ -3331,7 +3359,6 @@ begin
     StoreTranslateableText(conn,'scheme_used','Used [MB]');
     StoreTranslateableText(conn,'scheme_refer','Refer [MB]');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 { TFRE_DB_LUN_VIEW }
@@ -3349,9 +3376,8 @@ begin
   group.AddInput('targetgroup',GetTranslateableTextKey('scheme_targetgroup'));
 end;
 
-class procedure TFRE_DB_LUN_VIEW.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_LUN_VIEW.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited;
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -3359,7 +3385,6 @@ begin
     StoreTranslateableText(conn,'scheme_initiatorgroup','Initiator Group');
     StoreTranslateableText(conn,'scheme_targetgroup','Target Group');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 { TFRE_DB_ZFS_DATASET_ZVOL }
@@ -3387,9 +3412,8 @@ begin
   group.AddInput('secondarycache',GetTranslateableTextKey('scheme_secondarycache'),false,false,'',false,dh_chooser_radio);
 end;
 
-class procedure TFRE_DB_ZFS_DATASET_ZVOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_DATASET_ZVOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited;
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -3402,7 +3426,7 @@ begin
     StoreTranslateableText(conn,'enum_cache_all','All');
     StoreTranslateableText(conn,'enum_cache_metadata','Metadata');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 { TFRE_DB_ZFS_DATASET_FILE }
@@ -3463,9 +3487,8 @@ begin
 
 end;
 
-class procedure TFRE_DB_ZFS_DATASET_FILE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_DATASET_FILE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited InstallDBObjects(conn, currentVersionId, newVersionId);
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -3498,7 +3521,7 @@ begin
     StoreTranslateableText(conn,'enum_canmount_on','On');
     StoreTranslateableText(conn,'enum_canmount_noauto','NoAuto');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 { TFRE_DB_LUN }
@@ -3514,9 +3537,8 @@ begin
   group.AddInput('writeprotect',GetTranslateableTextKey('scheme_writeprotect'));
 end;
 
-class procedure TFRE_DB_LUN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_LUN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited InstallDBObjects(conn,currentVersionId,newVersionId);
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -3524,7 +3546,6 @@ begin
     StoreTranslateableText(conn,'scheme_writeback','Writeback');
     StoreTranslateableText(conn,'scheme_writeprotect','Writeprotect');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
 end;
 
 { TFRE_DB_NFS_ACCESS }
@@ -3551,9 +3572,8 @@ begin
   group.AddInput('subnet',GetTranslateableTextKey('scheme_subnet'));
 end;
 
-class procedure TFRE_DB_NFS_ACCESS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_NFS_ACCESS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited InstallDBObjects(conn,currentVersionId,newVersionId);
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -3567,7 +3587,7 @@ begin
     StoreTranslateableText(conn,'enum_nfs_access_root','Root');
 
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 { TFRE_DB_VIRTUAL_FILESHARE }
@@ -3591,9 +3611,8 @@ begin
   group.AddInput('webdav',GetTranslateableTextKey('scheme_webdav'));
 end;
 
-class procedure TFRE_DB_VIRTUAL_FILESHARE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_VIRTUAL_FILESHARE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited InstallDBObjects(conn,currentVersionId,newVersionId);
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -3604,7 +3623,7 @@ begin
     StoreTranslateableText(conn,'scheme_ftp','FTP (File Transfer Protocol)');
     StoreTranslateableText(conn,'scheme_webdav','WebDAV');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 procedure TFRE_DB_VIRTUAL_FILESHARE.CALC_GetIcons(const setter: IFRE_DB_CALCFIELD_SETTER);
@@ -3661,9 +3680,8 @@ begin
   group.AddInput('auth',GetTranslateableTextKey('scheme_auth'),false,false,'',false,dh_chooser_radio);
 end;
 
-class procedure TFRE_DB_NFS_FILESHARE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_NFS_FILESHARE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited InstallDBObjects(conn, currentVersionId, newVersionId);
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -3680,7 +3698,7 @@ begin
     StoreTranslateableText(conn,'enum_nfs_auth_k5c','Kerberos V5 with checksums');
     StoreTranslateableText(conn,'enum_nfs_auth_k5ce','Kerberos V5 with checksums and encryption');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 
@@ -3762,7 +3780,7 @@ begin
 
 end;
 
-class procedure TFRE_DB_ZFS_DATASET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_ZFS_DATASET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
@@ -3806,7 +3824,7 @@ begin
     StoreTranslateableText(conn,'enum_sync_always','Always');
     StoreTranslateableText(conn,'enum_sync_disabled','Disabled');
   end;
-  VersionInstallCheck(currentVersionId,newVersionId);
+
 end;
 
 procedure TFRE_DB_ZFS_DATASET.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);

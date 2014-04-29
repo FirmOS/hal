@@ -61,7 +61,6 @@ type
    TFRE_DB_UPDATE_TRANSPORT = class (TFRE_DB_ObjectEx)
    protected
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
      class function CreateUpdateObject(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field) : TFRE_DB_UPDATE_TRANSPORT;
 
@@ -80,7 +79,6 @@ type
    TFRE_DB_INSERT_TRANSPORT = class (TFRE_DB_ObjectEx)
    protected
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
      class function CreateInsertObject(const insert_obj : IFRE_DB_Object) : TFRE_DB_INSERT_TRANSPORT;
 
@@ -93,7 +91,6 @@ type
    TFRE_DB_DELETE_TRANSPORT = class (TFRE_DB_ObjectEx)
    protected
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
      class function CreateDeleteObject(const delete_obj : IFRE_DB_Object) : TFRE_DB_DELETE_TRANSPORT;
    end;
@@ -386,11 +383,6 @@ begin
   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
 end;
 
-class procedure TFRE_DB_DELETE_TRANSPORT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionID:='1.0';
-end;
-
 class function TFRE_DB_DELETE_TRANSPORT.CreateDeleteObject(const delete_obj: IFRE_DB_Object): TFRE_DB_DELETE_TRANSPORT;
 begin
   result := TFRE_DB_DELETE_TRANSPORT.CreateForDB;
@@ -403,11 +395,6 @@ class procedure TFRE_DB_INSERT_TRANSPORT.RegisterSystemScheme(const scheme: IFRE
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
-end;
-
-class procedure TFRE_DB_INSERT_TRANSPORT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionID:='1.0';
 end;
 
 class function TFRE_DB_INSERT_TRANSPORT.CreateInsertObject(const insert_obj: IFRE_DB_Object): TFRE_DB_INSERT_TRANSPORT;
@@ -434,10 +421,6 @@ begin
   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
 end;
 
-class procedure TFRE_DB_UPDATE_TRANSPORT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionID:='1.0';
-end;
 
 class function TFRE_DB_UPDATE_TRANSPORT.CreateUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field): TFRE_DB_UPDATE_TRANSPORT;
 begin

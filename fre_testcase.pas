@@ -114,7 +114,7 @@ type
   TFRE_DB_TestcaseResult = class (TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
   { TFRE_DB_TestcaseStatus }
@@ -122,7 +122,7 @@ type
   TFRE_DB_TestcaseStatus = class (TFRE_DB_ObjectEx)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
     function        IMI_ClearStatus             (const input:IFRE_DB_Object):IFRE_DB_Object;
     function        WEB_UpdateActualStatus      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -699,7 +699,7 @@ begin
   scheme.AddCalcSchemeField('status_icon',fdbft_String,@CALC_StatusIcon);
 end;
 
-class procedure TFRE_DB_TestcaseStatus.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_TestcaseStatus.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
  newVersionId:='1.0';
 
@@ -714,7 +714,7 @@ begin
  //next update code
  end;
 
- VersionInstallCheck(currentVersionId,newVersionId);
+  
 end;
 
 function TFRE_DB_TestcaseStatus.IMI_ClearStatus(const input: IFRE_DB_Object): IFRE_DB_Object;
@@ -795,7 +795,7 @@ begin
   scheme.AddSchemeField('endtime',fdbft_DateTimeUTC);
 end;
 
-class procedure TFRE_DB_TestcaseResult.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_TestcaseResult.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
  newVersionId:='1.0';
 
@@ -811,7 +811,7 @@ begin
  //next update code
  end;
 
- VersionInstallCheck(currentVersionId,newVersionId);
+  
 end;
 
 
