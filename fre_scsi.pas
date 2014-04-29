@@ -693,7 +693,6 @@ begin
     expander.DeviceIdentifier:=DeviceIdentifier+'_'+devicename;
   if not FieldExists('expanders') then
     Field('expanders').AsObject:= GFRE_DBI.NewObject;
-  expander.AddMosParentID(UID);
   Field('expanders').asObject.Field(expander.DeviceIdentifier).AsObject:=expander;
 end;
 
@@ -718,7 +717,6 @@ begin
     Field('slots').AsObject:= GFRE_DBI.NewObject;
   driveslot.SlotNr       := slotnr;
   driveslot.EnclosureNr  := EnclosureNr;
-  driveslot.AddMosParentID(UID);
   Field('slots').AsObject.Field('slot'+inttostr(slotnr)).AsObject:=driveslot;
 end;
 
@@ -1975,7 +1973,11 @@ end;
 
 procedure TFRE_DB_DRIVESLOT.SetParentInEnclosureUID(AValue: TGUID);
 begin
+  if FieldExists('parent_in_enclosure_uid') then
+    if AValue<>Field('parent_in_enclosure_uid').AsObjectLink then
+      RemoveMosParentID(Field('parent_in_enclosure_uid').AsObjectLink);
   Field('parent_in_enclosure_uid').AsObjectLink:=AValue;
+  AddMosParentID(AValue);
 end;
 
 procedure TFRE_DB_DRIVESLOT.SetPortType(AValue: string);
@@ -2097,7 +2099,11 @@ end;
 
 procedure TFRE_DB_SAS_EXPANDER.SetParentInEnclosureUID(AValue: TGUID);
 begin
+  if FieldExists('parent_in_enclosure_uid') then
+    if AValue<>Field('parent_in_enclosure_uid').AsObjectLink then
+      RemoveMosParentID(Field('parent_in_enclosure_uid').AsObjectLink);
   Field('parent_in_enclosure_uid').AsObjectLink:=AValue;
+  AddMosParentID(AValue);
 end;
 
 class procedure TFRE_DB_SAS_EXPANDER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);

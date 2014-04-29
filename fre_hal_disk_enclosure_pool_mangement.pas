@@ -94,230 +94,7 @@ implementation
 
 function Common_Disk_DataFeed(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 
-var
-    unassigned_disks     : TFRE_DB_ZFS_UNASSIGNED;
-    ua_obj               : IFRE_DB_Object;
-    machinecollection    : IFRE_DB_COLLECTION;
-    poolcollection       : IFRE_DB_COLLECTION;
-    blockdevicecollection: IFRE_DB_COLLECTION;
-    enclosurecollection  : IFRE_DB_COLLECTION;
-    expandercollection   : IFRE_DB_COLLECTION;
-    driveslotcollection  : IFRE_DB_COLLECTION;
-    machine_uid          : TGUID;
-    i                    : NativeInt;
-    enclosure_refs       : TFRE_DB_ObjectReferences;
-    disk_refs            : TFRE_DB_ObjectReferences;
-    dbo_uid              : TGUID;
 
-//    unassigned_uid       : TGUID;
-
-    procedure _UpdatePools(const obj:IFRE_DB_Object);
-    var pool : TFRE_DB_ZFS_POOL;
-    begin
-      pool := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
-      pool.MachineID := machine_uid;
-      pool.Field('mosparentIds').AddObjectLink(machine_uid);
-      pool.FlatEmbeddedAndStoreInCollections(conn);
-    end;
-
-    procedure _InsertDisksIntoSlots(const obj:IFRE_DB_Object);
-    var disk           : TFRE_DB_PHYS_DISK;
-        targetports    : TFRE_DB_StringArray;
-        i              : integer;
-        guida          : TFRE_DB_GUIDArray;
-        slotguid       : TGUID;
-        index_name     : string;
-        dbo            : IFRE_DB_Object;
-        db_disk        : TFRE_DB_PHYS_DISK;
-        sdbo           : IFRE_DB_Object;
-        db_slot        : TFRE_DB_DRIVESLOT;
-        refs           : TFRE_DB_GUIDArray;
-        old_dbo        : IFRE_DB_Object;
-        old_disk       : TFRE_DB_PHYS_DISK;
-        already_in_slot: boolean;
-
-        procedure _CheckSlot;
-        begin
-          if slotguid=CFRE_DB_NullGUID then
-            begin
-              if length(guida)<>1 then
-                raise EFRE_DB_Exception.Create(edb_ERROR,'index for driveslot delivered more than one driveslot for targetport '+targetports[i])
-              else
-                begin
-                  slotguid := guida[0];
-                end;
-            end
-          else
-            begin
-              if length(guida)<>1 then
-                raise EFRE_DB_Exception.Create(edb_ERROR,'index for driveslot delivered more than one driveslot for targetport '+targetports[i]);
-              if slotguid <> guida[0] then
-                raise EFRE_DB_Exception.Create(edb_ERROR,'index for driveslot delivered different driveslots for targetport '+targetports[i]);
-            end;
-        end;
-
-    begin
-      if (obj.Implementor_HC is TFRE_DB_PHYS_DISK) then
-        begin
-          disk            := (obj.Implementor_HC as TFRE_DB_PHYS_DISK);
-
-          if disk.MachineID<>machine_uid then  // only for actual machine
-            exit;
-
-          targetports     := disk.GetTargetPorts;
-          slotguid        := CFRE_DB_NullGUID;
-          already_in_slot := false;
-
-          for i:=low(targetports) to high(targetports) do
-            begin
-              if driveslotcollection.GetIndexedUID(targetports[i],guida,CFRE_DB_DRIVESLOT_TP1_INDEX) then
-                _CheckSlot
-              else
-                if driveslotcollection.GetIndexedUID(targetports[i],guida,CFRE_DB_DRIVESLOT_TP2_INDEX) then
-                  _CheckSlot;
-            end;
-          if slotguid<>CFRE_DB_NullGUID then
-            begin
-              if not blockdevicecollection.Fetch(disk.UID,dbo) then
-                 raise EFRE_DB_Exception.Create(edb_ERROR,'could not fetch disk '+disk.UID_String);
-              if not driveslotcollection.Fetch(slotguid,sdbo) then
-                 raise EFRE_DB_Exception.Create(edb_ERROR,'could not fetch driveslot '+GFRE_BT.GUID_2_HexString(slotguid));
-              db_slot := sdbo.Implementor_HC as TFRE_DB_DRIVESLOT;
-
-              refs:=conn.GetReferences(db_slot.UID,false,'','parent_in_enclosure_uid');
-              if length(refs)>0 then
-                begin
-                  if length(refs)>1 then
-                    raise EFRE_DB_Exception.Create(edb_ERROR,'more than one drive  driveslot '+GFRE_BT.GUID_2_HexString(slotguid));
-                  if disk.UID <> refs[0] then  // disk changed in slot
-                    begin
-                      if not blockdevicecollection.Fetch(refs[0],old_dbo) then
-                         raise EFRE_DB_Exception.Create(edb_ERROR,'could not fetch disk '+FREDB_G2H(old_dbo.UID));
-                       old_disk := old_dbo.Implementor_HC as TFRE_DB_PHYS_DISK;
-                       old_disk.ClearSlotandEnclosureInformation;
-                       CheckDbResult(blockdevicecollection.Update(old_dbo),'update blockdevice clearslot information');
-                    end
-                  else
-                    begin
-                      already_in_slot := true;
-                    end;
-                end;
-              if already_in_slot then
-                begin
-                  dbo.Finalize;
-                end
-              else
-                begin
-                  db_disk := dbo.Implementor_HC as TFRE_DB_PHYS_DISK;
-                  db_disk.ParentInEnclosureUID:= slotguid;
-                  db_disk.EnclosureUID        := db_slot.ParentInEnclosureUID;
-                  db_disk.EnclosureNr         := db_slot.EnclosureNr;
-                  db_disk.SlotNr              := db_slot.SlotNr;
-                  db_disk.Field('mosparentIds').AddObjectLink(db_slot.ParentInEnclosureUID);
-
-                  CheckDbResult(blockdevicecollection.Update(dbo),'update blockdevice with slot information');
-                end;
-              sdbo.Finalize;
-            end;
-        end;
-    end;
-
-    procedure            _updateDisks(const obj:IFRE_DB_Object);
-    var  disk               : TFRE_DB_ZFS_BLOCKDEVICE;
-         db_disk            : TFRE_DB_ZFS_BLOCKDEVICE;
-         dbo                : IFRE_DB_Object;
-
-      procedure __updatedisk;
-      var i : NativeInt;
-          domID : TGUID;
-      begin
-//        writeln('SWL: UPDATEABLE DISK ', dbo.DumpToString());
-
-
-        domID    := dbo.DomainID;
-        db_disk  := dbo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE;
-        db_disk.SetAllSimpleObjectFieldsFromObject(disk);
-        db_disk.SetDomainID(domID);
-
-        db_disk.MachineID :=  machine_uid;
-        if db_disk.FieldExists('target_port') then
-          db_disk.Field('target_port').AsStringArr := disk.Field('target_port').asstringArr;
-        if disk.FieldExists('iostat') then
-          begin
-            if db_disk.FieldExists('iostat') then
-              begin
-                db_disk.Field('iostat').asobject.SetAllSimpleObjectFieldsFromObject(disk.Field('iostat').AsObject);
-              end
-            else
-              begin
-                db_disk.Field('iostat').asobject := disk.Field('iostat').AsObject.CloneToNewObject;
-              end;
-          end;
-        if disk.FieldExists('log') then
-          begin
-            if db_disk.FieldExists('log') then
-              begin
-                db_disk.Field('log').asobject.SetAllSimpleObjectFieldsFromObject(disk.Field('log').AsObject);
-              end
-            else
-              begin
-                db_disk.Field('log').asobject := disk.Field('log').AsObject.CloneToNewObject;
-              end;
-          end;
-        for i:=0 to high(disk_refs) do
-          begin
-            if disk.UID=disk_refs[i].linked_uid then
-              begin
-                disk_refs[i].linked_uid := CFRE_DB_NullGUID;
-                break;
-              end;
-          end;
-      end;
-
-      procedure __insertdisk;
-      begin
-        dbo      := disk.CloneToNewObject;
-        db_disk  := dbo.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE;
-        db_disk.MachineID :=  machine_uid;
-//        db_disk.caption   :=  disk.Devicename; // device.WWN+' ('+device.Manufacturer+' '+device.Model_number+' '+device.Serial_number+')';
-        unassigned_disks.addBlockdevice(db_disk);
-      end;
-
-      procedure __deletedisk;
-      begin
-        CheckDbResult(conn.Delete(dbo.UID),'store blockdevice in disk machine ['+FREDB_G2H(machine_uid)+'] deviceidentifier ['+disk.DeviceIdentifier+'] devicename ['+disk.DeviceName+']');
-        dbo.Finalize;
-      end;
-
-    begin
-      disk := (obj.Implementor_HC as TFRE_DB_ZFS_BLOCKDEVICE);
-      if blockdevicecollection.GetIndexedObj(TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(machine_uid,disk.DeviceIdentifier),dbo,CFRE_DB_DEVICE_DEV_ID_INDEX) then
-        begin
-          if dbo.UID<>disk.UID then
-            begin
-              __deletedisk;
-              __insertdisk;
-              CheckDbResult(blockdevicecollection.Store(db_disk),'failed store blockdevice in disk machine ['+FREDB_G2H(machine_uid)+'] deviceidentifier ['+disk.DeviceIdentifier+'] devicename ['+disk.DeviceName+']'); ;
-            end
-          else
-            begin
-              assert(dbo.DomainID<>CFRE_DB_NullGUID,'fetched disk with Null GUiD');  //SWL
-              __updatedisk;
-              assert(db_disk.DomainID<>CFRE_DB_NullGUID,'updating disk with Null GUiD');      //SWL
-              CheckDbResult(blockdevicecollection.Update(db_disk),'failed update blockdevice in disk ['+FREDB_G2H(machine_uid)+'] deviceidentifier ['+disk.DeviceIdentifier+'] devicename ['+disk.DeviceName+']');
-            end;
-        end
-      else
-        begin
-          __insertdisk;
-          dbo_UID :=dbo.UID;
-          CheckDbResult(blockdevicecollection.Store(db_disk),'failed store blockdevice in disk machine ['+FREDB_G2H(machine_uid)+'] deviceidentifier ['+disk.DeviceIdentifier+'] devicename ['+disk.DeviceName+']');
-//          writeln('SWL: INSERTDISK DONE ',disk.Devicename);
-//          blockdevicecollection.Fetch(dbo_UID,dbo);  //test fetch                 //SWL
-//          writeln('SWL: DISK FROM DB ',dbo.DumpToString());
-//          assert(dbo.DomainID<>CFRE_DB_NullGUID,'updating disk with Null GUiD');  //SWL
-        end;
-    end;
 
 begin
   FREDIFF_ApplyTransportObjectToDB(input,conn);
@@ -398,13 +175,17 @@ var
   pools     : IFRE_DB_Object;
   ua_obj    : IFRE_DB_Object;
   ua        : TFRE_DB_ZFS_UNASSIGNED;
+  newenclosures : IFRE_DB_Object;
+  newdisks      : IFRE_DB_Object;
 
 
   procedure _UpdateDisks(const obj:IFRE_DB_Object);
   var feed_disk        : TFRE_DB_ZFS_BLOCKDEVICE;
-      mdata_obj        : IFRE_DB_OBject;
+      new_obj          : IFRE_DB_OBject;
+      struct_obj       : IFRE_DB_Object;
       struct_disk      : TFRE_DB_OS_BLOCKDEVICE;
-      phys_struct_disk : TFRE_DB_PHYS_DISK;
+      new_disk         : TFRE_DB_OS_BLOCKDEVICE;
+      phys_new_disk : TFRE_DB_PHYS_DISK;
       zfs_obj          : IFRE_DB_Object;
       targetports      : TFRE_DB_StringArray;
       slotguid         : TGUID;
@@ -415,20 +196,22 @@ var
   begin
     feed_disk := obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE;
     feed_disk.MachineID := mdata.UID;
-    if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_disk.DeviceIdentifier,mdata_obj,'') then
+    if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_disk.DeviceIdentifier,struct_obj,'') then
       begin
-        if mdata_obj.IsA(TFRE_DB_OS_BLOCKDEVICE,struct_disk) then
+        if struct_obj.IsA(TFRE_DB_OS_BLOCKDEVICE,struct_disk) then
           begin
             struct_disk.DeleteField('zfs_guid');
             if struct_disk.hasParentInZFS then
               struct_disk.RemoveMosParentID(struct_disk.parentInZFSId);
-            struct_disk.SetAllSimpleObjectFieldsFromObject(feed_disk);
+            new_obj  := struct_disk.CloneToNewObject;
+            new_disk := (new_obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE);
+            new_disk.SetAllSimpleObjectFieldsFromObject(feed_disk);
             if feed_disk.FieldExists('log') then
               begin
-                if (struct_disk.FieldExists('log')) then
-                    struct_disk.Field('log').AsObject.SetAllSimpleObjectFieldsFromObject(feed_disk.Field('log').AsObject)
+                if (new_disk.FieldExists('log')) then
+                    new_disk.Field('log').AsObject.SetAllSimpleObjectFieldsFromObject(feed_disk.Field('log').AsObject)
                 else
-                    struct_disk.Field('log').AsObject := feed_disk.Field('log').AsObject.CloneToNewObject;
+                    new_disk.Field('log').AsObject := feed_disk.Field('log').AsObject.CloneToNewObject;
               end;
             // assign zfs guid
             if assigned(pools) then
@@ -437,8 +220,8 @@ var
                 if pools.FetchObjWithStringFieldValue('devicename',feed_disk.DeviceName,zfs_obj,uppercase(TFRE_DB_ZFS_BLOCKDEVICE.ClassName)) then
                   begin
                     writeln('SWL: FOUND ZFS GUID ',(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
-                    struct_disk.setZFSGuid((zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
-                    struct_disk.parentInZFSId := zfs_obj.UID;
+                    new_disk.setZFSGuid((zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
+                    new_disk.parentInZFSId := zfs_obj.UID;
                   end
                 else
                   begin
@@ -446,7 +229,7 @@ var
                     if pools.FetchObjWithStringFieldValue('zfs_guid',mdata.UID_String+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'),zfs_obj,uppercase(TFRE_DB_ZFS_UNASSIGNED.ClassName)) then
                       begin
                         writeln('SWL: SET TO UNASSIGNED ');
-                        struct_disk.parentInZFSId := zfs_obj.UID;
+                        new_disk.parentInZFSId := zfs_obj.UID;
                       end
                     else
                       raise EFRE_DB_Exception.Create('NO UNASSIGNED DISK OBJECT FOR MACHINE FOUND!');
@@ -454,19 +237,22 @@ var
               end;
           end
         else
-          raise EFRE_DB_Exception.Create('invalid class in UpdateDiskAndEnclosure _updatedisks'+mdata_obj.SchemeClass);
+          raise EFRE_DB_Exception.Create('invalid class in UpdateDiskAndEnclosure _updatedisks'+struct_obj.SchemeClass);
       end
     else
       begin
-        mdata_obj := feed_disk.CloneToNewObject;
-        mdata.Field('disks').asObject.Field(feed_disk.Field('DEVICEIDENTIFIER').asstring).asobject:=mdata_obj;
+        new_obj := feed_disk.CloneToNewObject;
       end;
+
+    newdisks.Field(feed_disk.Field('DEVICEIDENTIFIER').asstring).asobject:=new_obj;
+
+
     //assign disks to diskslots
-    if mdata_obj.IsA(TFRE_DB_PHYS_DISK,phys_struct_disk) then
+    if new_obj.IsA(TFRE_DB_PHYS_DISK,phys_new_disk) then
       begin
-        if phys_struct_disk.hasParentinEnclosure then
-          phys_struct_disk.RemoveMosParentID(phys_struct_disk.ParentInEnclosureUID);
-        targetports     := phys_struct_disk.GetTargetPorts;
+        if phys_new_disk.hasParentinEnclosure then
+          phys_new_disk.RemoveMosParentID(phys_new_disk.ParentInEnclosureUID);
+        targetports     := phys_new_disk.GetTargetPorts;
         slotguid        := CFRE_DB_NullGUID;
         for i:=low(targetports) to high(targetports) do
           begin
@@ -493,11 +279,11 @@ var
           begin
             if slot_obj.IsA(TFRE_DB_DRIVESLOT,slot) then
               begin
-                writeln ('SWL: ASSIGNING SLOT TO DISK '+FREDB_G2H(slotguid));
-                phys_struct_disk.ParentInEnclosureUID:= slotguid;
-                phys_struct_disk.EnclosureUID        := slot.ParentInEnclosureUID;
-                phys_struct_disk.EnclosureNr         := slot.EnclosureNr;
-                phys_struct_disk.SlotNr              := slot.SlotNr;
+                writeln ('SWL: ASSIGNING SLOT ',slot.slotnr,' ',FREDB_G2H(slotguid),' TO DISK ',phys_new_disk.UID_String);
+                phys_new_disk.ParentInEnclosureUID:= slotguid;
+                phys_new_disk.EnclosureUID        := slot.ParentInEnclosureUID;
+                phys_new_disk.EnclosureNr         := slot.EnclosureNr;
+                phys_new_disk.SlotNr              := slot.SlotNr;
               end
             else
               raise EFRE_DB_Exception.Create(edb_ERROR,'Class of slot_obj is invalid '+slot_obj.SchemeClass+' '+FREDB_G2H(slot_obj.UID));
@@ -506,39 +292,46 @@ var
   end;
 
   procedure _UpdateEnclosures(const obj:IFRE_DB_Object);
-  var feed_enclosure : TFRE_DB_ENCLOSURE;
+  var feed_enclosure  : TFRE_DB_ENCLOSURE;
       stat_enclosure  : IFRE_DB_OBject;
+      new_enclosure   : IFRE_DB_Object;
 
     procedure _UpdateSlots(const slotobj:IFRE_DB_Object);
-    var feed_slot    : TFRE_DB_DRIVESLOT;
+    var feed_slot     : TFRE_DB_DRIVESLOT;
         stat_slot     : IFRE_DB_Object;
+        new_slot      : IFRE_DB_Object;
     begin
       feed_slot                       := slotobj.Implementor_HC as TFRE_DB_DRIVESLOT;
-      feed_slot.ParentInEnclosureUID  := stat_enclosure.UID;
       if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_slot.DeviceIdentifier,stat_slot,'') then
         begin
-          stat_slot.SetAllSimpleObjectFieldsFromObject(feed_slot);
+          new_slot:=stat_slot.CloneToNewObject;
+          new_slot.SetAllSimpleObjectFieldsFromObject(feed_slot);
         end
       else
         begin
-          (stat_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddDriveSlotEmbedded(feed_slot.SlotNr,(feed_slot.CloneToNewObject.Implementor_HC as TFRE_DB_DRIVESLOT));
+          new_slot := feed_slot.CloneToNewObject;
         end;
+      (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddDriveSlotEmbedded(feed_slot.SlotNr,new_slot.Implementor_HC as TFRE_DB_DRIVESLOT);
+      (new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).ParentInEnclosureUID  := new_enclosure.UID;
     end;
 
     procedure _UpdateExpanders(const expanderobj:IFRE_DB_Object);
     var feed_expander     : TFRE_DB_SAS_EXPANDER;
         stat_expander     : IFRE_DB_Object;
+        new_expander      : IFRE_DB_Object;
     begin
       feed_expander      := expanderobj.Implementor_HC as TFRE_DB_SAS_EXPANDER;
-      feed_expander.ParentInEnclosureUID  := stat_enclosure.UID;
       if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_expander.DeviceIdentifier,stat_expander,'') then
         begin
-          stat_expander.SetAllSimpleObjectFieldsFromObject(feed_expander);
+          new_expander := stat_expander.CloneToNewObject;
+          new_expander.SetAllSimpleObjectFieldsFromObject(feed_expander);
         end
       else
         begin
-          (stat_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddExpanderEmbedded((feed_expander.CloneToNewObject.Implementor_HC as TFRE_DB_SAS_EXPANDER));
+          new_expander := feed_expander.CloneToNewObject;
         end;
+      (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddExpanderEmbedded(new_expander.Implementor_HC as TFRE_DB_SAS_EXPANDER);
+      (new_expander.Implementor_HC as TFRE_DB_SAS_EXPANDER).ParentInEnclosureUID  := new_enclosure.UID;
     end;
 
   begin
@@ -547,15 +340,17 @@ var
     feed_enclosure.AddMosParentID(mdata.UID);
     if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_enclosure.DeviceIdentifier,stat_enclosure,'') then
       begin
-        stat_enclosure.SetAllSimpleObjectFieldsFromObject(feed_enclosure);
+        new_enclosure:=stat_enclosure.CloneToNewObject;
+        new_enclosure.SetAllSimpleObjectFieldsFromObject(feed_enclosure);
       end
     else
       begin
-        stat_enclosure := feed_enclosure.CloneToNewObject;
-        mdata.Field('enclosures').asObject.Field(feed_enclosure.Field('DEVICEIDENTIFIER').asstring).asobject:=stat_enclosure;
+        new_enclosure := feed_enclosure.CloneToNewObject;
       end;
     feed_enclosure.Field('slots').AsObject.ForAllObjects(@_updateslots);
     feed_enclosure.Field('expanders').AsObject.ForAllObjects(@_updateexpanders);
+
+    newenclosures.Field(feed_enclosure.Field('DEVICEIDENTIFIER').asstring).asobject:=new_enclosure;
   end;
 
 begin
@@ -584,11 +379,25 @@ begin
     if not mdata.FieldExists('enclosures') then
       mdata.Field('enclosures').AsObject:=GFRE_DBI.NewObject;
 
-    dbo.Field('enclosures').AsObject.ForAllObjects(@_updateenclosures);
 
-//    writeln('SWL ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
+    newenclosures := GFRE_DBI.NewObject;
+    newenclosures.Field('UID').AsGUID := mdata.Field('enclosures').AsObject.UID;
+    newenclosures.SetDomainID(mdata.Field('enclosures').AsObject.DomainID);
+
+    dbo.Field('enclosures').AsObject.ForAllObjects(@_updateenclosures);
+    mdata.Field('enclosures').AsObject:=newenclosures;
+
+    writeln('SWL DBOENCLOSURE STRUCTURE', dbo.Field('enclosures').AsObject.DumpToString());
+    writeln('SWL ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
+
+    newdisks := GFRE_DBI.NewObject;
+    newdisks.Field('UID').AsGUID := mdata.Field('disks').AsObject.UID;
+    newdisks.SetDomainID(mdata.Field('disks').AsObject.DomainID);
+
+
 
     dbo.Field('disks').AsObject.ForAllObjects(@_updatedisks);
+    mdata.Field('disks').AsObject:=newdisks;
 
 //    writeln('SWL DISK STRUCTURE', mdata.Field('disks').AsObject.DumpToString());
 
@@ -642,7 +451,8 @@ begin
 end;
 
 procedure TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.UpdateZpoolStatus(const dbo: IFRE_DB_Object; const machinename: TFRE_DB_NameType);
-var mdata: IFRE_DB_Object;
+var mdata    : IFRE_DB_Object;
+    newpools : IFRE_DB_Object;
 
   procedure _UpdatePools(const obj:IFRE_DB_Object);
   var feed_pool : TFRE_DB_ZFS_POOL;
@@ -724,75 +534,80 @@ var mdata: IFRE_DB_Object;
         GFRE_DBI.LogError(dblc_APPLICATION,'OBJECT HAS NO ZFS GUID [%s]',[new_obj.DumpToString()]);
     end;
 
-    procedure _Delete(const delete_obj : IFRE_DB_Object);
 
-      procedure _checkforreferencedobjects(const obj:IFRE_DB_Object; var halt:boolean);
-      var del_fields: IFRE_DB_Object;
-
-        procedure _checkLinks (const fld:IFRE_DB_Field);
-        var i:NativeInt;
-        begin
-          if (fld.FieldType=fdbft_ObjLink) then
-            begin
-              for i:=fld.ValueCount-1 downto 0 do
-                begin
-                  if fld.AsObjectLinkItem[i]=delete_obj.UID then
-                    begin
-                      GFRE_DBI.LogInfo(dblc_APPLICATION,'REMOVE OBJECT LINK FROM %s %s',[obj.SchemeClass,fld.FieldName]);
-                      fld.RemoveObjectLink(i);
-                      if fld.IsEmptyArray then
-                        del_fields.Field(fld.FieldName).AsBoolean := true;
-                    end;
-                end;
-            end;
-        end;
-
-        procedure _delete_emptyarrays (const fld:IFRE_DB_Field);
-        begin
-          if (fld.FieldType=fdbft_Boolean) then
-            obj.DeleteField(fld.FieldName);
-        end;
-
-      begin
-        halt := false;
-        del_fields := GFRE_DBI.NewObject;
-        obj.ForAllFields(@_checkLinks);
-        del_fields.ForAllFields(@_delete_emptyarrays);
-        del_fields.Finalize;
-      end;
-
-    begin
-      GFRE_DBI.LogInfo(dblc_APPLICATION,'DELETED OBJECTS FROM POOL: %s',[delete_obj.DumpToString()]);
-      mdata.ForAllObjectsBreakHierarchic(@_checkforreferencedobjects);
-    end;
-
-    procedure _Update(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field);
-    begin
-      // not used
-    end;
-
-    procedure _Insert(const o : IFRE_DB_Object);
-    begin
-      // not used
-    end;
 
 
   begin
     feed_pool   := obj.Implementor_HC as TFRE_DB_ZFS_POOL;
     new_pool    := (feed_pool.CloneToNewObject.Implementor_HC as TFRE_DB_ZFS_POOL);
-    writeln('SWL: NEW POOL ',new_pool.DumpToString());
+//    writeln('SWL: NEW POOL ',new_pool.DumpToString());
 //    abort;
     if mdata.FetchObjWithStringFieldValue('objname',feed_pool.Field('objname').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
       begin
         new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
-
-        // check for deleted objects
-        GFRE_DBI.GenerateAnObjChangeList(new_pool,old_pool,@_Insert,@_Delete,@_Update);
-
       end;
     new_pool.MachineID := mdata.UID;
     new_pool.AddMosParentID(mdata.UID);
-    mdata.Field('pools').AsObject.Field(feed_pool.Field('objname').asstring).AsObject:= new_pool;
+    newpools.Field(feed_pool.Field('objname').asstring).AsObject:= new_pool;
+  end;
+
+  procedure _cloneUnassigned(const obj:IFRE_DB_Object);
+  var ua: TFRE_DB_ZFS_UNASSIGNED;
+  begin
+    if obj.IsA(TFRE_DB_ZFS_UNASSIGNED,ua) then
+      newpools.Field(ua.GetName).AsObject:=ua.CloneToNewObject;
+  end;
+
+  procedure _Delete(const delete_obj : IFRE_DB_Object);
+
+    procedure _checkforreferencedobjects(const obj:IFRE_DB_Object; var halt:boolean);
+    var del_fields: IFRE_DB_Object;
+
+      procedure _checkLinks (const fld:IFRE_DB_Field);
+      var i:NativeInt;
+      begin
+        if (fld.FieldType=fdbft_ObjLink) then
+          begin
+            for i:=fld.ValueCount-1 downto 0 do
+              begin
+                if fld.AsObjectLinkItem[i]=delete_obj.UID then
+                  begin
+                    GFRE_DBI.LogInfo(dblc_APPLICATION,'REMOVE OBJECT LINK FROM %s %s',[obj.SchemeClass,fld.FieldName]);
+                    fld.RemoveObjectLink(i);
+                    if fld.IsEmptyArray then
+                      del_fields.Field(fld.FieldName).AsBoolean := true;
+                  end;
+              end;
+          end;
+      end;
+
+      procedure _delete_emptyarrays (const fld:IFRE_DB_Field);
+      begin
+        if (fld.FieldType=fdbft_Boolean) then
+          obj.DeleteField(fld.FieldName);
+      end;
+
+    begin
+      halt := false;
+      del_fields := GFRE_DBI.NewObject;
+      obj.ForAllFields(@_checkLinks);
+      del_fields.ForAllFields(@_delete_emptyarrays);
+      del_fields.Finalize;
+    end;
+
+  begin
+    GFRE_DBI.LogInfo(dblc_APPLICATION,'DELETED OBJECTS FROM POOL: %s',[delete_obj.DumpToString()]);
+    mdata.ForAllObjectsBreakHierarchic(@_checkforreferencedobjects);
+  end;
+
+  procedure _Update(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field);
+  begin
+    // not used
+  end;
+
+  procedure _Insert(const o : IFRE_DB_Object);
+  begin
+    // not used
   end;
 
 begin
@@ -802,9 +617,20 @@ begin
     if not mdata.FieldExists('pools') then
       mdata.Field('pools').AsObject:=GFRE_DBI.NewObject;
 
-//    writeln('ZPOOLSTATUS',dbo.DumpToString());
+    newpools := GFRE_DBI.NewObject;
+    newpools.Field('UID').AsGUID := mdata.Field('pools').AsObject.UID;
+    newpools.SetDomainID(mdata.Field('pools').AsObject.DomainID);
+
 
     dbo.ForAllObjects(@_updatepools);
+    mdata.Field('pools').AsObject.ForAllObjects(@_cloneUnassigned);
+
+
+    // check for deleted objects and remove objlinks
+    GFRE_DBI.GenerateAnObjChangeList(newpools,mdata.Field('pools').asObject,@_Insert,@_Delete,@_Update);
+
+    mdata.Field('pools').asObject := newpools;
+
 //    writeln('SWL: MDATA POOLS',mdata.Field('pools').AsObject.DumpToString());
 
   finally
@@ -905,7 +731,7 @@ var machine     : TFRE_DB_MACHINE;
   end;
 
 begin
-  writeln('SWL SERVERDISKENC ',data.DumpToString());
+  writeln('SWL: SERVERDISKENC ',data.DumpToString());
 
   hdata_lock.Acquire;
   try
