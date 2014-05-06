@@ -254,7 +254,6 @@ type
     function  createDiskSpareContainerEmbedded              (const devicename:TFRE_DB_String) : TFRE_DB_ZFS_DISKSPARECONTAINER; virtual;
     function  mayHaveZFSChildren       : Boolean; override;
     function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
-    function  getLastChildId            (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
     procedure DeleteReferencingVdevToMe (const conn: IFRE_DB_CONNECTION);
     property  raidLevel                 : TFRE_DB_ZFS_RAID_LEVEL read GetRaidLevel write SetRaidLevel;
   published
@@ -365,7 +364,6 @@ type
     function acceptsNewZFSChildren (const conn: IFRE_DB_CONNECTION): Boolean; override;
     function getPool               (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_ROOTOBJ; override;
     function getPoolName           : TFRE_DB_String;
-    function getLastChildId        (const conn: IFRE_DB_CONNECTION): String; //FIXXME - remove store update
   end;
 
   { TFRE_DB_ZFS_POOL }
@@ -785,18 +783,6 @@ begin
   Result:=getCaption;
 end;
 
-function TFRE_DB_ZFS_ROOTOBJ.getLastChildId(const conn: IFRE_DB_CONNECTION): String;
-var
-  children: IFRE_DB_ObjectArray;
-begin
-  children:=getZFSChildren(conn);
-  if Length(children)>0 then begin
-    Result:=(children[Length(children)-1].Implementor_HC as TFRE_DB_ZFS_OBJ).getId;
-  end else begin
-    Result:='';
-  end;
-end;
-
 { TFRE_DB_ZFS_DISKCONTAINER }
 
 function TFRE_DB_ZFS_DISKCONTAINER.GetRaidLevel: TFRE_DB_ZFS_RAID_LEVEL;
@@ -865,18 +851,6 @@ end;
 function TFRE_DB_ZFS_DISKCONTAINER.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
 begin
   Result:=true;
-end;
-
-function TFRE_DB_ZFS_DISKCONTAINER.getLastChildId(const conn: IFRE_DB_CONNECTION): String;
-var
-  children: IFRE_DB_ObjectArray;
-begin
-  children:=getZFSChildren(conn);
-  if Length(children)>0 then begin
-    Result:=(children[Length(children)-1].Implementor_HC as TFRE_DB_ZFS_OBJ).getId;
-  end else begin
-    Result:='';
-  end;
 end;
 
 procedure TFRE_DB_ZFS_DISKCONTAINER.DeleteReferencingVdevToMe(const conn: IFRE_DB_CONNECTION);
@@ -1168,12 +1142,12 @@ end;
 procedure TFRE_DB_ZFS_OBJ._getIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
    if getIsNew then begin
-     calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_new.png'));
+     calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'_new.png');
    end else begin
      if getIsModified then begin
-       calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_mod.png'));
+       calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'_mod.png');
      end else begin
-       calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
+       calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'.png');
      end;
    end;
 end;
@@ -1203,12 +1177,12 @@ end;
 
 procedure TFRE_DB_ZFS_OBJ._getCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  calcfieldsetter.SetAsString(caption+' '+Field('state').asstring);     //DEBUG
+  calcfieldsetter.SetAsString(caption);
 end;
 
 procedure TFRE_DB_ZFS_OBJ._getMOSCaption(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
-  calcfieldsetter.SetAsString(caption+' '+Field('state').asstring);     //DEBUG
+  calcfieldsetter.SetAsString(caption);
 end;
 
 
@@ -1547,15 +1521,15 @@ end;
 procedure TFRE_DB_ZFS_BLOCKDEVICE._getIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
   if getIsNew then begin
-    calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_new.png'));
+    calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'_new.png');
   end else begin
     if getIsModified then begin
-      calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_mod.png'));
+      calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'_mod.png');
     end else begin
       if isOffline then begin
-        calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_offline.png'));
+        calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'_offline.png');
       end else begin
-        calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
+        calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'.png');
       end;
     end;
   end;
