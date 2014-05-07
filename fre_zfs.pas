@@ -729,6 +729,7 @@ procedure TFRE_DB_ZFS_UNASSIGNED.InitforMachine(const avalue: TGUID);
 begin
  setZFSGuid(FREDB_G2H(avalue)+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
  SetName('Unassigned disks');  //FIXXME: should be a languge key ?!?
+ SetParentInZFSId(avalue);
  MachineID := avalue;
 end;
 
@@ -1122,7 +1123,7 @@ end;
 
 procedure TFRE_DB_ZFS_OBJ.setZpoolIoStat(const AValue: TFRE_DB_ZPOOL_IOSTAT);
 begin
-  AValue.Field('parent_in_zfs_uid').AsObjectLink:=UID;
+  AValue.Field('zfs_obj_id').AsObjectLink:=UID;
   Field('zpooliostat').AsObject:=AValue;
 end;
 

@@ -223,10 +223,12 @@ type
     function  GetDriveSlots                     : UInt16;
     function  GetEnclosureNr                    : Uint16;
     function  GetMachineID                      : TGUID;
+    function  GetParentInEnclosureUID           : TGUID;
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure SetDriveSlots                     (AValue: UInt16);
     procedure SetEnclosureNr                    (AValue: Uint16);
     procedure SetMachineID                      (AValue: TGUID);
+    procedure SetParentInEnclosureUID           (AValue: TGUID);
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
@@ -253,6 +255,7 @@ type
     property  DriveSlots       : UInt16 read GetDriveSlots write SetDriveSlots;
     property  EnclosureNr      : Uint16 read GetEnclosureNr write SetEnclosureNr;
     property  MachineID        : TGUID read GetMachineID write SetMachineID;
+    property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
 
   published
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -589,6 +592,11 @@ begin
   result:=Field('machineid').AsObjectLink;
 end;
 
+function TFRE_DB_ENCLOSURE.GetParentInEnclosureUID: TGUID;
+begin
+  Result:=Field('parent_in_enclosure_uid').AsObjectLink;
+end;
+
 procedure TFRE_DB_ENCLOSURE.setDeviceIdentifier(AValue: TFRE_DB_String);
 begin
   Field('deviceIdentifier').AsString := AValue;
@@ -607,6 +615,11 @@ end;
 procedure TFRE_DB_ENCLOSURE.SetMachineID(AValue: TGUID);
 begin
   Field('machineid').AsObjectLink :=Avalue;
+end;
+
+procedure TFRE_DB_ENCLOSURE.SetParentInEnclosureUID(AValue: TGUID);
+begin
+  Field('parent_in_enclosure_uid').AsObjectLink:=Avalue;
 end;
 
 procedure TFRE_DB_ENCLOSURE.SetMOSStatus(const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);

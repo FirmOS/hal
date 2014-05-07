@@ -345,6 +345,8 @@ var
   begin
     feed_enclosure           := obj.Implementor_HC as TFRE_DB_ENCLOSURE;
     feed_enclosure.MachineID := mdata.UID;
+    feed_enclosure.ParentInEnclosureUID := mdata.UID;
+
     feed_enclosure.AddMosParentID(mdata.UID);
     if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_enclosure.DeviceIdentifier,stat_enclosure,'') then
       begin
@@ -555,6 +557,7 @@ var mdata    : IFRE_DB_Object;
         new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
       end;
     new_pool.MachineID := mdata.UID;
+    new_pool.parentInZFSId := mdata.UID;
     new_pool.AddMosParentID(mdata.UID);
     newpools.Field(feed_pool.Field('objname').asstring).AsObject:= new_pool;
   end;
