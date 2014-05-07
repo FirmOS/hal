@@ -192,12 +192,15 @@ var
       slot_obj         : IFRE_DB_Object;
       slot             : TFRE_DB_DRIVESLOT;
       i                : NativeInt;
+      ua               : TFRE_DB_ZFS_UNASSIGNED;
 
   begin
     feed_disk := obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE;
     feed_disk.MachineID := mdata.UID;
     if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_disk.DeviceIdentifier,struct_obj,'') then
       begin
+        if struct_obj.isA(TFRE_DB_UNDEFINED_BLOCKDEVICE.ClassName) then
+          exit; // skip undefined blockdevices for ZFS Assignment
         if struct_obj.IsA(TFRE_DB_OS_BLOCKDEVICE,struct_disk) then
           begin
             struct_disk.DeleteField('zfs_guid');
@@ -229,7 +232,12 @@ var
                     if pools.FetchObjWithStringFieldValue('zfs_guid',mdata.UID_String+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'),zfs_obj,uppercase(TFRE_DB_ZFS_UNASSIGNED.ClassName)) then
                       begin
                         writeln('SWL: SET TO UNASSIGNED ');
-                        new_disk.parentInZFSId := zfs_obj.UID;
+                        if zfs_obj.IsA(TFRE_DB_ZFS_UNASSIGNED,ua) then
+                          begin
+                            ua.addBlockdevice(new_disk);
+                          end
+                        else
+                          raise EFRE_DB_Exception.Create('UNASSIGNED DISK OBJECT FOR MACHINE IS NOT A TFRE_DB_ZFS_UNASSIGNED');
                       end
                     else
                       raise EFRE_DB_Exception.Create('NO UNASSIGNED DISK OBJECT FOR MACHINE FOUND!');
