@@ -124,8 +124,6 @@ type
     procedure SetMachineID          (AValue: TGUID);
     function  getIOStat             : TFRE_DB_IOSTAT;
     procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
-    function  getZpoolIoStat        : TFRE_DB_ZPOOL_IOSTAT;
-    procedure setZpoolIoStat        (const AValue: TFRE_DB_ZPOOL_IOSTAT);
     function  getMachineID          : TGUID;
   protected
     procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
@@ -159,8 +157,12 @@ type
     procedure embedChildrenRecursive  (const conn: IFRE_DB_CONNECTION);
     procedure addChildEmbedded        (const child : TFRE_DB_ZFS_OBJ);
     procedure embedIostat             (const conn: IFRE_DB_Connection);
+    procedure embedZpoolIostat        (const conn: IFRE_DB_Connection);
     procedure SetMOSStatus            (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
     function  GetMOSStatus            : TFRE_DB_MOS_STATUS_TYPE;
+    function  getZpoolIoStatEmbedded  : TFRE_DB_ZPOOL_IOSTAT;
+    procedure setZpoolIoStatEmbedded  (const AValue: TFRE_DB_ZPOOL_IOSTAT);
+
     procedure AddMosParentID          (const avalue : TGUID);
     procedure RemoveMosParentID       (const avalue : TGUID);
     procedure SetName                 (const avalue:TFRE_DB_String);
@@ -172,8 +174,8 @@ type
     property  transferW               : TFRE_DB_String read GetTransferWrite;
     property  poolId                  : TGuid          read GetPoolId        write SetPoolId;
     property  parentInZFSId           : TGuid          read GetParentInZFS   write SetParentInZFSId;
-    property  ZPoolIostat             : TFRE_DB_ZPOOL_IOSTAT read getZpoolIoStat write SetZpoolIOstat;
     property  MachineID               : TGUID read GetMachineID write SetMachineID;
+
   published
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -1113,7 +1115,7 @@ begin
   Field('iostat').AsObject:=AValue;
 end;
 
-function TFRE_DB_ZFS_OBJ.getZpoolIoStat: TFRE_DB_ZPOOL_IOSTAT;
+function TFRE_DB_ZFS_OBJ.getZpoolIoStatEmbedded: TFRE_DB_ZPOOL_IOSTAT;
 begin
  if FieldExists('zpooliostat') then
    result := (Field('zpooliostat').AsObject.Implementor_HC as TFRE_DB_ZPOOL_IOSTAT)
@@ -1121,7 +1123,7 @@ begin
    result := nil;
 end;
 
-procedure TFRE_DB_ZFS_OBJ.setZpoolIoStat(const AValue: TFRE_DB_ZPOOL_IOSTAT);
+procedure TFRE_DB_ZFS_OBJ.setZpoolIoStatEmbedded(const AValue: TFRE_DB_ZPOOL_IOSTAT);
 begin
   AValue.Field('zfs_obj_id').AsObjectLink:=UID;
   Field('zpooliostat').AsObject:=AValue;
@@ -1293,13 +1295,9 @@ begin
          zfs_obj.embedChildrenRecursive(conn);
          continue;
        end;
-     if children[i].IsA(TFRE_DB_ZPOOL_IOSTAT,zio_obj) then
-       begin
-         ZPoolIostat := zio_obj;
-         continue;
-       end;
      raise EFRE_DB_Exception('unhandled class in TFRE_DB_ZFS_OBJ.embedChildrenRecursive '+ children[i].SchemeClass);
    end;
+ embedZpoolIostat(conn);
 end;
 
 procedure TFRE_DB_ZFS_OBJ.addChildEmbedded(const child: TFRE_DB_ZFS_OBJ);
@@ -1324,6 +1322,26 @@ begin
       if obj.IsA(TFRE_DB_IOSTAT,liostat) then
         begin
           setIOStat(liostat);
+        end
+      else
+        obj.Finalize;
+    end;
+end;
+
+procedure TFRE_DB_ZFS_OBJ.embedZpoolIostat(const conn: IFRE_DB_Connection);
+var refs   : TFRE_DB_ObjectReferences;
+    i      : NativeInt;
+    obj    : IFRE_DB_Object;
+    liostat: TFRE_DB_ZPOOL_IOSTAT;
+
+begin
+  refs := conn.GetReferencesDetailed(UID,false,uppercase(TFRE_DB_ZPOOL_IOSTAT.ClassName));
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+FREDB_G2H(refs[i].linked_uid));
+      if obj.IsA(TFRE_DB_ZPOOL_IOSTAT,liostat) then
+        begin
+          setZpoolIoStatEmbedded(liostat);
         end
       else
         obj.Finalize;

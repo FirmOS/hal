@@ -219,19 +219,19 @@ var
             // assign zfs guid
             if assigned(pools) then
               begin
-                writeln('SWL: FIND ZFS GUID FOR ',feed_disk.DeviceName);
+//                writeln('SWL: FIND ZFS GUID FOR ',feed_disk.DeviceName);
                 if pools.FetchObjWithStringFieldValue('devicename',feed_disk.DeviceName,zfs_obj,uppercase(TFRE_DB_ZFS_BLOCKDEVICE.ClassName)) then
                   begin
-                    writeln('SWL: FOUND ZFS GUID ',(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
+//                    writeln('SWL: FOUND ZFS GUID ',(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
                     new_disk.setZFSGuid((zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
                     new_disk.parentInZFSId := zfs_obj.UID;
                   end
                 else
                   begin
-                    writeln('SWL: NO ZFS GUID ');
+//                    writeln('SWL: NO ZFS GUID ');
                     if pools.FetchObjWithStringFieldValue('zfs_guid',mdata.UID_String+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'),zfs_obj,uppercase(TFRE_DB_ZFS_UNASSIGNED.ClassName)) then
                       begin
-                        writeln('SWL: SET TO UNASSIGNED ');
+//                        writeln('SWL: SET TO UNASSIGNED ');
                         if zfs_obj.IsA(TFRE_DB_ZFS_UNASSIGNED,ua) then
                           begin
                             ua.addBlockdevice(new_disk);
@@ -264,20 +264,20 @@ var
         slotguid        := CFRE_DB_NullGUID;
         for i:=low(targetports) to high(targetports) do
           begin
-            writeln ('SWL: SEARCHING FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
+//            writeln ('SWL: SEARCHING FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
             if mdata.Field('enclosures').AsObject.FetchObjWithStringFieldValue('TARGETPORT_'+inttostr(i+1),targetports[i],slot_obj,TFRE_DB_DRIVESLOT.ClassName) then
               begin
                 if slotguid=CFRE_DB_NullGUID then
                   begin
-                    writeln ('SWL: FOUND FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
+//                    writeln ('SWL: FOUND FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
                     slotguid :=slot_obj.UID;
                   end
                 else
                   begin
-                    writeln ('SWL: FOUND AGAIN FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
+//                    writeln ('SWL: FOUND AGAIN FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
                     if slot_obj.UID<>slotguid then
                       begin
-                        writeln ('SWL: FOUND DIFFERENT SLOT FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
+//                        writeln ('SWL: FOUND DIFFERENT SLOT FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
                         raise EFRE_DB_Exception.Create(edb_ERROR,'FetchObjWithStringFieldValue for driveslot delivered different driveslots for targetport '+targetports[i]+'slot uids:'+FREDB_G2H(slotguid)+' '+FREDB_G2H(slot_obj.UID));
                       end;
                   end;
@@ -287,7 +287,7 @@ var
           begin
             if slot_obj.IsA(TFRE_DB_DRIVESLOT,slot) then
               begin
-                writeln ('SWL: ASSIGNING SLOT ',slot.slotnr,' ',FREDB_G2H(slotguid),' TO DISK ',phys_new_disk.UID_String);
+//                writeln ('SWL: ASSIGNING SLOT ',slot.slotnr,' ',FREDB_G2H(slotguid),' TO DISK ',phys_new_disk.UID_String);
                 phys_new_disk.ParentInEnclosureUID:= slotguid;
                 phys_new_disk.EnclosureUID        := slot.ParentInEnclosureUID;
                 phys_new_disk.EnclosureNr         := slot.EnclosureNr;
@@ -397,8 +397,8 @@ begin
     dbo.Field('enclosures').AsObject.ForAllObjects(@_updateenclosures);
     mdata.Field('enclosures').AsObject:=newenclosures;
 
-    writeln('SWL DBOENCLOSURE STRUCTURE', dbo.Field('enclosures').AsObject.DumpToString());
-    writeln('SWL ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
+//    writeln('SWL DBOENCLOSURE STRUCTURE', dbo.Field('enclosures').AsObject.DumpToString());
+    writeln('SWL UPDATED ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
 
     newdisks := GFRE_DBI.NewObject;
     newdisks.Field('UID').AsGUID := mdata.Field('disks').AsObject.UID;
@@ -522,15 +522,17 @@ var mdata    : IFRE_DB_Object;
         begin
           if old_pool.FetchObjWithStringFieldValue('ZFS_GUID',zfs_guid,zfs_obj,'') then
             begin
+//              writeln('SWL: FOUND ZFS OBJECT');
               new_obj.Field('UID').AsGUID := zfs_obj.UID;
               new_obj.ForAllFields(@_UpdateObjectLinks);
               if (zfs_obj.Implementor_HC is TFRE_DB_ZFS_OBJ) then
                 begin
-                  zpool_iostat :=(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).ZPoolIostat;
+                  zpool_iostat :=(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZpoolIoStatEmbedded;
                   if assigned(zpool_iostat) then
                     begin
-                      (new_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).ZPoolIostat.Field('UID').AsGUID := zpool_iostat.Field('UID').AsGUID;
-                      (new_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).ZPoolIostat.Field('PARENT_IN_ZFS_UID').AsObjectLink := new_obj.UID;
+//                      writeln('SWL: UPDATING ZPOOL IOSTAT ',(new_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZpoolIoStatEmbedded.UID_String);
+                      (new_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZpoolIoStatEmbedded.Field('UID').AsGUID := zpool_iostat.Field('UID').AsGUID;
+                      (new_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZpoolIoStatEmbedded.Field('zfs_obj_id').AsObjectLink := new_obj.UID;
                     end;
                 end;
             end
@@ -550,8 +552,7 @@ var mdata    : IFRE_DB_Object;
   begin
     feed_pool   := obj.Implementor_HC as TFRE_DB_ZFS_POOL;
     new_pool    := (feed_pool.CloneToNewObject.Implementor_HC as TFRE_DB_ZFS_POOL);
-//    writeln('SWL: NEW POOL ',new_pool.DumpToString());
-//    abort;
+//    writeln('SWL: INCOMING POOL ',new_pool.DumpToString());
     if mdata.FetchObjWithStringFieldValue('objname',feed_pool.Field('objname').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
       begin
         new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
