@@ -198,6 +198,7 @@ type
     procedure SetSlotNr   (AValue: UInt16);
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure AddMosParentID                    (const avalue : TGUID);
     procedure RemoveMosParentID                 (const avalue : TGUID);
@@ -211,6 +212,7 @@ type
     property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
     property  EnclosureNr          : Uint16 read GetEnclosureNr write SetEnclosureNr;
   published
+    procedure CALC_GetDisplayName         (const setter : IFRE_DB_CALCFIELD_SETTER);
     function  WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
@@ -2014,6 +2016,13 @@ begin
   end;
 end;
 
+class procedure TFRE_DB_DRIVESLOT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+  scheme.AddCalcSchemeField ('displayname',fdbft_String,@CALC_GetDisplayName);
+end;
+
 procedure TFRE_DB_DRIVESLOT.AddMosParentID(const avalue: TGUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
@@ -2060,6 +2069,11 @@ begin
       else
         obj.Finalize;
     end;
+end;
+
+procedure TFRE_DB_DRIVESLOT.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  setter.SetAsString('(' + IntToStr(SlotNr) + ')' + DeviceIdentifier);
 end;
 
 function TFRE_DB_DRIVESLOT.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
