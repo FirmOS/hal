@@ -254,7 +254,6 @@ var
 
     newdisks.Field(feed_disk.Field('DEVICEIDENTIFIER').asstring).asobject:=new_obj;
 
-
     //assign disks to diskslots
     if new_obj.IsA(TFRE_DB_PHYS_DISK,phys_new_disk) then
       begin
@@ -262,6 +261,7 @@ var
           phys_new_disk.RemoveMosParentID(phys_new_disk.ParentInEnclosureUID);
         targetports     := phys_new_disk.GetTargetPorts;
         slotguid        := CFRE_DB_NullGUID;
+//        writeln('SWL: CLEAR SLOTGUID');
         for i:=low(targetports) to high(targetports) do
           begin
 //            writeln ('SWL: SEARCHING FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
@@ -271,6 +271,7 @@ var
                   begin
 //                    writeln ('SWL: FOUND FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
                     slotguid :=slot_obj.UID;
+//                    writeln('SWL: SET SLOTGUID '+FREDB_G2H(slotguid));
                   end
                 else
                   begin
@@ -285,6 +286,10 @@ var
           end;
         if slotguid <> CFRE_DB_NullGUID then
           begin
+            if mdata.Field('enclosures').AsObject.FetchObjByUID(slotguid,slot_obj)=false then
+              raise EFRE_DB_Exception.Create(edb_ERROR,'Slot_obj not found on fetching for assignment for disk !'+FREDB_G2H(slotguid));
+            if not Assigned(slot_obj) then
+              raise EFRE_DB_Exception.Create(edb_ERROR,'Slot_obj must be assigned here !'+FREDB_G2H(slotguid));
             if slot_obj.IsA(TFRE_DB_DRIVESLOT,slot) then
               begin
 //                writeln ('SWL: ASSIGNING SLOT ',slot.slotnr,' ',FREDB_G2H(slotguid),' TO DISK ',phys_new_disk.UID_String);
@@ -364,6 +369,8 @@ var
   end;
 
 begin
+
+//  writeln('SWL DBO DISKENC', dbo.DumpToString());
   mdata := GetLockedDataForMachine(machinename);
   try
     last_fdata := mdata.CloneToNewObject;
@@ -398,8 +405,7 @@ begin
     mdata.Field('enclosures').AsObject:=newenclosures;
 
 //    writeln('SWL DBOENCLOSURE STRUCTURE', dbo.Field('enclosures').AsObject.DumpToString());
-    writeln('SWL UPDATED ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
-
+//    writeln('SWL UPDATED ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
     newdisks := GFRE_DBI.NewObject;
     newdisks.Field('UID').AsGUID := mdata.Field('disks').AsObject.UID;
     newdisks.SetDomainID(mdata.Field('disks').AsObject.DomainID);
@@ -409,7 +415,7 @@ begin
     dbo.Field('disks').AsObject.ForAllObjects(@_updatedisks);
     mdata.Field('disks').AsObject:=newdisks;
 
-//    writeln('SWL DISK STRUCTURE', mdata.Field('disks').AsObject.DumpToString());
+//    writeln('SWL UPDATED DISK STRUCTURE', mdata.Field('disks').AsObject.DumpToString());
 
 
 //    writeln('SWL TOTAL STRUCTURE', mdata.DumpToString());
@@ -452,6 +458,7 @@ var mdata:IFRE_DB_Object;
   end;
 
 begin
+//  writeln('SWL: IOSTAT',dbo.DumpToString());
   mdata := GetLockedDataForMachine(machinename);
   try
     dbo.ForAllObjects(@_updateiostat);
