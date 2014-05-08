@@ -3782,7 +3782,7 @@ begin
         end
       else if obj.IsA(TFRE_DB_ZFS_POOL,pool) then
         begin
-          pools.Field(pool.GetName).AsObject:=TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(conn,refs[i].linked_uid);
+          pools.Field(pool.GetName).AsObject:=TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(conn,refs[i].linked_uid,False);
           pool.Finalize;
         end
       else if obj.IsA(TFRE_DB_OS_BLOCKDEVICE,disk) then

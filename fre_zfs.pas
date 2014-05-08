@@ -154,7 +154,7 @@ type
     procedure setIsNew                (const avalue:Boolean=true);
     procedure setZFSGuid              (const avalue:String);
     function  canIdentify             : Boolean; virtual;
-    procedure embedChildrenRecursive  (const conn: IFRE_DB_CONNECTION);
+    procedure embedChildrenRecursive  (const conn: IFRE_DB_CONNECTION; const include_os_blockdevices:boolean);
     procedure addChildEmbedded        (const child : TFRE_DB_ZFS_OBJ);
     procedure embedIostat             (const conn: IFRE_DB_Connection);
     procedure embedZpoolIostat        (const conn: IFRE_DB_Connection);
@@ -377,7 +377,7 @@ type
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
-    class function  CreateEmbeddedPoolObjectfromDB (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID): TFRE_DB_ZFS_POOL;
+    class function  CreateEmbeddedPoolObjectfromDB (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID;  const include_os_blockdevices:boolean): TFRE_DB_ZFS_POOL;
     function  GetDatastorage            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_DATASTORAGE;
     function  GetDatastorageEmbedded    : TFRE_DB_ZFS_DATASTORAGE;
     function  GetSpare                  (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_SPARE;
@@ -448,7 +448,7 @@ type
     function        GetPoolStatus               (const poolname: string; out error : string; out pool: IFRE_DB_Object) : integer;
     function        GetDataset                  (const dataset: string; out error : string; out datasetobject: IFRE_DB_Object) : integer;
     function        GetPools                    (out error: string; out pools:IFRE_DB_Object) : integer;
-    function        CreateDiskPool              (const pool_definition:IFRE_DB_Object; out error: string; out pool_result:IFRE_DB_Object) : integer;
+    function        CreateDiskPool              (const pool_definition:IFRE_DB_Object; out pool_result:IFRE_DB_Object) : integer;
   end;
 
   { TFRE_DB_ZFSJob }
@@ -1244,7 +1244,7 @@ begin
   Result:=false;
 end;
 
-procedure TFRE_DB_ZFS_OBJ.embedChildrenRecursive(const conn: IFRE_DB_CONNECTION);
+procedure TFRE_DB_ZFS_OBJ.embedChildrenRecursive(const conn: IFRE_DB_CONNECTION; const include_os_blockdevices: boolean);
 var
     children             : IFRE_DB_ObjectArray;
     i                    : NativeInt;
@@ -1263,36 +1263,44 @@ begin
      if children[i].IsA(TFRE_DB_ZFS_DATASTORAGE,ds_obj) then
        begin
          (self.Implementor_HC as TFRE_DB_ZFS_POOL).addDatastorageEmbedded(ds_obj);
-         ds_obj.embedChildrenRecursive(conn);
+         ds_obj.embedChildrenRecursive(conn,include_os_blockdevices);
          continue;
        end;
      if children[i].IsA(TFRE_DB_ZFS_SPARE,s_obj) then
        begin
          (self.Implementor_HC as TFRE_DB_ZFS_POOL).addSpareEmbedded(s_obj);
-         s_obj.embedChildrenRecursive(conn);
+         s_obj.embedChildrenRecursive(conn,include_os_blockdevices);
          continue;
        end;
      if children[i].IsA(TFRE_DB_ZFS_LOG,l_obj) then
        begin
          (self.Implementor_HC as TFRE_DB_ZFS_POOL).addLogEmbedded(l_obj);
-         l_obj.embedChildrenRecursive(conn);
+         l_obj.embedChildrenRecursive(conn,include_os_blockdevices);
          continue;
        end;
      if children[i].IsA(TFRE_DB_ZFS_CACHE,c_obj) then
        begin
          (self.Implementor_HC as TFRE_DB_ZFS_POOL).addCacheEmbedded(c_obj);
-         c_obj.embedChildrenRecursive(conn);
+         c_obj.embedChildrenRecursive(conn,include_os_blockdevices);
          continue;
        end;
      if children[i].IsA(TFRE_DB_OS_BLOCKDEVICE,os_obj) then
        begin
-         // do not embed
+         if include_os_blockdevices then
+           begin
+             addChildEmbedded(os_obj);
+           end
+         else
+           begin
+             writeln('SWL SKIP :',children[i].SchemeClass);
+             // do not embed for feeder
+           end;
          continue;
        end;
      if children[i].IsA(TFRE_DB_ZFS_OBJ,zfs_obj) then
        begin
          addChildEmbedded(zfs_obj);
-         zfs_obj.embedChildrenRecursive(conn);
+         zfs_obj.embedChildrenRecursive(conn,include_os_blockdevices);
          continue;
        end;
      raise EFRE_DB_Exception('unhandled class in TFRE_DB_ZFS_OBJ.embedChildrenRecursive '+ children[i].SchemeClass);
@@ -1301,10 +1309,15 @@ begin
 end;
 
 procedure TFRE_DB_ZFS_OBJ.addChildEmbedded(const child: TFRE_DB_ZFS_OBJ);
+var fieldname : TFRE_DB_String;
 begin
  child.parentInZFSId:=UID;
  child.poolId:=poolId;
- Field(child.Field('zfs_guid').asstring).AsObject := child;
+ if getIsNew then
+   fieldname := child.UID_String
+ else
+   fieldname := child.Field('zfs_guid').asstring;
+ Field(fieldname).AsObject := child;
 end;
 
 procedure TFRE_DB_ZFS_OBJ.embedIostat(const conn: IFRE_DB_Connection);
@@ -1754,7 +1767,7 @@ begin
  calcfieldsetter.SetAsString('Zpool '+caption+' '+Field('state').asstring);
 end;
 
-class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TGUID): TFRE_DB_ZFS_POOL;
+class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TGUID; const include_os_blockdevices: boolean): TFRE_DB_ZFS_POOL;
 var
     obj                  : IFRE_DB_Object;
     pool                 : TFRE_DB_ZFS_POOL;
@@ -1763,7 +1776,7 @@ var
 begin
    CheckDbResult(conn.Fetch(db_zfs_pool_id,obj),'Could not find pool for CreateEmbeddedPoolObjectfromDB');
    pool := (obj.Implementor_HC as TFRE_DB_ZFS_POOL);
-   pool.embedChildrenRecursive(conn);
+   pool.embedChildrenRecursive(conn,include_os_blockdevices);
    result := pool;
 end;
 
@@ -3147,101 +3160,76 @@ begin
 end;
 
 
-function TFRE_DB_ZFS.CreateDiskPool(const pool_definition: IFRE_DB_Object; out error: string; out pool_result: IFRE_DB_Object): integer;
+function TFRE_DB_ZFS.CreateDiskPool(const pool_definition: IFRE_DB_Object; out pool_result: IFRE_DB_Object): integer;
 var zfs_cmd   : TFRE_DB_String;
-    vdevcont  : IFRE_DB_Object;
-    vdev      : IFRE_DB_Object;
-    disk      : IFRE_DB_Object;
     proc      : TFRE_DB_Process;
 
-    i         : NativeInt;
-    j         : NativeInt;
-
-
-
-    procedure _AddDisks(const vdev:IFRE_DB_Object);
-    var i     : NativeInt;
+    procedure _parseVdevs(const obj:IFRE_DB_Object);
+    var ds       : TFRE_DB_ZFS_DATASTORAGE;
+        vdevcont : TFRE_DB_ZFS_VDEVCONTAINER;
+        vdev     : TFRE_DB_ZFS_VDEV;
+        bd       : TFRE_DB_ZFS_BLOCKDEVICE;
+        zlog     : TFRE_DB_ZFS_LOG;
+        spare    : TFRE_DB_ZFS_SPARE;
+        cache    : TFRE_DB_ZFS_CACHE;
     begin
-      for i:= 0 to vdev.Field('vdev').ValueCount-1 do
+      if obj.IsA(TFRE_DB_ZFS_DATASTORAGE,ds) then
         begin
-          disk := vdev.Field('vdev').AsObjectItem[i];
-          zfs_cmd := zfs_cmd+' '+disk.Field('name').asstring;
+          ds.ForAllObjects(@_parseVdevs);
+          exit;
         end;
-    end;
-
-    procedure _AddDisk(const disk:IFRE_DB_Object);
-    begin
-      zfs_cmd := zfs_cmd+' '+disk.Field('name').asstring;
+      if obj.isA(TFRE_DB_ZFS_VDEVCONTAINER,vdevcont) then
+        begin
+          vdevcont.ForAllObjects(@_parseVdevs);
+          exit;
+        end;
+      if obj.isA(TFRE_DB_ZFS_LOG,zlog) then
+        begin
+          zlog.ForAllObjects(@_parseVdevs);
+          exit;
+        end;
+      if obj.IsA(TFRE_DB_ZFS_VDEV,vdev) then
+        begin
+          case (vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel of
+            zfs_rl_mirror: zfs_cmd:=zfs_cmd+' mirror';
+            zfs_rl_z1    : zfs_cmd:=zfs_cmd+' raidz1';
+            zfs_rl_z2    : zfs_cmd:=zfs_cmd+' raidz2';
+            zfs_rl_z3    : zfs_cmd:=zfs_cmd+' raidz3';
+          else
+            raise EFRE_DB_Exception.Create('unsupported raiadlevel in CreateDiskpool for datastorage'+CFRE_DB_ZFS_RAID_LEVEL[(vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel]);
+          end;
+          vdev.ForAllObjects(@_parseVdevs);
+          exit;
+        end;
+      if obj.IsA(TFRE_DB_ZFS_CACHE,cache) then
+        begin
+          zfs_cmd:=zfs_cmd+' cache';
+          cache.ForAllObjects(@_parseVdevs);
+          exit;
+        end;
+      if obj.IsA(TFRE_DB_ZFS_SPARE,spare) then
+        begin
+          zfs_cmd:=zfs_cmd+' spare';
+          spare.ForAllObjects(@_parseVdevs);
+          exit;
+        end;
+      if obj.IsA(TFRE_DB_ZFS_BLOCKDEVICE,bd) then
+        begin
+          zfs_cmd:=zfs_cmd+' '+bd.DeviceName;
+          exit;
+        end;
     end;
 
 begin
-  zfs_cmd  := 'zpool create '+pool_definition.Field('pool').asstring;
-  for i    := 0 to pool_definition.Field('vdev').ValueCount-1 do
-    begin
-      vdevcont := pool_definition.Field('vdev').AsObjectItem[i];
-      if vdevcont.SchemeClass='TFRE_DB_ZFS_DATASTORAGE' then
-        begin
-          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
-            begin
-              vdev := vdevcont.Field('vdev').AsObjectItem[j];
-              if vdev.SchemeClass='TFRE_DB_ZFS_VDEV' then
-                begin
-                  case (vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel of
-                    zfs_rl_mirror: zfs_cmd:=zfs_cmd+' mirror';
-                    zfs_rl_z1    : zfs_cmd:=zfs_cmd+' raidz1';
-                    zfs_rl_z2    : zfs_cmd:=zfs_cmd+' raidz2';
-                    zfs_rl_z3    : zfs_cmd:=zfs_cmd+' raidz3';
-                  else
-                    raise EFRE_DB_Exception.Create('unsupported raiadlevel in CreateDiskpool for datastorage'+CFRE_DB_ZFS_RAID_LEVEL[(vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel]);
-                  end;
-                  _AddDisks(vdev);
-                end else begin
-                  _AddDisk(vdev);
-                end;
-            end;
-        end;
-      if vdevcont.SchemeClass='TFRE_DB_ZFS_LOG' then
-        begin
-          zfs_cmd:=zfs_cmd+' log';
-          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
-            begin
-              vdev := vdevcont.Field('vdev').AsObjectItem[j];
-              if vdev.SchemeClass='TFRE_DB_ZFS_VDEV' then
-                begin
-                  case (vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel of
-                    zfs_rl_mirror: zfs_cmd:=zfs_cmd+' mirror';
-                  else
-                    raise EFRE_DB_Exception.Create('unsupported raiadlevel in CreateDiskpool for log'+CFRE_DB_ZFS_RAID_LEVEL[(vdev.Implementor_HC as TFRE_DB_ZFS_VDEV).GetRaidLevel]);
-                  end;
-                  _AddDisks(vdev);
-                end else begin
-                  _AddDisk(vdev);
-                end;
-            end;
-        end;
-      if vdevcont.SchemeClass='TFRE_DB_ZFS_SPARE' then
-        begin
-          zfs_cmd:=zfs_cmd+' spare';
-          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
-            begin
-              vdev := vdevcont.Field('vdev').AsObjectItem[j];
-              _AddDisk(vdev);
-            end;
-        end;
-      if vdevcont.SchemeClass='TFRE_DB_ZFS_CACHE' then
-        begin
-          zfs_cmd:=zfs_cmd+' cache';
-          for j:=0 to vdevcont.Field('vdev').ValueCount-1 do
-            begin
-              vdev := vdevcont.Field('vdev').AsObjectItem[j];
-              _AddDisk(vdev);
-            end;
-        end;
-    end;
+  writeln('SWL: POOL EMBED '+ pool_definition.DumpToString);
+  zfs_cmd  := 'zpool create '+pool_definition.Field('objname').asstring;
+
+  pool_definition.ForAllObjects(@_parseVdevs);
 
   pool_result := GFRE_DBI.NewObject;
   pool_result.Field('zfs_cmd').asstring := zfs_cmd;
-
+  writeln('SWL: ZFS CMD '+zfs_cmd);
+  exit;
   ClearProcess;
   proc := TFRE_DB_Process.create;
   if not pool_definition.FieldExists('debug') then
@@ -3250,7 +3238,7 @@ begin
       AddProcess(proc);
       ExecuteMulti;
       result := proc.Field('exitstatus').AsInt32;
-      error  := proc.Field('errorstring').AsString;
+//      error  := proc.Field('errorstring').AsString;
     end;
 end;
 

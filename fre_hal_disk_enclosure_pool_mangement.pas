@@ -792,10 +792,10 @@ begin
   zo     := TFRE_DB_ZFS.create;
   try
     zo.SetRemoteSSH(remoteuser, remotehost, remotekey);
-    res    := zo.CreateDiskpool(input,error,obj);
+    res    := zo.CreateDiskpool(input,obj);
     result := GFRE_DBI.NewObject;
     result.Field('resultcode').AsInt32 := res;
-    result.Field('error').asstring     := error;
+//    result.Field('error').asstring     := error;
     result.Field('data').AsObject      := obj;
   finally
     zo.Free;
