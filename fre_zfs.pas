@@ -1053,6 +1053,7 @@ end;
 
 procedure TFRE_DB_ZFS_OBJ.removeFromPool;
 begin
+   RemoveMosParentID(Field('parent_in_zfs_uid').AsObjectLink);
    DeleteField('parent_in_zfs_uid');
    DeleteField('pool_uid');
 end;
