@@ -1710,22 +1710,38 @@ end;
 
 function TFRE_DB_ZFS_POOL.GetDatastorageEmbedded: TFRE_DB_ZFS_DATASTORAGE;
 begin
-  result := Field('datastorage').asObject.Implementor_HC as TFRE_DB_ZFS_DATASTORAGE;
+  if FieldExists('datastorage') then begin
+    result := Field('datastorage').asObject.Implementor_HC as TFRE_DB_ZFS_DATASTORAGE;
+  end else begin
+    Result := Nil;
+  end;
 end;
 
 function TFRE_DB_ZFS_POOL.GetSpare(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_SPARE;
 begin
- result := Field('spares').asObject.Implementor_HC as TFRE_DB_ZFS_SPARE;
+  if FieldExists('spares') then begin
+    result := Field('spares').asObject.Implementor_HC as TFRE_DB_ZFS_SPARE;
+  end else begin
+    Result := Nil;
+  end;
 end;
 
 function TFRE_DB_ZFS_POOL.GetCache(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_CACHE;
 begin
-  result := Field('cache').asObject.Implementor_HC as TFRE_DB_ZFS_CACHE;
+  if FieldExists('cache') then begin
+    result := Field('cache').asObject.Implementor_HC as TFRE_DB_ZFS_CACHE;
+  end else begin
+    Result := Nil;
+  end;
 end;
 
 function TFRE_DB_ZFS_POOL.GetLog(const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_LOG;
 begin
- result := Field('logs').asObject.Implementor_HC as TFRE_DB_ZFS_LOG;
+  if FieldExists('logs') then begin
+    result := Field('logs').asObject.Implementor_HC as TFRE_DB_ZFS_LOG;
+  end else begin
+    Result := Nil;
+  end;
 end;
 
 class procedure TFRE_DB_ZFS_POOL.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
