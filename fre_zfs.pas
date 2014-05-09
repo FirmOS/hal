@@ -399,6 +399,7 @@ type
     procedure DeleteReferencingVdevToMe              (const conn: IFRE_DB_CONNECTION);
   published
     function  WEB_MOSContent                         (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_ZFSContent                         (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    published
     function  WEB_GetDefaultCollection               (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
 
@@ -2254,6 +2255,11 @@ begin
 //  panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool_iostat'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
+end;
+
+function TFRE_DB_ZFS_POOL.WEB_ZFSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  Result:=TFRE_DB_HTML_DESC.create.Describe('I am a Pool');//FIXXME: deliver real content here
 end;
 
 function TFRE_DB_ZFS_POOL.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
