@@ -345,7 +345,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$snmp_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'snmp_content_header'));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('snmp'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;

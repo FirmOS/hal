@@ -2078,27 +2078,26 @@ begin
   scheme.AddSchemeField('server',fdbft_Boolean);
   scheme.SetSysDisplayField(TFRE_DB_NameTypeArray.Create('cn'),'%s');
 
-  group:=scheme.AddInputGroup('main_create').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
+  group:=scheme.AddInputGroup('main_create').Setup('scheme_main_group');
   group.AddInput('ca','',false,true);
-  group.AddInput('objname','$scheme_TFRE_DB_CERTIFICATE_cn');
-  group.AddInput('email','$scheme_TFRE_DB_CERTIFICATE_email');
-  group.AddInput('l','$scheme_TFRE_DB_CERTIFICATE_l');
-  group.AddInput('ou','$scheme_TFRE_DB_CERTIFICATE_ou');
-  group.AddInput('server','$scheme_TFRE_DB_CERTIFICATE_server');
+  group.AddInput('objname','scheme_cn');
+  group.AddInput('email','scheme_email');
+  group.AddInput('l','scheme_l');
+  group.AddInput('ou','scheme_ou');
+  group.AddInput('server','scheme_server');
 
-  group:=scheme.AddInputGroup('main_edit').Setup('$scheme_TFRE_DB_CERTIFICATE_main_group');
-//  group.UseInputGroup(scheme.DefinedSchemeName,'main_create');
+  group:=scheme.AddInputGroup('main_edit').Setup('scheme_main_group');
   group.AddInput('ca','',false,true);
-  group.AddInput('objname','$scheme_TFRE_DB_CERTIFICATE_cn',true);
-  group.AddInput('c','$scheme_TFRE_DB_CERTIFICATE_c',true);
-  group.AddInput('email','$scheme_TFRE_DB_CERTIFICATE_email',true);
-  group.AddInput('st','$scheme_TFRE_DB_CERTIFICATE_st',true);
-  group.AddInput('l','$scheme_TFRE_DB_CERTIFICATE_l',true);
-  group.AddInput('ou','$scheme_TFRE_DB_CERTIFICATE_ou',true);
-  group.AddInput('issued','$scheme_TFRE_DB_CERTIFICATE_issued',true);
-  group.AddInput('revoked','$scheme_TFRE_DB_CERTIFICATE_revoked',true);
-  group.AddInput('valid','$scheme_TFRE_DB_CERTIFICATE_valid',true);
-  group.AddInput('server','$scheme_TFRE_DB_CERTIFICATE_server',true);
+  group.AddInput('objname','scheme_main_group',true);
+  group.AddInput('c','scheme_cn',true);
+  group.AddInput('email','scheme_email',true);
+  group.AddInput('st','scheme_st',true);
+  group.AddInput('l','scheme_l',true);
+  group.AddInput('ou','scheme_ou',true);
+  group.AddInput('issued','scheme_issued',true);
+  group.AddInput('revoked','scheme_revoked',true);
+  group.AddInput('valid','scheme_valid',true);
+  group.AddInput('server','scheme_server',true);
 end;
 
 class procedure TFRE_DB_Certificate.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -2106,18 +2105,17 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_main_group','Certificate'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_cn','Common Name'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_c','Country'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_email','EMail'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_st','State'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_l','Location'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_ou','Organization Unit'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_revoke','Revoke'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_issued','Issued'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_revoked','Revoked'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_valid','Valid'));
-    conn.StoreTranslateableText(GFRE_DBI.CreateText('$scheme_TFRE_DB_CERTIFICATE_server','Server Certificate'));
+    StoreTranslateableText(conn,'scheme_main_group','Certificate');
+    StoreTranslateableText(conn,'scheme_cn','Common Name');
+    StoreTranslateableText(conn,'scheme_c','Country');
+    StoreTranslateableText(conn,'scheme_email','EMail');
+    StoreTranslateableText(conn,'scheme_st','State');
+    StoreTranslateableText(conn,'scheme_l','Location');
+    StoreTranslateableText(conn,'scheme_ou','Organization Unit');
+    StoreTranslateableText(conn,'scheme_issued','Issued');
+    StoreTranslateableText(conn,'scheme_revoked','Revoked');
+    StoreTranslateableText(conn,'scheme_valid','Valid');
+    StoreTranslateableText(conn,'scheme_server','Server Certificate');
   end;
 
 end;
@@ -3715,7 +3713,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$machine_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'machine_content_header'));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('machine'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;

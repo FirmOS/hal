@@ -1398,7 +1398,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$zfs_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'zfs_content_header'));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('zfs'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
@@ -2249,7 +2249,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$pool_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'pool_content_header'));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool'),GetSession(input));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('zfs'),GetSession(input));
 //  panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool_iostat'),GetSession(input));

@@ -798,7 +798,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$enclosure_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'enclosure_content_header'));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('enclosure'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
@@ -1906,7 +1906,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'$phys_disk_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'phys_disk_content_header'));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('log_common'),GetSession(input)).SetCollapseState(false,true);
   panel.AddSchemeFormGroup(scheme.GetInputGroup('log_ec'),GetSession(input)).SetCollapseState(true);
