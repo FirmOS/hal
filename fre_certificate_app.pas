@@ -294,12 +294,12 @@ var
   res        : TFRE_DB_FORM_DIALOG_DESC;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   GFRE_DBI.GetSystemScheme(TFRE_DB_CA,scheme);
   res:=TFRE_DB_FORM_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$ca_add_diag_cap'),600,true,true,false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_create'),ses,false,false);
-  res.AddButton.Describe(app.FetchAppTextShort(ses,'$button_save'),CWSF(@WEB_newCertificateAuthority),fdbbt_submit);
+  res.AddButton.Describe(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$button_save')),CWSF(@WEB_newCertificateAuthority),fdbbt_submit);
   Result:=res;
 end;
 
@@ -312,7 +312,7 @@ var caob_id          : TGUID;
 
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   data             := input.Field('DATA').asobject;
 
@@ -338,12 +338,12 @@ var
   res        : TFRE_DB_FORM_DIALOG_DESC;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   GFRE_DBI.GetSystemScheme(TFRE_DB_CA,scheme);
   res:=TFRE_DB_FORM_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$ca_import_diag_cap'),600,true,true,false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_import'),ses,false,false);
-  res.AddButton.Describe(app.FetchAppTextShort(ses,'$button_save'),CWSF(@WEB_importCertificateAuthority),fdbbt_submit);
+  res.AddButton.Describe(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$button_save')),CWSF(@WEB_importCertificateAuthority),fdbbt_submit);
   Result:=res;
 end;
 
@@ -359,7 +359,7 @@ var caob_id          : TGUID;
 
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   data             := input.Field('DATA').asobject;
   base_dir         := data.Field('directory').asstring;
@@ -402,7 +402,7 @@ var
   cap,msg: String;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_CA) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
   sf:=CWSF(@WEB_delCertificateAuthorityConfirmed);
   sf.AddParam.Describe('selected',input.Field('selected').AsStringArr);
   if input.Field('selected').ValueCount=1 then begin
@@ -422,7 +422,7 @@ var
   i          : NativeInt;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_CA) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   if input.field('confirmed').AsBoolean then begin
     refs_array  := conn.GetReferences(input.Field('selected').AsGUID,false,TFRE_DB_CERTIFICATE.ClassName);
@@ -444,7 +444,7 @@ var
 begin
 
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_Certificate) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   dependend  := GetDependencyFiltervalues(input,'uids_ref');
   if length(dependend)=0 then begin
@@ -457,7 +457,7 @@ begin
   res:=TFRE_DB_FORM_DIALOG_DESC.create.Describe(app.FetchAppTextShort(ses,'$crt_add_diag_cap'),600,true,true,false);
   res.AddSchemeFormGroup(scheme.GetInputGroup('main_create'),GetSession(input),false,false);
   res.SetElementValue('ca',ca);
-  res.AddButton.Describe(app.FetchAppTextShort(ses,'$button_save'),CWSF(@WEB_newCertificate),fdbbt_submit);
+  res.AddButton.Describe(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$button_save')),CWSF(@WEB_newCertificate),fdbbt_submit);
   Result:=res;
 end;
 
@@ -469,7 +469,7 @@ var crtob            : TFRE_DB_CERTIFICATE;
 
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CERTIFICATE) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   data             := input.Field('DATA').asobject;
 
@@ -496,7 +496,7 @@ var
   crt        : IFRE_DB_Object;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_Certificate) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
     sel_guid := input.Field('SELECTED').AsGUID;
@@ -521,7 +521,7 @@ var
 begin
 
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_Certificate) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   TFRE_DB_CA.RestoreCA(conn,'/fre/hal/ca_backup.cfg');
   result := GFRE_DB_NIL_DESC;
@@ -537,7 +537,7 @@ var
 begin
 
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_CA) then
-    raise EFRE_DB_Exception.Create(app.FetchAppTextShort(ses,'$error_no_access'));
+    raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('$error_no_access')));
 
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then
     begin
