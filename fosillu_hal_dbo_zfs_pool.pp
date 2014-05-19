@@ -204,7 +204,7 @@ var zp         : Pzpool_handle_t;
             zpool_iostat.Field(type_s+'_OPS').AsUInt64   := vs^.vs_ops[i];
             zpool_iostat.Field(type_s+'_BYTES').AsUInt64 := vs^.vs_bytes[i];
           end;
-        zfs_obj.ZpoolIoStat:=zpool_iostat;
+        zfs_obj.setZpoolIoStatEmbedded(zpool_iostat);
       end;
   end;
 
