@@ -264,7 +264,8 @@ var i       : integer;
   end;
 
 begin
-  vmc.StartBlockUpdating;
+  { TODO - Use Transactions }
+  //vmc.StartBlockUpdating;
   try
     for i := 0 to high(vmo.Field('Machines').AsObjectArr) do begin
       vm      := vmo.Field('Machines').AsObjectArr[i].CloneToNewObject;
@@ -285,7 +286,7 @@ begin
     end;
     vmo.Finalize;
   finally
-    vmc.FinishBlockUpdating;
+    //vmc.FinishBlockUpdating;
   end;
 end;
 
