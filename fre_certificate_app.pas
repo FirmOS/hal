@@ -523,7 +523,7 @@ begin
   if not conn.sys.CheckClassRight4MyDomain(sr_STORE,TFRE_DB_Certificate) then
     raise EFRE_DB_Exception.Create(conn.FetchTranslateableTextShort(FREDB_GetGlobalTextKey('error_no_access')));
 
-  TFRE_DB_CA.RestoreCA(conn,'/fre/hal/ca_backup.cfg');
+  TFRE_DB_CA.RestoreCA(conn,'/fre/hal/ca_backup.cfg',ses.GetDomain);
   result := GFRE_DB_NIL_DESC;
 end;
 
