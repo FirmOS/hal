@@ -226,13 +226,13 @@ var i       : integer;
   begin
     uvm.Field('Objname').AsString  := vm.Field('MName').AsString;
     uvm.Field('MType').AsString    := vm.Field('MType').AsString;
-    uvm.Field('MState').AsString   := vm.Field('MState').AsString;
+    uvm.Field('State').AsString    := vm.Field('State').AsString;
     uvm.Field('domainid').AsGUID   := dbc.sys.DomainId('SYSTEM');
 
-    if vm.Field('MState').AsString='running' then begin
-      uvm.Field('MStateIcon').AsString   := 'images_apps/hal/vm_running.png';
+    if UpperCase(vm.Field('State').AsString)='RUNNING' then begin
+      uvm.Field('StateIcon').AsString   := 'images_apps/hal/vm_running.png';
     end else begin
-      uvm.Field('MStateIcon').AsString   := 'images_apps/hal/vm_stopped.png';
+      uvm.Field('StateIcon').AsString   := 'images_apps/hal/vm_stopped.png';
     end;
     uvm.Field('MBrand').AsString   := vm.Field('MBrand').AsString;
     if vm.FieldExists('PERFPCPU') then begin
@@ -269,7 +269,7 @@ begin
   try
     for i := 0 to high(vmo.Field('Machines').AsObjectArr) do begin
       vm      := vmo.Field('Machines').AsObjectArr[i].CloneToNewObject;
-      if vmc.GetIndexedObj(vm.Field('MKey').AsString,UVM) then begin
+      if vmc.GetIndexedObj(vm.Field('key').AsString,UVM) then begin
         Obj2Obj(vm,uvm);
         vmc.Update(uvm);
       end else begin
@@ -280,7 +280,7 @@ begin
         end;
         Obj2Obj(vm,uvm);
         //uvm.field('UID').AsGUID:=vm.UID;
-        uvm.Field('MKey').AsString    := vm.Field('MKey').AsString;
+        uvm.Field('key').AsString    := vm.Field('key').AsString;
         vmc.Store(uvm);
       end;
     end;
@@ -476,7 +476,7 @@ begin
   //  for i := 0 to high(vm_list.Field('Machines').AsObjectArr) do begin
   //    m_entry := vm_list.Field('Machines').AsObjectArr[i];
   //    dbp := TFRE_DB_Process.create;
-  //    dbp.SetupInput('vmadm',TFRE_DB_StringArray.Create('get',m_entry.Field('Mkey').AsString));
+  //    dbp.SetupInput('vmadm',TFRE_DB_StringArray.Create('get',m_entry.Field('key').AsString));
   //    dbmp.AddProcess(dbp);
   //    if res<>0 then begin
   //      raise EFRE_DB_Exception.Create(edb_ERROR,'ERROR LISTING MACHINES');
@@ -513,7 +513,7 @@ begin
   //  for i := 0 to high(vm_list.Field('Machines').AsObjectArr) do begin
   //    m_entry := vm_list.Field('Machines').AsObjectArr[i];
   //    dbp := TFRE_DB_Process.create;
-  //    dbp.SetupInput('vmadm',TFRE_DB_StringArray.Create('info',m_entry.Field('Mkey').AsString));
+  //    dbp.SetupInput('vmadm',TFRE_DB_StringArray.Create('info',m_entry.Field('key').AsString));
   //    dbmp.AddProcess(dbp);
   //    if res<>0 then begin
   //      raise EFRE_DB_Exception.Create(edb_ERROR,'ERROR LISTING MACHINES');
@@ -765,7 +765,7 @@ var i          : integer;
   begin
     for j := 0 to high(vm_list.Field('Machines').AsObjectArr) do begin
       mprops := vm_list.Field('Machines').AsObjectArr[j];
-      if mprops.Field('MKey').AsString=zone then begin
+      if mprops.Field('key').AsString=zone then begin
         mprops.Field('PERFpmem').AsString   := pmem;
         mprops.Field('PERFpcpu').AsString   := pcpu;
         mprops.Field('PERFpri').AsString    := pri;
@@ -827,13 +827,13 @@ var process    : TFRE_Process;
     begin
       result := nil;
       for i:= 0 to vm_list.Field('Machines').ValueCount-1 do begin
-        if vm_list.Field('Machines').AsObjectItem[i].Field('MKey').asstring=mkey then begin
+        if vm_list.Field('Machines').AsObjectItem[i].Field('key').asstring=mkey then begin
           result := vm_list.Field('Machines').AsObjectItem[i];
           exit;
         end;
       end;
       result := GFRE_DBI.NewObject;
-      result.Field('MKey').asstring:=mkey;
+      result.Field('key').asstring:=mkey;
       vm_list.Field('Machines').AddObject(result);
     end;
 
@@ -845,7 +845,7 @@ begin
     if line_e[0]='0' then continue;         // skipping global
 //    writeln('LINE:',plines[i]);
     m_entry := _find_or_add_machineobject(line_e[1]);
-//    writeln('DBG I:',i,' mkey: ',m_entry.Field('MKey').AsString);
+//    writeln('DBG I:',i,' mkey: ',m_entry.Field('key').AsString);
     m_entry.Field('MBrand').AsString     := line_e[5];
     if m_entry.Field('MBrand').AsString  ='joyent' then begin
       m_entry.Field('MType').AsString    := 'OS';
@@ -853,7 +853,7 @@ begin
       m_entry.Field('MType').AsString    := 'KVM';
     end;
 //    m_entry.Field('MName').AsString      := '';
-    m_entry.Field('MState').AsString     := line_e[2];
+    m_entry.Field('State').AsString      := line_e[2];
 //      m_entry.Field('MPid').AsString       := line_e[5];
 //      m_entry.Field('MCPUCAP').AsString    := line_e[6];
 //      m_entry.Field('MCPUSHARES').AsString := line_e[7];
@@ -864,7 +864,7 @@ begin
 //      m_entry.Field('MPool').AsString      := line_e[12];
 //     writeln('VM VNC:',vncport+' ALIAS:',vm_alias);
     if m_entry.FieldExists('VM_Info')=false then begin
-      GetConstants(m_entry.Field('Mkey').AsString,vncport,vnchost,vm_alias,domain);
+      GetConstants(m_entry.Field('key').AsString,vncport,vnchost,vm_alias,domain);
       m_props := GFRE_DBI.NewObject;
       m_props.Field('INFO_EXISTS').AsBoolean :=true;
       vncobject := GFRE_DBI.NewObject;
@@ -875,7 +875,7 @@ begin
       m_props.Field('VNC').AsObject := vncobject;
       m_entry.Field('VM_Info').AsObject := m_props;
     end;
-    if m_entry.Field('MState').AsString<>'running' then begin
+    if UpperCase(m_entry.Field('State').AsString)<>'RUNNING' then begin
    //   writeln('CLEARING MPROPS');
       m_entry.DeleteField('PERFpmem');
       m_entry.DeleteField('PERFpcpu');

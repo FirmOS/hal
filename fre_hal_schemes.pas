@@ -272,11 +272,28 @@ type
    { TFRE_DB_VMACHINE }
 
    TFRE_DB_VMACHINE=class(TFRE_DB_SERVICE)
+   private
+     function  getKey    : TFRE_DB_String;
+     function getMType   : TFRE_DB_String;
+     function  getState  : TFRE_DB_String;
+     function  getVNCHost: TFRE_DB_String;
+     function  getVNCPort: UInt32;
+     procedure setKey    (AValue: TFRE_DB_String);
+     procedure setMType  (AValue: TFRE_DB_String);
+     procedure setState  (AValue: TFRE_DB_String);
+     procedure setVNCHost(AValue: TFRE_DB_String);
+     procedure setVNCPort(AValue: UInt32);
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
-     procedure       CALC_GetDisplayName          (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+     procedure       CALC_GetDisplayName    (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+   public
+     property  key      : TFRE_DB_String read getKey     write setKey;
+     property  state    : TFRE_DB_String read getState   write setState;
+     property  mtype    : TFRE_DB_String read getMType   write setMType;
+     property  vncHost  : TFRE_DB_String read getVNCHost write setVNCHost;
+     property  vncPort  : UInt32         read getVNCPort write setVNCPort;
    end;
 
    { TFRE_DB_DNS }
@@ -286,7 +303,7 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
-     procedure       CALC_GetDisplayName          (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+     procedure       CALC_GetDisplayName    (const setter: IFRE_DB_CALCFIELD_SETTER); override;
    end;
 
    { TFRE_DB_NAS }
@@ -3565,11 +3582,77 @@ end;
    end;
  end;
 
+function TFRE_DB_VMACHINE.getKey: TFRE_DB_String;
+begin
+  Result:=Field('key').AsString;
+end;
+
+function TFRE_DB_VMACHINE.getMType: TFRE_DB_String;
+begin
+  Result:=Field('mtype').AsString;
+end;
+
+function TFRE_DB_VMACHINE.getState: TFRE_DB_String;
+begin
+  Result:=Field('state').AsString;
+end;
+
+function TFRE_DB_VMACHINE.getVNCHost: TFRE_DB_String;
+begin
+  Result:=Field('vnc_host').AsString;
+end;
+
+function TFRE_DB_VMACHINE.getVNCPort: UInt32;
+begin
+  Result:=Field('vnc_port').AsUInt32;
+end;
+
+procedure TFRE_DB_VMACHINE.setKey(AValue: TFRE_DB_String);
+begin
+  Field('key').AsString:=AValue;
+end;
+
+procedure TFRE_DB_VMACHINE.setMType(AValue: TFRE_DB_String);
+begin
+  Field('mtype').AsString:=AValue;
+end;
+
+procedure TFRE_DB_VMACHINE.setState(AValue: TFRE_DB_String);
+begin
+  Field('state').AsString:=AValue;
+end;
+
+procedure TFRE_DB_VMACHINE.setVNCHost(AValue: TFRE_DB_String);
+begin
+  Field('vnc_host').AsString:=AValue;
+end;
+
+procedure TFRE_DB_VMACHINE.setVNCPort(AValue: UInt32);
+begin
+  Field('vnc_port').AsUInt32:=AValue;
+end;
 
  class procedure TFRE_DB_VMACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ var
+   enum: IFRE_DB_Enum;
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+
+   enum:=GFRE_DBI.NewEnum('vmachine_state').Setup(GFRE_DBI.CreateText('$enum_vmachine_state','State'));
+   enum.addEntry('STOPPED',GetTranslateableTextKey('enum_state_stopped'));
+   enum.addEntry('RUNNING',GetTranslateableTextKey('enum_state_running'));
+   enum.addEntry('STOPPING',GetTranslateableTextKey('enum_state_stopping'));
+   GFRE_DBI.RegisterSysEnum(enum);
+
+   enum:=GFRE_DBI.NewEnum('vmachine_type').Setup(GFRE_DBI.CreateText('$enum_vmachine_type','Type'));
+   enum.addEntry('KVM',GetTranslateableTextKey('enum_type_kvm'));
+   enum.addEntry('OS',GetTranslateableTextKey('enum_type_os'));
+
+   scheme.AddSchemeField('key',fdbft_String).required:=true;
+   scheme.AddSchemeField('state',fdbft_String).SetupFieldDef(true,false,'module_type');
+   scheme.AddSchemeField('vnc_port',fdbft_UInt32);
+   scheme.AddSchemeField('vnc_host',fdbft_String).SetupFieldDef(false,false,'','ip');
  end;
 
  class procedure TFRE_DB_VMACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3577,6 +3660,13 @@ end;
    newVersionId:='1.0';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+
+     StoreTranslateableText(conn,'enum_state_stopped','Stopped');
+     StoreTranslateableText(conn,'enum_state_running','Running');
+     StoreTranslateableText(conn,'enum_state_stopping','Stopping');
+
+     StoreTranslateableText(conn,'enum_type_kvm','KVM');
+     StoreTranslateableText(conn,'enum_type_os','OS');
    end;
  end;
 
@@ -3820,6 +3910,7 @@ end;
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
    scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
+
    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
    group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
  end;
