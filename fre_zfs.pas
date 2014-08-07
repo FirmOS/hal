@@ -2412,7 +2412,7 @@ begin
       writeln(incrementalsnapshotname);
     end;
 
-    res         := SourceZFS.TCPSendSnapshot(config.Field('sourcedataset').AsString,snapshotname,config.Field('destinationhost').AsString,config.Field('destinationport').AsInt32,config.Field('destinationdataset').AsString, error, incrementalsnapshotname, zfsSendReplicated,true,config.Field('jobid').asstring);   // Send Snapshotname to Destination
+    res         := SourceZFS.TCPSendSnapshot(config.Field('sourcedataset').AsString,snapshotname,config.Field('destinationhost').AsString,config.Field('destinationport').AsInt32,config.Field('destinationdataset').AsString, error, incrementalsnapshotname, zfsSendReplicated,false,config.Field('jobid').asstring);   // Send Snapshotname to Destination
     if ResultCheck('ERROR ON SENDING SNAPSHOT') then exit;
     writeln(error);
     if error<>'' then begin                                                                                                                // Result was OK, write Warning
