@@ -130,12 +130,13 @@ type
     procedure ZTCPSendSnapshot;
     procedure ZTCPCheckDataSetExists;
     procedure ZTCPGetLastSnapShot;
-    procedure ZTCPReplicateJob;
     procedure SNMPTest;
 
-  published
     procedure ZPoolGetPools;
     procedure ZPoolStatus;
+
+  published
+    procedure ZTCPReplicateJob;
   end;
 
 
@@ -337,6 +338,7 @@ begin
   po.SetJobkeyDescription('TESTJOB','NO DESC');
 //  po.SetRemoteSSH(cremoteuser, cremotehost, GetRemoteKeyFilename);
   po.SetTCPReplicate('rpool/repos','rpool/destination/repos','AUTO',cTCPfoscmd,CFRE_FOSCMD_PORT);
+  writeln(po.DumpToString());
   po.ExecuteCMD;
   writeln(po.DumpToString());
 end;

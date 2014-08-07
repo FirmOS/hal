@@ -2658,7 +2658,6 @@ var
   i        : integer;
   snapname : string;
 begin
-  abort;
   if proc.ExitStatus=0 then begin
     slist := TStringList.Create;
     try
