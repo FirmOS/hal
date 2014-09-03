@@ -60,8 +60,11 @@ uses
 
 const
 
-  CFRE_DB_CA_COLLECTION          = 'ca';
-  CFRE_DB_CERTIFICATE_COLLECTION = 'certificate';
+  CFRE_DB_CA_COLLECTION                = 'ca';
+  CFRE_DB_CERTIFICATE_COLLECTION       = 'certificate';
+
+  CFOS_DB_SERVICES_COLLECTION          = 'services';
+  CFOS_DB_ZONES_COLLECTION             = 'zones';
 
 type
 
@@ -701,6 +704,8 @@ type
 
 
 procedure Register_DB_Extensions;
+
+procedure CreateServicesCollections(const conn: IFRE_DB_COnnection);
 
 implementation
 
@@ -4065,6 +4070,18 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUAL_FILESERVER);
    GFRE_DBI.Initialize_Extension_Objects;
  end;
+
+procedure CreateServicesCollections(const conn: IFRE_DB_COnnection);
+var
+  collection: IFRE_DB_COLLECTION;
+begin
+  if not conn.CollectionExists(CFOS_DB_SERVICES_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFOS_DB_SERVICES_COLLECTION);
+  end;
+  if not conn.CollectionExists(CFOS_DB_ZONES_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFOS_DB_ZONES_COLLECTION);
+  end;
+end;
 
 
 
