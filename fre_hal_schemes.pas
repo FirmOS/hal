@@ -4077,6 +4077,7 @@ var
 begin
   if not conn.CollectionExists(CFOS_DB_SERVICES_COLLECTION) then begin
     collection  := conn.CreateCollection(CFOS_DB_SERVICES_COLLECTION);
+    collection.DefineIndexOnField('objname',fdbft_String,true,true,'def',false);
   end;
   if not conn.CollectionExists(CFOS_DB_ZONES_COLLECTION) then begin
     collection  := conn.CreateCollection(CFOS_DB_ZONES_COLLECTION);
