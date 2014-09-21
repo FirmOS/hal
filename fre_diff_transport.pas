@@ -71,7 +71,7 @@ type
      function GetNewFieldName : TFRE_DB_NameType;
      function GetOldFieldName : TFRE_DB_NameType;
      function GetUpdateScheme : TFRE_DB_NameType;
-     function GetParentUID    : TGUID;
+     function GetParentUID    : TFRE_DB_GUID;
    end;
 
    { TFRE_DB_INSERT_TRANSPORT }
@@ -185,7 +185,7 @@ var update_obj   : IFRE_DB_Object;
       collection      : IFRE_DB_COLLECTION;
       res             : TFRE_DB_Errortype;
 
-      procedure _DumpDeleteReferences(const uid:TGUID);
+      procedure _DumpDeleteReferences(const uid:TFRE_DB_GUID);
       var    i           : NativeInt;
              ex_del_obj  : IFRE_DB_Object;
              ex_refs     : TFRE_DB_ObjectReferences;
@@ -494,7 +494,7 @@ begin
   result := Field('S').asstring;
 end;
 
-function TFRE_DB_UPDATE_TRANSPORT.GetParentUID: TGUID;
+function TFRE_DB_UPDATE_TRANSPORT.GetParentUID: TFRE_DB_GUID;
 begin
   result := Field('P').AsGUID;
 end;

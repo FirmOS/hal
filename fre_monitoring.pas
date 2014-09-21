@@ -58,7 +58,7 @@ type
 
 
   procedure GFRE_MOS_SetMOSStatusandUpdate          (const mosobject:IFRE_DB_Object;const status: TFRE_DB_MOS_STATUS_TYPE; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
-  function  GFRE_MOS_MOSChildStatusChanged          (const mos_UID: TGUID;const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):TFRE_DB_MOS_STATUS_TYPE;
+  function  GFRE_MOS_MOSChildStatusChanged          (const mos_UID: TFRE_DB_GUID;const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):TFRE_DB_MOS_STATUS_TYPE;
   procedure GFRE_MOS_GetStatusIcon                  (const status:TFRE_DB_MOS_STATUS_TYPE;const calc: IFRE_DB_CALCFIELD_SETTER);
   function  String2DBMOSStatus                  (const fts: string): TFRE_DB_MOS_STATUS_TYPE;
   procedure CreateMonitoringCollections         (const conn: IFRE_DB_COnnection);
@@ -85,7 +85,7 @@ begin
 end;
 
 
-function GFRE_MOS_MOSChildStatusChanged(const mos_UID: TGUID; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): TFRE_DB_MOS_STATUS_TYPE;
+function GFRE_MOS_MOSChildStatusChanged(const mos_UID: TFRE_DB_GUID; const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): TFRE_DB_MOS_STATUS_TYPE;
 var
   refs      : TFRE_DB_GUIDArray;
   i         : Integer;

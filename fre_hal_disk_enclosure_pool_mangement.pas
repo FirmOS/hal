@@ -188,7 +188,7 @@ var
       phys_new_disk : TFRE_DB_PHYS_DISK;
       zfs_obj          : IFRE_DB_Object;
       targetports      : TFRE_DB_StringArray;
-      slotguid         : TGUID;
+      slotguid         : TFRE_DB_GUID;
       slot_obj         : IFRE_DB_Object;
       slot             : TFRE_DB_DRIVESLOT;
       i                : NativeInt;

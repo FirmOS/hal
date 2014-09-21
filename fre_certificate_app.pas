@@ -32,8 +32,8 @@ type
   public
     class procedure RegisterSystemScheme          (const scheme:IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects              (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-    class procedure InstallDBObjects4Domain       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TGUID); override;
-    class procedure InstallUserDBObjects4Domain   (const conn: IFRE_DB_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TGUID); override;
+    class procedure InstallDBObjects4Domain       (const conn:IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TFRE_DB_GUID); override;
+    class procedure InstallUserDBObjects4Domain   (const conn: IFRE_DB_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TFRE_DB_GUID); override;
   end;
 
   { TFRE_CERTIFICATE_CA_MOD }
@@ -219,7 +219,7 @@ var
   panel         : TFRE_DB_FORM_PANEL_DESC;
   scheme        : IFRE_DB_SchemeObject;
   ca            : IFRE_DB_Object;
-  sel_guid      : TGUID;
+  sel_guid      : TFRE_DB_GUID;
 begin
 
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
@@ -254,7 +254,7 @@ var
   panel         : TFRE_DB_FORM_PANEL_DESC;
   scheme        : IFRE_DB_SchemeObject;
   crt           : IFRE_DB_Object;
-  sel_guid      : TGUID;
+  sel_guid      : TFRE_DB_GUID;
 begin
   if input.FieldExists('SELECTED') and (input.Field('SELECTED').ValueCount>0)  then begin
     sel_guid := input.Field('SELECTED').AsGUID;
@@ -304,7 +304,7 @@ begin
 end;
 
 function TFRE_CERTIFICATE_CA_MOD.WEB_newCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var caob_id          : TGUID;
+var caob_id          : TFRE_DB_GUID;
     caob             : IFRE_DB_Object;
     data             : IFRE_DB_Object;
     lSchemeObject    : IFRE_DB_SchemeObject;
@@ -348,7 +348,7 @@ begin
 end;
 
 function TFRE_CERTIFICATE_CA_MOD.WEB_importCertificateAuthority(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var caob_id          : TGUID;
+var caob_id          : TFRE_DB_GUID;
     caob             : IFRE_DB_Object;
     data             : IFRE_DB_Object;
     lSchemeObject    : IFRE_DB_SchemeObject;
@@ -492,7 +492,7 @@ end;
 
 function TFRE_CERTIFICATE_CA_MOD.WEB_revokeCertificate(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var
-  sel_guid   : TGUID;
+  sel_guid   : TFRE_DB_GUID;
   crt        : IFRE_DB_Object;
 begin
   if not conn.sys.CheckClassRight4MyDomain(sr_DELETE,TFRE_DB_Certificate) then
@@ -531,7 +531,7 @@ function TFRE_CERTIFICATE_CA_MOD.WEB_backupCertificateAuthority(const input: IFR
 var
   scheme     : IFRE_DB_SchemeObject;
   res        : TFRE_DB_FORM_DIALOG_DESC;
-  ca_uid     : TGUID;
+  ca_uid     : TFRE_DB_GUID;
   caobj      : IFRE_DB_Object;
 
 begin
@@ -649,7 +649,7 @@ begin
     end;
 end;
 
-class procedure TFRE_CERTIFICATE_APP.InstallDBObjects4Domain(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TGUID);
+class procedure TFRE_CERTIFICATE_APP.InstallDBObjects4Domain(const conn: IFRE_DB_SYS_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TFRE_DB_GUID);
 begin
   inherited InstallDBObjects4Domain(conn, currentVersionId, domainUID);
 
@@ -687,7 +687,7 @@ begin
     end;
 end;
 
-class procedure TFRE_CERTIFICATE_APP.InstallUserDBObjects4Domain(const conn: IFRE_DB_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TGUID);
+class procedure TFRE_CERTIFICATE_APP.InstallUserDBObjects4Domain(const conn: IFRE_DB_CONNECTION; currentVersionId: TFRE_DB_NameType; domainUID: TFRE_DB_GUID);
 var
   coll: IFRE_DB_COLLECTION;
 begin

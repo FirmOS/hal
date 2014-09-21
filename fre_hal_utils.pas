@@ -82,7 +82,7 @@ type
     procedure GetServiceHAL     (const conn: IFRE_DB_Connection;const serviceobj:IFRE_DB_Object;const result_obj:IFRE_DB_Object); virtual;
     function  ServiceSchemeName : string; virtual; abstract;
   public
-    function  GetHALObject      (const conn:IFRE_DB_Connection;const machine_id:TGUID) : IFRE_DB_Object;
+    function  GetHALObject      (const conn:IFRE_DB_Connection;const machine_id:TFRE_DB_GUID) : IFRE_DB_Object;
     procedure StartService      (const name:string); virtual;
     procedure StopService       (const name:string); virtual;
     procedure RestartService    (const name:string); virtual;
@@ -101,7 +101,7 @@ type
 
   TFRE_HAL_DirectService = class (TFRE_HAL_BaseService)
   public
-    procedure ConfigureServiceDirect(const conn:IFRE_DB_Connection;const service_guid:TGUID); virtual; abstract;
+    procedure ConfigureServiceDirect(const conn:IFRE_DB_Connection;const service_guid:TFRE_DB_GUID); virtual; abstract;
   end;
 
 
@@ -277,7 +277,7 @@ begin
  // do nothing
 end;
 
-function TFRE_HAL_BaseService.GetHALObject(const conn: IFRE_DB_Connection; const machine_id: TGUID): IFRE_DB_Object;
+function TFRE_HAL_BaseService.GetHALObject(const conn: IFRE_DB_Connection; const machine_id: TFRE_DB_GUID): IFRE_DB_Object;
 var coll:IFRE_DB_Collection;
       ro:IFRE_DB_Object;
 

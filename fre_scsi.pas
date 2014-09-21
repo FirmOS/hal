@@ -76,13 +76,13 @@ type
   TFRE_DB_PHYS_DISK=class(TFRE_DB_OS_BLOCKDEVICE)
   private
     function GetBlockSize: Uint16;
-    function GetEnclosureUID: TGUID;
+    function GetEnclosureUID: TFRE_DB_GUID;
     function GetEnclosureNr: Uint16;
     function Getfw_revision: string;
     function Getmanufacturer: string;
     function Getmodel_number: string;
     function GetOperationalPathCount: Uint16;
-    function GetParentInEnclosureUID: TGUID;
+    function GetParentInEnclosureUID: TFRE_DB_GUID;
     function GetSlotNr: Uint16;
     function GetTotalPathCount: Uint16;
     function GetWWN: string;
@@ -91,12 +91,12 @@ type
     function GetDiskLog: TFRE_DB_SG_LOGS;
     procedure SetBlockSize(AValue: Uint16);
     procedure SetEnclosureNr(AValue: Uint16);
-    procedure SetEnclosureUID(AValue: TGUID);
+    procedure SetEnclosureUID(AValue: TFRE_DB_GUID);
     procedure Setfw_revision(AValue: string);
     procedure Setmanufacturer(AValue: string);
     procedure Setmodel_number(AValue: string);
     procedure SetOperationalPathCount(AValue: Uint16);
-    procedure SetParentInEnclosureUID(AValue: TGUID);
+    procedure SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
     procedure SetSlotNr(AValue: Uint16);
     procedure SetTotalPathCount(AValue: Uint16);
     procedure SetWWN(AValue: string);
@@ -124,10 +124,10 @@ type
     property Fw_revision                         : string read Getfw_revision write Setfw_revision;
     property Serial_number                       : string read Getserial_number write Setserial_number;
     property Size_Sectors                        : UInt32 read GetSize_Sectors write SetSize_Sectors;
-    property ParentInEnclosureUID                : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
+    property ParentInEnclosureUID                : TFRE_DB_GUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
     property SlotNr                              : Uint16 read GetSlotNr write SetSlotNr;
     property EnclosureNr                         : Uint16 read GetEnclosureNr write SetEnclosureNr;
-    property EnclosureUID                        : TGUID  read GetEnclosureUID write SetEnclosureUID;
+    property EnclosureUID                        : TFRE_DB_GUID  read GetEnclosureUID write SetEnclosureUID;
     property BlockSize                           : Uint16 read GetBlockSize write SetBlockSize;
     property TotalPathCount                      : Uint16 read GetTotalPathCount write SetTotalPathCount;
     property OperationalPathCount                : Uint16 read GetOperationalPathCount write SetOperationalPathCount;
@@ -162,22 +162,22 @@ type
     function  Getmanufacturer: string;
     function  Getmodel_number: string;
     function  GetDeviceIdentifier: TFRE_DB_String;
-    function  GetParentInEnclosureUID: TGUID;
+    function  GetParentInEnclosureUID: TFRE_DB_GUID;
     procedure Setfw_revision(AValue: string);
     procedure Setmanufacturer(AValue: string);
     procedure Setmodel_number(AValue: string);
     procedure SetDeviceIdentifier(AValue: TFRE_DB_String);
-    procedure SetParentInEnclosureUID(AValue: TGUID);
+    procedure SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    procedure AddMosParentID                    (const avalue : TGUID);
-    procedure RemoveMosParentID                 (const avalue : TGUID);
+    procedure AddMosParentID                    (const avalue : TFRE_DB_GUID);
+    procedure RemoveMosParentID                 (const avalue : TFRE_DB_GUID);
     property  Model_number         : string read Getmodel_number write Setmodel_number;
     property  Manufacturer         : string read Getmanufacturer write Setmanufacturer;
     property  Fw_revision          : string read Getfw_revision write Setfw_revision;
     property  DeviceIdentifier     : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
-    property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
+    property  ParentInEnclosureUID : TFRE_DB_GUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
   published
     function  WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
@@ -190,18 +190,18 @@ type
     function  GetEnclosureNr: Uint16;
     function  GetPortType: string;
     function  GetSlotNr    : UInt16;
-    function  GetParentInEnclosureUID: TGUID;
+    function  GetParentInEnclosureUID: TFRE_DB_GUID;
     procedure setDeviceIdentifier(AValue: TFRE_DB_String);
     procedure SetEnclosureNr(AValue: Uint16);
-    procedure SetParentInEnclosureUID(AValue: TGUID);
+    procedure SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
     procedure SetPortType(AValue: string);
     procedure SetSlotNr   (AValue: UInt16);
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
-    procedure AddMosParentID                    (const avalue : TGUID);
-    procedure RemoveMosParentID                 (const avalue : TGUID);
+    procedure AddMosParentID                    (const avalue : TFRE_DB_GUID);
+    procedure RemoveMosParentID                 (const avalue : TFRE_DB_GUID);
     procedure SetAttachedTo  (const port_nr:Byte; const AValue: string);
     procedure SetTargetPort  (const port_nr:Byte; const AValue: string);
     function  GetTargetPort  (const port_nr:Byte) : TFRE_DB_String;
@@ -209,7 +209,7 @@ type
     property  SlotNr: Uint16 read GetSlotNr write SetSlotNr;
     property  PortType             : string read GetPortType write SetPortType;
     property  DeviceIdentifier     : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
-    property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
+    property  ParentInEnclosureUID : TFRE_DB_GUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
     property  EnclosureNr          : Uint16 read GetEnclosureNr write SetEnclosureNr;
   published
     procedure CALC_GetDisplayName         (const setter : IFRE_DB_CALCFIELD_SETTER);
@@ -224,13 +224,13 @@ type
     function  getDeviceIdentifier               : TFRE_DB_String;
     function  GetDriveSlots                     : UInt16;
     function  GetEnclosureNr                    : Uint16;
-    function  GetMachineID                      : TGUID;
-    function  GetParentInEnclosureUID           : TGUID;
+    function  GetMachineID                      : TFRE_DB_GUID;
+    function  GetParentInEnclosureUID           : TFRE_DB_GUID;
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure SetDriveSlots                     (AValue: UInt16);
     procedure SetEnclosureNr                    (AValue: Uint16);
-    procedure SetMachineID                      (AValue: TGUID);
-    procedure SetParentInEnclosureUID           (AValue: TGUID);
+    procedure SetMachineID                      (AValue: TFRE_DB_GUID);
+    procedure SetParentInEnclosureUID           (AValue: TFRE_DB_GUID);
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
@@ -246,8 +246,8 @@ type
     procedure AddDriveSlotEmbedded              (const slotnr:UInt16; const driveslot: TFRE_DB_DRIVESLOT);
     procedure DeleteReferencingToMe             (const conn:IFRE_DB_CONNECTION);
     procedure EmbedSlotsAndExpanders            (const conn:IFRE_DB_CONNECTION);
-    procedure AddMosParentID                    (const avalue : TGUID);
-    procedure RemoveMosParentID                 (const avalue : TGUID);
+    procedure AddMosParentID                    (const avalue : TFRE_DB_GUID);
+    procedure RemoveMosParentID                 (const avalue : TFRE_DB_GUID);
 
 
     procedure SetMOSStatus                      (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
@@ -256,8 +256,8 @@ type
     property  DeviceIdentifier : TFRE_DB_String read getDeviceIdentifier write setDeviceIdentifier;
     property  DriveSlots       : UInt16 read GetDriveSlots write SetDriveSlots;
     property  EnclosureNr      : Uint16 read GetEnclosureNr write SetEnclosureNr;
-    property  MachineID        : TGUID read GetMachineID write SetMachineID;
-    property  ParentInEnclosureUID : TGUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
+    property  MachineID        : TFRE_DB_GUID read GetMachineID write SetMachineID;
+    property  ParentInEnclosureUID : TFRE_DB_GUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
 
   published
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -589,12 +589,12 @@ begin
     result:=0;
 end;
 
-function TFRE_DB_ENCLOSURE.GetMachineID: TGUID;
+function TFRE_DB_ENCLOSURE.GetMachineID: TFRE_DB_GUID;
 begin
   result:=Field('machineid').AsObjectLink;
 end;
 
-function TFRE_DB_ENCLOSURE.GetParentInEnclosureUID: TGUID;
+function TFRE_DB_ENCLOSURE.GetParentInEnclosureUID: TFRE_DB_GUID;
 begin
   Result:=Field('parent_in_enclosure_uid').AsObjectLink;
 end;
@@ -614,12 +614,12 @@ begin
   Field('enclosurenr').AsUInt16 := AValue;
 end;
 
-procedure TFRE_DB_ENCLOSURE.SetMachineID(AValue: TGUID);
+procedure TFRE_DB_ENCLOSURE.SetMachineID(AValue: TFRE_DB_GUID);
 begin
   Field('machineid').AsObjectLink :=Avalue;
 end;
 
-procedure TFRE_DB_ENCLOSURE.SetParentInEnclosureUID(AValue: TGUID);
+procedure TFRE_DB_ENCLOSURE.SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
 begin
   Field('parent_in_enclosure_uid').AsObjectLink:=Avalue;
 end;
@@ -778,13 +778,13 @@ begin
     end;
 end;
 
-procedure TFRE_DB_ENCLOSURE.AddMosParentID(const avalue: TGUID);
+procedure TFRE_DB_ENCLOSURE.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
     Field('mosparentIds').AddObjectLink(AValue);
 end;
 
-procedure TFRE_DB_ENCLOSURE.RemoveMosParentID(const avalue: TGUID);
+procedure TFRE_DB_ENCLOSURE.RemoveMosParentID(const avalue: TFRE_DB_GUID);
 var lp:NativeInt;
 begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
@@ -1636,7 +1636,7 @@ begin
   Result:=Field('blocksize').AsUint16;
 end;
 
-function TFRE_DB_PHYS_DISK.GetEnclosureUID: TGUID;
+function TFRE_DB_PHYS_DISK.GetEnclosureUID: TFRE_DB_GUID;
 begin
   Result:=Field('enclosure_uid').AsObjectLink;
 end;
@@ -1669,7 +1669,7 @@ begin
     Result:=0;
 end;
 
-function TFRE_DB_PHYS_DISK.GetParentInEnclosureUID: TGUID;
+function TFRE_DB_PHYS_DISK.GetParentInEnclosureUID: TFRE_DB_GUID;
 begin
   Result:=Field('parent_in_enclosure_uid').AsObjectLink;
 end;
@@ -1724,7 +1724,7 @@ begin
   Field('enclosurenr').AsUInt16:=AValue;
 end;
 
-procedure TFRE_DB_PHYS_DISK.SetEnclosureUID(AValue: TGUID);
+procedure TFRE_DB_PHYS_DISK.SetEnclosureUID(AValue: TFRE_DB_GUID);
 begin
    Field('enclosure_uid').AsObjectLink:=AValue;
 end;
@@ -1750,7 +1750,7 @@ begin
   Field('operationalpathcount').AsUInt16:=AValue;
 end;
 
-procedure TFRE_DB_PHYS_DISK.SetParentInEnclosureUID(AValue: TGUID);
+procedure TFRE_DB_PHYS_DISK.SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
 begin
   if FieldExists('parent_in_enclosure_uid') then
     if AValue<>Field('parent_in_enclosure_uid').AsObjectLink then
@@ -1974,7 +1974,7 @@ begin
   result := Field('slotnr').AsUInt16;
 end;
 
-function TFRE_DB_DRIVESLOT.GetParentInEnclosureUID: TGUID;
+function TFRE_DB_DRIVESLOT.GetParentInEnclosureUID: TFRE_DB_GUID;
 begin
   Result:=Field('parent_in_enclosure_uid').AsObjectLink;
 end;
@@ -1989,7 +1989,7 @@ begin
   Field('enclosurenr').AsUInt16:=AValue;
 end;
 
-procedure TFRE_DB_DRIVESLOT.SetParentInEnclosureUID(AValue: TGUID);
+procedure TFRE_DB_DRIVESLOT.SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
 begin
   if FieldExists('parent_in_enclosure_uid') then
     if AValue<>Field('parent_in_enclosure_uid').AsObjectLink then
@@ -2023,13 +2023,13 @@ begin
   scheme.AddCalcSchemeField ('displayname',fdbft_String,@CALC_GetDisplayName);
 end;
 
-procedure TFRE_DB_DRIVESLOT.AddMosParentID(const avalue: TGUID);
+procedure TFRE_DB_DRIVESLOT.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
     Field('mosparentIds').AddObjectLink(AValue);
 end;
 
-procedure TFRE_DB_DRIVESLOT.RemoveMosParentID(const avalue: TGUID);
+procedure TFRE_DB_DRIVESLOT.RemoveMosParentID(const avalue: TFRE_DB_GUID);
 var lp:NativeInt;
 begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
@@ -2104,7 +2104,7 @@ begin
   result:=Field('deviceIdentifier').AsString;
 end;
 
-function TFRE_DB_SAS_EXPANDER.GetParentInEnclosureUID: TGUID;
+function TFRE_DB_SAS_EXPANDER.GetParentInEnclosureUID: TFRE_DB_GUID;
 begin
   Result:=Field('parent_in_enclosure_uid').AsObjectLink;
 end;
@@ -2130,7 +2130,7 @@ begin
   Field('deviceIdentifier').AsString:=AValue;
 end;
 
-procedure TFRE_DB_SAS_EXPANDER.SetParentInEnclosureUID(AValue: TGUID);
+procedure TFRE_DB_SAS_EXPANDER.SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
 begin
   if FieldExists('parent_in_enclosure_uid') then
     if AValue<>Field('parent_in_enclosure_uid').AsObjectLink then
@@ -2147,13 +2147,13 @@ begin
   end;
 end;
 
-procedure TFRE_DB_SAS_EXPANDER.AddMosParentID(const avalue: TGUID);
+procedure TFRE_DB_SAS_EXPANDER.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
     Field('mosparentIds').AddObjectLink(AValue);
 end;
 
-procedure TFRE_DB_SAS_EXPANDER.RemoveMosParentID(const avalue: TGUID);
+procedure TFRE_DB_SAS_EXPANDER.RemoveMosParentID(const avalue: TFRE_DB_GUID);
 var lp:NativeInt;
 begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);

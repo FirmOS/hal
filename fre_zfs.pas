@@ -102,8 +102,8 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    procedure       SetBlockdevice              (const blockdevice:TGUID);
-    function        GetBlockdevice              : TGUID;
+    procedure       SetBlockdevice              (const blockdevice:TFRE_DB_GUID);
+    function        GetBlockdevice              : TFRE_DB_GUID;
   published
     function        WEB_GetDefaultCollection    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
@@ -114,17 +114,17 @@ type
   private
     function  GetIopsRead      : TFRE_DB_String;
     function  GetIopsWrite     : TFRE_DB_String;
-    function  GetParentInZFS   : TGuid;
-    function  GetPoolId        : TGuid; virtual;
+    function  GetParentInZFS   : TFRE_DB_GUID;
+    function  GetPoolId        : TFRE_DB_GUID; virtual;
     function  GetTransferRead  : TFRE_DB_String;
     function  GetTransferWrite : TFRE_DB_String;
     function  getCaption       : TFRE_DB_String; virtual;
-    procedure SetParentInZFSId (AValue: TGuid);
-    procedure SetPoolId        (AValue: TGuid); virtual;
-    procedure SetMachineID          (AValue: TGUID);
+    procedure SetParentInZFSId (AValue: TFRE_DB_GUID);
+    procedure SetPoolId        (AValue: TFRE_DB_GUID); virtual;
+    procedure SetMachineID          (AValue: TFRE_DB_GUID);
     function  getIOStat             : TFRE_DB_IOSTAT;
     procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
-    function  getMachineID          : TGUID;
+    function  getMachineID          : TFRE_DB_GUID;
   protected
     procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
@@ -163,8 +163,8 @@ type
     function  getZpoolIoStatEmbedded  : TFRE_DB_ZPOOL_IOSTAT;
     procedure setZpoolIoStatEmbedded  (const AValue: TFRE_DB_ZPOOL_IOSTAT);
 
-    procedure AddMosParentID          (const avalue : TGUID);
-    procedure RemoveMosParentID       (const avalue : TGUID);
+    procedure AddMosParentID          (const avalue : TFRE_DB_GUID);
+    procedure RemoveMosParentID       (const avalue : TFRE_DB_GUID);
     procedure SetName                 (const avalue:TFRE_DB_String);
     property  IoStat                  : TFRE_DB_IOSTAT read getIOStat write setIOStat;
     property  caption                 : TFRE_DB_String read GetCaption;
@@ -172,9 +172,9 @@ type
     property  iopsW                   : TFRE_DB_String read GetIopsWrite;
     property  transferR               : TFRE_DB_String read GetTransferRead;
     property  transferW               : TFRE_DB_String read GetTransferWrite;
-    property  poolId                  : TGuid          read GetPoolId        write SetPoolId;
-    property  parentInZFSId           : TGuid          read GetParentInZFS   write SetParentInZFSId;
-    property  MachineID               : TGUID read GetMachineID write SetMachineID;
+    property  poolId                  : TFRE_DB_GUID          read GetPoolId        write SetPoolId;
+    property  parentInZFSId           : TFRE_DB_GUID          read GetParentInZFS   write SetParentInZFSId;
+    property  MachineID               : TFRE_DB_GUID read GetMachineID write SetMachineID;
 
   published
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -208,8 +208,8 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    class function  GetMachineDeviceIdentifier  (const vmachine_uid: TGUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
-    class function  GetMachineDeviceName        (const vmachine_uid: TGUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
+    class function  GetMachineDeviceIdentifier  (const vmachine_uid: TFRE_DB_GUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
+    class function  GetMachineDeviceName        (const vmachine_uid: TFRE_DB_GUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
     procedure UnassignReferencingDisksToMe      (const conn: IFRE_DB_CONNECTION);
     function  mayHaveZFSChildren: Boolean; override;
     function  canIdentify       : Boolean; override;
@@ -358,8 +358,8 @@ type
 
   TFRE_DB_ZFS_ROOTOBJ=class(TFRE_DB_ZFS_OBJ)
   protected
-    function  GetPoolId        : TGuid; override;
-    procedure SetPoolId        (AValue: TGuid); override;
+    function  GetPoolId        : TFRE_DB_GUID; override;
+    procedure SetPoolId        (AValue: TFRE_DB_GUID); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     function mayHaveZFSChildren    : Boolean; override;
@@ -377,7 +377,7 @@ type
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
-    class function  CreateEmbeddedPoolObjectfromDB (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TGUID;  const include_os_blockdevices:boolean): TFRE_DB_ZFS_POOL;
+    class function  CreateEmbeddedPoolObjectfromDB (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TFRE_DB_GUID;  const include_os_blockdevices:boolean): TFRE_DB_ZFS_POOL;
     function  GetDatastorage            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_DATASTORAGE;
     function  GetDatastorageEmbedded    : TFRE_DB_ZFS_DATASTORAGE;
     function  GetSpare                  (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_SPARE;
@@ -413,7 +413,7 @@ type
     class procedure InstallDBObjects              (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     class function  FetchUnassigned               (const conn:IFRE_DB_CONNECTION) : TFRE_DB_ZFS_UNASSIGNED;
-    procedure InitforMachine                      (const avalue:TGUID);
+    procedure InitforMachine                      (const avalue:TFRE_DB_GUID);
     function  addBlockdevice                      (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
     function  addBlockdeviceEmbedded              (const blockdevice: TFRE_DB_ZFS_BLOCKDEVICE): TFRE_DB_ZFS_BLOCKDEVICE;
   end;
@@ -688,12 +688,12 @@ begin
    end;
 end;
 
-procedure TFRE_DB_IOSTAT.SetBlockdevice(const blockdevice: TGUID);
+procedure TFRE_DB_IOSTAT.SetBlockdevice(const blockdevice: TFRE_DB_GUID);
 begin
   field('blockdeviceid').AsObjectLink := blockdevice;
 end;
 
-function TFRE_DB_IOSTAT.GetBlockdevice: TGUID;
+function TFRE_DB_IOSTAT.GetBlockdevice: TFRE_DB_GUID;
 begin
   result := field('blockdeviceid').AsObjectLink;
 end;
@@ -728,7 +728,7 @@ begin
     raise EFRE_DB_Exception.Create(edb_ERROR,'could not get unassigned disks object by index');
 end;
 
-procedure TFRE_DB_ZFS_UNASSIGNED.InitforMachine(const avalue: TGUID);
+procedure TFRE_DB_ZFS_UNASSIGNED.InitforMachine(const avalue: TFRE_DB_GUID);
 begin
  setZFSGuid(FREDB_G2H(avalue)+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
  SetName('Unassigned disks');  //FIXXME: should be a languge key ?!?
@@ -752,12 +752,12 @@ end;
 
 { TFRE_DB_ZFS_ROOTOBJ }
 
-function TFRE_DB_ZFS_ROOTOBJ.GetPoolId: TGuid;
+function TFRE_DB_ZFS_ROOTOBJ.GetPoolId: TFRE_DB_GUID;
 begin
   Result:=UID;
 end;
 
-procedure TFRE_DB_ZFS_ROOTOBJ.SetPoolId(AValue: TGuid);
+procedure TFRE_DB_ZFS_ROOTOBJ.SetPoolId(AValue: TFRE_DB_GUID);
 begin
   //dont change UID of Pool
 end;
@@ -970,12 +970,12 @@ begin
   result := (FieldExists('parent_in_zfs_uid')) and (not Field('parent_in_zfs_uid').IsEmptyArray);
 end;
 
-function TFRE_DB_ZFS_OBJ.GetParentInZFS: TGuid;
+function TFRE_DB_ZFS_OBJ.GetParentInZFS: TFRE_DB_GUID;
 begin
   Result:=Field('parent_in_zfs_uid').AsObjectLink;
 end;
 
-function TFRE_DB_ZFS_OBJ.GetPoolId: TGuid;
+function TFRE_DB_ZFS_OBJ.GetPoolId: TFRE_DB_GUID;
 begin
   Result:=Field('pool_uid').AsObjectLink;
 end;
@@ -1085,7 +1085,7 @@ begin
 end;
 
 
-procedure TFRE_DB_ZFS_OBJ.SetParentInZFSId(AValue: TGuid);
+procedure TFRE_DB_ZFS_OBJ.SetParentInZFSId(AValue: TFRE_DB_GUID);
 begin
   if (FieldExists('parent_in_zfs_uid')) and (not Field('parent_in_zfs_uid').IsEmptyArray) then
     if AValue<>Field('parent_in_zfs_uid').AsObjectLink then
@@ -1094,12 +1094,12 @@ begin
   AddMosParentID(AValue);
 end;
 
-procedure TFRE_DB_ZFS_OBJ.SetPoolId(AValue: TGuid);
+procedure TFRE_DB_ZFS_OBJ.SetPoolId(AValue: TFRE_DB_GUID);
 begin
   Field('pool_uid').AsObjectLink:=AValue;
 end;
 
-procedure TFRE_DB_ZFS_OBJ.SetMachineID(AValue: TGUID);
+procedure TFRE_DB_ZFS_OBJ.SetMachineID(AValue: TFRE_DB_GUID);
 begin
  Field('machineid').AsObjectLink := AValue;
 end;
@@ -1131,7 +1131,7 @@ begin
   Field('zpooliostat').AsObject:=AValue;
 end;
 
-function TFRE_DB_ZFS_OBJ.getMachineID: TGUID;
+function TFRE_DB_ZFS_OBJ.getMachineID: TFRE_DB_GUID;
 begin
  if (FieldExists('machineid')) and (not Field('machineid').IsEmptyArray) then
    result := Field('machineid').AsObjectLink
@@ -1373,13 +1373,13 @@ begin
   Result:=String2DBMOSStatus(Field('status_mos').AsString);
 end;
 
-procedure TFRE_DB_ZFS_OBJ.AddMosParentID(const avalue: TGUID);
+procedure TFRE_DB_ZFS_OBJ.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
     Field('mosparentIds').AddObjectLink(AValue);
 end;
 
-procedure TFRE_DB_ZFS_OBJ.RemoveMosParentID(const avalue: TGUID);
+procedure TFRE_DB_ZFS_OBJ.RemoveMosParentID(const avalue: TFRE_DB_GUID);
 var lp:NativeInt;
 begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
@@ -1645,12 +1645,12 @@ begin
   end;
 end;
 
-class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(const vmachine_uid: TGUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
+class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceIdentifier(const vmachine_uid: TFRE_DB_GUID; const vdeviceIdentifier: TFRE_DB_String): TFRE_DB_String;
 begin
   result := FREDB_G2H(vmachine_uid)+'_'+uppercase(vDeviceIdentifier);
 end;
 
-class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceName(const vmachine_uid: TGUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
+class function TFRE_DB_ZFS_BLOCKDEVICE.GetMachineDeviceName(const vmachine_uid: TFRE_DB_GUID; const vdeviceName: TFRE_DB_String): TFRE_DB_String;
 begin
   result := FREDB_G2H(vmachine_uid)+'_'+uppercase(vdeviceName);
 end;
@@ -1785,7 +1785,7 @@ begin
  calcfieldsetter.SetAsString('Zpool '+caption+' '+Field('state').asstring);
 end;
 
-class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TGUID; const include_os_blockdevices: boolean): TFRE_DB_ZFS_POOL;
+class function TFRE_DB_ZFS_POOL.CreateEmbeddedPoolObjectfromDB(const conn: IFRE_DB_CONNECTION; const db_zfs_pool_id: TFRE_DB_GUID; const include_os_blockdevices: boolean): TFRE_DB_ZFS_POOL;
 var
     obj                  : IFRE_DB_Object;
     pool                 : TFRE_DB_ZFS_POOL;
@@ -1900,16 +1900,16 @@ var poolcollection       : IFRE_DB_COLLECTION;
 
     vdev                 : IFRE_DB_Object;
 
-    db_pool_uid          : TGUID;
+    db_pool_uid          : TFRE_DB_GUID;
     vdev_refs            : Array [0..10] of TFRE_DB_ObjectReferences;
 
     i           : NativeInt;
     j           : NativeInt;
 
 
-    procedure __removeVdevFromDeleteArray(const vdev_uid:TGUID; const lvl:NativeInt);
+    procedure __removeVdevFromDeleteArray(const vdev_uid:TFRE_DB_GUID; const lvl:NativeInt);
     var i    : NativeInt;
-        luid : TGUID;
+        luid : TFRE_DB_GUID;
     begin
       for i:=0 to high(vdev_refs[lvl]) do
         begin
@@ -1976,7 +1976,7 @@ var poolcollection       : IFRE_DB_COLLECTION;
 
     procedure __deleteVdevs(const lvl:NativeInt);
     var i    : NativeInt;
-        luid : TGUID;
+        luid : TFRE_DB_GUID;
         lsn  : string;
         obj  : IFRE_DB_Object;
         res  : TFRE_DB_Errortype;
@@ -2023,7 +2023,7 @@ var poolcollection       : IFRE_DB_COLLECTION;
         end;
     end;
 
-    procedure _updateVdevContainer(const vdev:IFRE_DB_Object; const parent_id:TGUID;const lvl:NativeInt);
+    procedure _updateVdevContainer(const vdev:IFRE_DB_Object; const parent_id:TFRE_DB_GUID;const lvl:NativeInt);
     var
 
       dbvdev_obj           : TFRE_DB_ZFS_OBJ;

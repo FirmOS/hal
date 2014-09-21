@@ -405,11 +405,11 @@ type
 
   TFRE_DB_Accesspoint = class(TFRE_DB_Endpoint)
   private
-    function  HasAnotherAP        (const site_id:TGUID ; const conn : IFRE_DB_CONNECTION)  : boolean;
+    function  HasAnotherAP        (const site_id:TFRE_DB_GUID ; const conn : IFRE_DB_CONNECTION)  : boolean;
   protected
     class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-    class procedure AccessPointOnChange   (const conn: IFRE_DB_CONNECTION; const is_dhcp:boolean ; const dhcp_id : TGUID; const mac : TFRE_DB_String); virtual;
+    class procedure AccessPointOnChange   (const conn: IFRE_DB_CONNECTION; const is_dhcp:boolean ; const dhcp_id : TFRE_DB_GUID; const mac : TFRE_DB_String); virtual;
   published
    class function  WBC_NewOperation       (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object; override;
    function        WEB_Menu               (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -533,7 +533,7 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-    class procedure NetworkOnChange      (const dbc : IFRE_DB_Connection; const is_dhcp:boolean; const subnet : string; const ep_id: TGUID; const dns:string; const range_start, range_end : integer ); virtual;
+    class procedure NetworkOnChange      (const dbc : IFRE_DB_Connection; const is_dhcp:boolean; const subnet : string; const ep_id: TFRE_DB_GUID; const dns:string; const range_start, range_end : integer ); virtual;
   published
     class function  WBC_NewOperation     (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
     function IMI_Content                 (const input:IFRE_DB_Object):IFRE_DB_Object;
@@ -735,21 +735,21 @@ implementation
    ca_base_information.key           := cao.Field('key_stream').asstream.AsRawByteString;
  end;
 
- procedure SetReprovision (const dbc: IFRE_DB_Connection; const id:TGUID);
+ procedure SetReprovision (const dbc: IFRE_DB_Connection; const id:TFRE_DB_GUID);
  var
      obj       :    IFRE_DB_Object;
  begin
-   writeln  ('set reprovision :'+GUIDToString(id));
-   CheckDbResult(dbc.Fetch(id,obj),'NO OBJ FOUND FOR REPROVISION '+GUIDToString(id));
+   writeln  ('set reprovision :'+FREDB_G2H(id));
+   CheckDbResult(dbc.Fetch(id,obj),'NO OBJ FOUND FOR REPROVISION '+FREDB_G2H(id));
    obj.Field('reprovision').asboolean:=true;
    writeln  (obj.DumpToString());
    CheckDbResult(dbc.Update(obj),'failure on cloned/update');
  end;
 
- function GetService     (const dbc: IFRE_DB_Connection; const serviceclass:string): TGUID;
+ function GetService     (const dbc: IFRE_DB_Connection; const serviceclass:string): TFRE_DB_GUID;
  var
      coll    : IFRE_DB_COLLECTION;
-     id      : TGUID;
+     id      : TFRE_DB_GUID;
      hlt     : boolean;
 
      procedure _get(const obj:IFRE_DB_Object ; var halt : boolean);
@@ -791,10 +791,10 @@ implementation
  end;
 
 
- function GetNextNet (const dbc: IFRE_DB_CONNECTION; const ep_id:TGUID) : string;
+ function GetNextNet (const dbc: IFRE_DB_CONNECTION; const ep_id:TFRE_DB_GUID) : string;
  var
      ep_obj     : IFRE_DB_Object;
-     cap_id     : TGUID;
+     cap_id     : TFRE_DB_GUID;
      cap_obj    : IFRE_DB_Object;
      net        : string;
      colln      : IFRE_DB_COLLECTION;
@@ -825,9 +825,9 @@ implementation
      end;
 
  begin
-   CheckDbResult(dbc.Fetch(ep_id,ep_obj),'NO EP FOUND IN GET NEXT NET '+GUIDToString(ep_id));
+   CheckDbResult(dbc.Fetch(ep_id,ep_obj),'NO EP FOUND IN GET NEXT NET '+FREDB_G2H(ep_id));
    cap_id:=GetService(dbc,'TFRE_DB_CAPTIVEPORTAL');
-   CheckDbResult(dbc.Fetch(cap_id,cap_obj),'NO CAPSERVICE FOUND IN GET NEXT NET '+GUIDToString(cap_id));
+   CheckDbResult(dbc.Fetch(cap_id,cap_obj),'NO CAPSERVICE FOUND IN GET NEXT NET '+FREDB_G2H(cap_id));
 
    if ep_obj.IsA('TFRE_DB_AP_Lancom') then begin
      net := cap_obj.Field('lancom_net').asstring;
@@ -878,7 +878,7 @@ implementation
   end;
  end;
 
- function UniqueNet (const dbc: IFRE_DB_CONNECTION; const network_id:TGUID; const new_net: string) : boolean;
+ function UniqueNet (const dbc: IFRE_DB_CONNECTION; const network_id:TFRE_DB_GUID; const new_net: string) : boolean;
   var
       colln      : IFRE_DB_COLLECTION;
       check_net  : TFRE_HAL_IP4;
@@ -1355,7 +1355,7 @@ var dbc        :   IFRE_DB_CONNECTION;
     raw_object :   IFRE_DB_Object;
     dhcp       :   boolean;
     mac        :   string;
-    dhcp_id    :   TGUID;
+    dhcp_id    :   TFRE_DB_GUID;
 
 
 begin
@@ -1393,7 +1393,7 @@ begin
 end;
 
 
-function TFRE_DB_Accesspoint.HasAnotherAP(const site_id: TGUID; const conn: IFRE_DB_CONNECTION): boolean;
+function TFRE_DB_Accesspoint.HasAnotherAP(const site_id: TFRE_DB_GUID; const conn: IFRE_DB_CONNECTION): boolean;
 var site_object       : IFRE_DB_Object;
     childs            : TFRE_DB_GUIDArray;
     i                 : integer;
@@ -1422,7 +1422,7 @@ begin
 end;
 
 
-class procedure TFRE_DB_Accesspoint.AccessPointOnChange(const conn: IFRE_DB_CONNECTION; const is_dhcp: boolean; const dhcp_id: TGUID; const mac: TFRE_DB_String);
+class procedure TFRE_DB_Accesspoint.AccessPointOnChange(const conn: IFRE_DB_CONNECTION; const is_dhcp: boolean; const dhcp_id: TFRE_DB_GUID; const mac: TFRE_DB_String);
 var dhcp_obj        : IFRE_DB_Object;
     childs          : TFRE_DB_GUIDArray;
     dhcp_fixed_obj  : IFRE_DB_Object;
@@ -1476,10 +1476,10 @@ end;
 
 function TFRE_DB_Accesspoint.WEB_SaveOperation(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var scheme            : IFRE_DB_SCHEMEOBJECT;
-    update_object_uid : TGUid;
+    update_object_uid : TFRE_DB_GUID;
     raw_object        : IFRE_DB_Object;
     dhcp              : boolean;
-    dhcp_id           : TGUID;
+    dhcp_id           : TFRE_DB_GUID;
     mac               : TFRE_DB_String;
 
 
@@ -2146,7 +2146,7 @@ end;
 function TFRE_DB_Certificate.WEB_Revoke(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var cao       : IFRE_DB_Object;
     ca_base   : RFRE_CA_BASEINFORMATION;
-    crt_id    : TGUID;
+    crt_id    : TFRE_DB_GUID;
 
 begin
   try
@@ -2172,7 +2172,7 @@ end;
 
 function TFRE_DB_CERTIFICATE.Create_SSL_Certificate(const conn: IFRE_DB_CONNECTION): boolean;
 var cao       : IFRE_DB_Object;
-    cao_id    : TGUID;
+    cao_id    : TFRE_DB_GUID;
     ca_base   : RFRE_CA_BASEINFORMATION;
     crt_base  : RFRE_CRT_BASEINFORMATION;
 
@@ -2304,7 +2304,7 @@ var
   halo  : IFRE_DB_Object;
   caobj : IFRE_DB_Object;
   crtobj: IFRE_DB_Object;
-  ldomainid : TGUID;
+  ldomainid : TFRE_DB_GUID;
 
   procedure _allCA(const fld:IFRE_DB_Field);
   var ca: IFRE_DB_Object;
@@ -2587,9 +2587,9 @@ begin
   end;
 end;
 
-class procedure TFRE_DB_Network.NetworkOnChange(const dbc: IFRE_DB_Connection; const is_dhcp: boolean; const subnet: string; const ep_id: TGUID; const dns: string; const range_start, range_end: integer);
+class procedure TFRE_DB_Network.NetworkOnChange(const dbc: IFRE_DB_Connection; const is_dhcp: boolean; const subnet: string; const ep_id: TFRE_DB_GUID; const dns: string; const range_start, range_end: integer);
   var dhcp_obj        : IFRE_DB_Object;
-      dhcp_id         : TGUID;
+      dhcp_id         : TFRE_DB_GUID;
       childs          : TFRE_DB_GUIDArray;
       dhcp_subnet_obj : IFRE_DB_Object;
       i               : integer;
@@ -2598,7 +2598,7 @@ class procedure TFRE_DB_Network.NetworkOnChange(const dbc: IFRE_DB_Connection; c
       highest         : integer;
       sub_ip          : integer;
       do_update       : boolean;
-      routing_id      : TGUID;
+      routing_id      : TFRE_DB_GUID;
       routing_obj     : IFRE_DB_Object;
       route_obj       : IFRE_DB_Object;
       ep_obj          : IFRE_DB_Object;
@@ -2696,7 +2696,7 @@ class function TFRE_DB_Network.WBC_NewOperation(const input:IFRE_DB_Object ; con
       dbc        :   IFRE_DB_CONNECTION;
       raw_object :   IFRE_DB_Object;
       new_net    :   string;
-      ep_id      :   TGUID;
+      ep_id      :   TFRE_DB_GUID;
       dhcp       :   boolean;
       range_start:   integer;
       range_end  :   integer;
@@ -2763,10 +2763,10 @@ end;
 
 function TFRE_DB_Network.WEB_SaveOperation(const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 var scheme            : IFRE_DB_SCHEMEOBJECT;
-    update_object_uid : TGUid;
+    update_object_uid : TFRE_DB_GUID;
     raw_object        : IFRE_DB_Object;
     dbc               : IFRE_DB_CONNECTION;
-    ep_id             : TGUID;
+    ep_id             : TFRE_DB_GUID;
     dhcp              : boolean;
     subnet            : string;
     dns               : string;
@@ -3845,7 +3845,7 @@ var mo          : IFRE_DB_Object;
     enclosure   : TFRE_DB_ENCLOSURE;
     ua          : TFRE_DB_ZFS_UNASSIGNED;
     foundua     : boolean;
-    ua_uid      : TGUID;
+    ua_uid      : TFRE_DB_GUID;
     ua_name     : TFRE_DB_String;
 
 begin
