@@ -556,7 +556,7 @@ end;
 procedure TFRE_CERTIFICATE_APP.SetupApplicationStructure;
 begin
   inherited SetupApplicationStructure;
-  InitAppDesc('description');
+  InitApp('description');
   AddApplicationModule(TFRE_CERTIFICATE_CA_MOD.create);
 end;
 
