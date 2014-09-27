@@ -65,6 +65,8 @@ const
 
   CFOS_DB_SERVICES_COLLECTION          = 'services';
   CFOS_DB_ZONES_COLLECTION             = 'zones';
+  CFRE_DB_ASSET_COLLECTION             = 'assets';
+
 
 type
 
@@ -124,9 +126,17 @@ type
    published
    end;
 
+   { TFRE_DB_ASSET }
+
+   TFRE_DB_ASSET  =class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme       (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects           (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
    { TFRE_DB_MACHINE }
 
-   TFRE_DB_MACHINE=class(TFRE_DB_ObjectEx)
+   TFRE_DB_MACHINE=class(TFRE_DB_ASSET)
    protected
      class procedure RegisterSystemScheme       (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects           (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -230,6 +240,41 @@ type
      function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
    end;
+
+   { TFRE_DB_DATALINK_IPTUN }
+
+   TFRE_DB_DATALINK_IPTUN=class(TFRE_DB_DATALINK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+   end;
+
+   { TFRE_DB_IP_ADDRESS }
+
+   TFRE_DB_IP_ADDRESS=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
+
+   { TFRE_DB_IPV4_ADDRESS }
+
+   TFRE_DB_IPV4_ADDRESS=class(TFRE_DB_IP_ADDRESS)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
+   { TFRE_DB_IPV6_ADDRESS }
+
+   TFRE_DB_IPV6_ADDRESS=class(TFRE_DB_IP_ADDRESS)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
 
    { TFRE_DB_DATALINK_STUB }
 
@@ -335,7 +380,20 @@ type
 
   { TFRE_DB_DEVICE }
 
-  TFRE_DB_DEVICE=class(TFRE_DB_ObjectEx)
+  TFRE_DB_DEVICE=class(TFRE_DB_ASSET)
+  private
+    function getProvisioningMac: TFRE_DB_String;
+    procedure setProvisioningMac(AValue: TFRE_DB_String);
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    property  provisioningmac      : TFRE_DB_String read getProvisioningMac     write setProvisioningMac;
+  end;
+
+  { TFRE_DB_CRYPTOCPE }
+
+  TFRE_DB_CRYPTOCPE=class(TFRE_DB_DEVICE)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -703,6 +761,40 @@ type
   end;
 
 
+  { TFRE_DB_CPE_NETWORK_SERVICE }
+
+  TFRE_DB_CPE_NETWORK_SERVICE=class(TFRE_DB_SERVICE)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_CPE_OPENVPN_SERVICE }
+
+  TFRE_DB_CPE_OPENVPN_SERVICE=class(TFRE_DB_VPN)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_CPE_DHCP_SERVICE }
+
+  TFRE_DB_CPE_DHCP_SERVICE=class(TFRE_DB_DHCP)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_CPE_VIRTUAL_FILESERVER }
+
+  TFRE_DB_CPE_VIRTUAL_FILESERVER=class(TFRE_DB_VIRTUAL_FILESERVER)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+
+
 procedure Register_DB_Extensions;
 
 procedure CreateServicesCollections(const conn: IFRE_DB_COnnection);
@@ -920,6 +1012,223 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_DATALINK_IPTUN }
+
+class procedure TFRE_DB_DATALINK_IPTUN.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+    enum  : IFRE_DB_Enum;
+
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+
+  enum:=GFRE_DBI.NewEnum('ip_tun_mode').Setup(GFRE_DBI.CreateText('$enum_ip_tun_mode','ip tunnel mode Enum'));
+  enum.addEntry('ip6ip6',GetTranslateableTextKey('enum_ip_tun_mode_ip6ip6'));
+  enum.addEntry('sit',GetTranslateableTextKey('enum_ip_tun_mode_sit'));
+  GFRE_DBI.RegisterSysEnum(enum);
+
+  scheme.AddSchemeField('mode',fdbft_String).SetupFieldDef(true,false,'ip_tun_mode');
+  scheme.AddSchemeField('remote_ip_net_ipv6',fdbft_String);
+  scheme.AddSchemeField('local_ip_net_ipv6',fdbft_String);
+  scheme.AddSchemeField('remote_ip_net_ipv4',fdbft_String);
+  scheme.AddSchemeField('local_ip_net_ipv4',fdbft_String);
+  scheme.AddSchemeField('device',fdbft_String).required:=true;
+  group:=scheme.AddInputGroup('tunnel').Setup(GetTranslateableTextKey('scheme_tunnel_group'));
+  group.AddInput('mode',GetTranslateableTextKey('scheme_tunnel_mode'));
+  group.AddInput('remote_ip_net_ipv6',GetTranslateableTextKey('scheme_remote_ip_net_ipv6'));
+  group.AddInput('local_ip_net_ipv6',GetTranslateableTextKey('scheme_local_ip_net_ipv6'));
+  group.AddInput('remote_ip_net_ipv4',GetTranslateableTextKey('scheme_remote_ip_net_ipv4'));
+  group.AddInput('local_ip_net_ipv4',GetTranslateableTextKey('scheme_local_ip_net_ipv4'));
+  group.AddInput('device',GetTranslateableTextKey('scheme_device'));
+end;
+
+class procedure TFRE_DB_DATALINK_IPTUN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'enum_ip_tun_mode_ip6ip6','IPv6 in IPv6');
+    StoreTranslateableText(conn,'scheme_tunnel_group','IP Tunnel');
+    StoreTranslateableText(conn,'scheme_tunnel_mode','IP Tunnel Mode');
+    StoreTranslateableText(conn,'scheme_remote_ip_net_ipv6','IPv6 Remote Address');
+    StoreTranslateableText(conn,'scheme_local_ip_net_ipv6','IPv6 Local Address');
+    StoreTranslateableText(conn,'scheme_remote_ip_net_ipv4','IPv4 Remote Address');
+    StoreTranslateableText(conn,'scheme_local_ip_net_ipv4','IPv4 Local Address');
+    StoreTranslateableText(conn,'scheme_device','Device');
+  end;
+end;
+
+{ TFRE_DB_IP_ADDRESS }
+
+class procedure TFRE_DB_IP_ADDRESS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+  scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
+end;
+
+class procedure TFRE_DB_IP_ADDRESS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+{ TFRE_DB_IPV6_ADDRESS }
+
+class procedure TFRE_DB_IPV6_ADDRESS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+    inherited RegisterSystemScheme(scheme);
+    scheme.SetParentSchemeByName(TFRE_DB_IP_ADDRESS.Classname);
+    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv6 validator
+    scheme.AddSchemeField('slaac',fdbft_Boolean).required:=true;
+    group:=scheme.AddInputGroup('ip').Setup(GetTranslateableTextKey('scheme_ipv6_group'));
+    group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
+    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
+end;
+
+class procedure TFRE_DB_IPV6_ADDRESS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_ipv6_group','IPv6 Properties');
+    StoreTranslateableText(conn,'scheme_slaac','Stateless Adress Autoconfiguration');
+    StoreTranslateableText(conn,'scheme_ip_net','IPv6/Subnet');
+  end;
+end;
+
+{ TFRE_DB_IPV4 }
+
+class procedure TFRE_DB_IPV4_ADDRESS.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+    inherited RegisterSystemScheme(scheme);
+    scheme.SetParentSchemeByName(TFRE_DB_IP_ADDRESS.Classname);
+    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ip');
+    scheme.AddSchemeField('dhcp',fdbft_Boolean).required:=true;
+    group:=scheme.AddInputGroup('ip').Setup(GetTranslateableTextKey('scheme_ipv4_group'));
+    group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
+    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
+end;
+
+class procedure TFRE_DB_IPV4_ADDRESS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_ipv4_group','IPv4 Properties');
+    StoreTranslateableText(conn,'scheme_ip_net','IP/Subnet');
+    StoreTranslateableText(conn,'scheme_dhcp','DHCP');
+  end;
+end;
+
+{ TFRE_DB_CPE_NETWORK_SERVICE }
+
+class procedure TFRE_DB_CPE_NETWORK_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+end;
+
+class procedure TFRE_DB_CPE_NETWORK_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+{ TFRE_DB_CPE_VPN_SERVICE }
+
+class procedure TFRE_DB_CPE_OPENVPN_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VPN.ClassName);
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('server',fdbft_Boolean).required:=true;
+  scheme.AddSchemeField('device',fdbft_String).required:=true;
+  scheme.AddSchemeField('protocol',fdbft_String).required:=true;
+  scheme.AddSchemeField('remote',fdbft_String).multiValues:=true;
+  scheme.AddSchemeField('ca',fdbft_Stream).required:=true;
+  scheme.AddSchemeField('crt',fdbft_Stream).required:=true;
+  scheme.AddSchemeField('key',fdbft_Stream).required:=true;
+  //TODO: OPENVPN Configuration
+end;
+
+class procedure TFRE_DB_CPE_OPENVPN_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+{ TFRE_DB_CPE_DHCP_SERVICE }
+
+class procedure TFRE_DB_CPE_DHCP_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+end;
+
+class procedure TFRE_DB_CPE_DHCP_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+{ TFRE_DB_CPE_VIRTUAL_FILESERVER }
+
+class procedure TFRE_DB_CPE_VIRTUAL_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VIRTUAL_FILESERVER.ClassName);
+end;
+
+class procedure TFRE_DB_CPE_VIRTUAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+{ TFRE_DB_CRYPTOCPE }
+
+class procedure TFRE_DB_CRYPTOCPE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_DEVICE.ClassName);
+end;
+
+class procedure TFRE_DB_CRYPTOCPE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+{ TFRE_DB_ASSET }
+
+class procedure TFRE_DB_ASSET.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+  scheme.GetSchemeField('objname').required:=true;
+end;
+
+class procedure TFRE_DB_ASSET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
 
 { TFRE_DB_NAS }
 
@@ -1638,11 +1947,21 @@ begin
   end;
 end;
 
+function TFRE_DB_DEVICE.getProvisioningMac: TFRE_DB_String;
+begin
+  result:=Field('provisioningmac').AsString;
+end;
+
+procedure TFRE_DB_DEVICE.setProvisioningMac(AValue: TFRE_DB_String);
+begin
+  Field('provisioningmac').AsString:=AValue;
+end;
+
 class procedure TFRE_DB_DEVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
+  scheme.SetParentSchemeByName(TFRE_DB_ASSET.ClassName);
   scheme.AddSchemeField('provisioningmac',fdbft_String).SetupFieldDef(true,false,'','mac');
   scheme.AddSchemeField('provisioning_serial',fdbft_Int32);
   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
@@ -1827,7 +2146,7 @@ end;
 class procedure TFRE_DB_VPN.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  Scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
+  Scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
 end;
 
 class procedure TFRE_DB_VPN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3468,6 +3787,9 @@ end;
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+   scheme.AddSchemeField('vlan',fdbft_Uint16);
+   group:=scheme.AddInputGroup('vlan').Setup(GetTranslateableTextKey('scheme_vlan_group'));
+   group.AddInput('vlan',GetTranslateableTextKey('scheme_vlan'));
  end;
 
  class procedure TFRE_DB_DATALINK_VNIC.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3475,6 +3797,11 @@ end;
    newVersionId:='1.0';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
+     StoreTranslateableText(conn,'scheme_vlan_group','Vlan Properties');
+     StoreTranslateableText(conn,'scheme_vlan','Vlan');
    end;
  end;
 
@@ -3539,17 +3866,13 @@ end;
    scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
-   scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ip');
    scheme.AddSchemeField('mtu',fdbft_Uint16);
-   scheme.AddSchemeField('vlan',fdbft_Uint16);
    scheme.AddSchemeField('showvirtual',fdbft_Boolean).required:=true;
    scheme.AddSchemeField('showglobal',fdbft_Boolean).required:=true;
    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
    group.AddInput('objname',GetTranslateableTextKey('scheme_name'),true);
    group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
-   group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
    group.AddInput('mtu',GetTranslateableTextKey('scheme_mtu'));
-   group.AddInput('vlan',GetTranslateableTextKey('scheme_vlan'));
  end;
 
  class procedure TFRE_DB_DATALINK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3563,6 +3886,11 @@ end;
      StoreTranslateableText(conn,'scheme_ip_net','IP/Subnet');
      StoreTranslateableText(conn,'scheme_mtu','MTU');
      StoreTranslateableText(conn,'scheme_vlan','Vlan');
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
+     DeleteTranslateableText(conn,'scheme_ip_net');
+     DeleteTranslateableText(conn,'scheme_vlan');
    end;
  end;
 
@@ -3655,7 +3983,7 @@ end;
    enum.addEntry('OS',GetTranslateableTextKey('enum_type_os'));
 
    scheme.AddSchemeField('key',fdbft_String).required:=true;
-   scheme.AddSchemeField('state',fdbft_String).SetupFieldDef(true,false,'module_type');
+   scheme.AddSchemeField('state',fdbft_String).SetupFieldDef(true,false,'vmachine_state');
    scheme.AddSchemeField('vnc_port',fdbft_UInt32);
    scheme.AddSchemeField('vnc_host',fdbft_String).SetupFieldDef(false,false,'','ip');
  end;
@@ -3684,8 +4012,7 @@ end;
  var group : IFRE_DB_InputGroupSchemeDefinition;
  begin
    inherited RegisterSystemScheme(scheme);
-   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
-   scheme.GetSchemeField('objname').required:=true;
+   scheme.SetParentSchemeByName(TFRE_DB_ASSET.ClassName);
    scheme.AddSchemeField('ip',fdbft_String);
    scheme.AddSchemeFieldSubscheme('position','TFRE_DB_GEOPOSITION').required:=false;
    scheme.AddSchemeFieldSubscheme('address','TFRE_DB_ADDRESS').required:=false;
@@ -4018,11 +4345,14 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_PHYS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_VNIC);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_IPTUN);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_AGGR);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_STUB);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_DOMAIN);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_INSTANCE);
+
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ASSET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMachine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DNS);
@@ -4068,6 +4398,15 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FILESERVER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_GLOBAL_FILESERVER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUAL_FILESERVER);
+
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CRYPTOCPE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_NETWORK_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_OPENVPN_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_DHCP_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_VIRTUAL_FILESERVER);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IP_ADDRESS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV4_ADDRESS);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_ADDRESS);
    GFRE_DBI.Initialize_Extension_Objects;
  end;
 
