@@ -1210,6 +1210,10 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
+    StoreTranslateableText(conn,'scheme_pmac','Mac');
   end;
 end;
 
@@ -1965,16 +1969,22 @@ begin
   scheme.AddSchemeField('provisioningmac',fdbft_String).SetupFieldDef(true,false,'','mac');
   scheme.AddSchemeField('provisioning_serial',fdbft_Int32);
   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
   group.AddInput('provisioningmac',GetTranslateableTextKey('scheme_pmac'));
 end;
 
 class procedure TFRE_DB_DEVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_main_group','General Information');
     StoreTranslateableText(conn,'scheme_pmac','Mac');
+  end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -3794,7 +3804,7 @@ end;
 
  class procedure TFRE_DB_DATALINK_VNIC.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
    end;
@@ -3877,7 +3887,7 @@ end;
 
  class procedure TFRE_DB_DATALINK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
      StoreTranslateableText(conn,'scheme_main_group','Link Properties');
