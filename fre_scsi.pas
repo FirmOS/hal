@@ -1397,7 +1397,7 @@ var
       begin
         result := TFRE_DB_ENCLOSURE.Create;
         result.DeviceIdentifier:= enclosure_id;
-        result.EnclosureNr     := enclosures.FieldCount(true)-2;
+        result.EnclosureNr     := enclosures.FieldCount(true,true);
 //        writeln('ENCLOSURE NR:',result.EnclosureNr);
         enclosures.Field(enclosure_id).AsObject:=result;
       end;
