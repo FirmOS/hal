@@ -68,6 +68,7 @@ const
   CFOS_DB_ZONES_COLLECTION             = 'zones';
   CFRE_DB_ASSET_COLLECTION             = 'assets';
 
+  CFOS_DB_VFS_CUSTOMERS_DCOLL          = 'vfs_customers_chooser';
 
 type
 
@@ -750,7 +751,7 @@ type
 
   { TFRE_DB_GLOBAL_FILESERVER }
 
-  TFRE_DB_GLOBAL_FILESERVER=class(TFRE_DB_SERVICE)
+  TFRE_DB_GLOBAL_FILESERVER=class(TFRE_DB_FILESERVER)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -758,7 +759,7 @@ type
 
   { TFRE_DB_VIRTUAL_FILESERVER }
 
-  TFRE_DB_VIRTUAL_FILESERVER=class(TFRE_DB_SERVICE)
+  TFRE_DB_VIRTUAL_FILESERVER=class(TFRE_DB_FILESERVER)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -4505,33 +4506,39 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
-  scheme.GetSchemeField('objname').required:=true;
-  scheme.AddSchemeField('ip',fdbft_String).required:=true;
-  scheme.AddSchemeField('pool',fdbft_String).required:=true;
-  scheme.AddSchemeField('interface',fdbft_String);
-  scheme.AddSchemeField('vlan',fdbft_UInt16);
+  scheme.AddSchemeField('customer',fdbft_ObjLink).SetupFieldDef(true);
+  scheme.AddSchemeField('name',fdbft_String).required:=true;
+  //scheme.AddSchemeField('ip',fdbft_String).required:=true;
+  //scheme.AddSchemeField('pool',fdbft_String).required:=true;
+  //scheme.AddSchemeField('interface',fdbft_String);
+  //scheme.AddSchemeField('vlan',fdbft_UInt16);
 
   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('vfs_scheme_main_group'));
-  group.AddInput('objname',GetTranslateableTextKey('scheme_fileservername'),false);
-  group.AddInput('pool',GetTranslateableTextKey('scheme_pool'),true);
+  group.AddInput('customer',GetTranslateableTextKey('scheme_customer'),false,false,CFOS_DB_VFS_CUSTOMERS_DCOLL,true);
+  group.AddInput('name',GetTranslateableTextKey('scheme_fileservername'),false);
+  //group.AddInput('pool',GetTranslateableTextKey('scheme_pool'),true);
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
-  group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
-  group.AddInput('interface',GetTranslateableTextKey('scheme_interface'));
-  group.AddInput('vlan',GetTranslateableTextKey('scheme_vlan'));
+  //group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
+  //group.AddInput('interface',GetTranslateableTextKey('scheme_interface'));
+  //group.AddInput('vlan',GetTranslateableTextKey('scheme_vlan'));
 end;
 
 class procedure TFRE_DB_VIRTUAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'vfs_scheme_main_group','Virtual Fileserver Properties');
     StoreTranslateableText(conn,'scheme_fileservername','Servername');
-    StoreTranslateableText(conn,'scheme_pool','Diskpool');
+    //StoreTranslateableText(conn,'scheme_pool','Diskpool');
     StoreTranslateableText(conn,'scheme_description','Description');
-    StoreTranslateableText(conn,'scheme_ip','IP');
-    StoreTranslateableText(conn,'scheme_interface','Interface');
-    StoreTranslateableText(conn,'scheme_vlan','Vlan');
+    //StoreTranslateableText(conn,'scheme_ip','IP');
+    //StoreTranslateableText(conn,'scheme_interface','Interface');
+    //StoreTranslateableText(conn,'scheme_vlan','Vlan');
+  end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'scheme_customer','Customer');
   end;
 end;
 

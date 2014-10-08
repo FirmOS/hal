@@ -65,6 +65,8 @@ const
   CFRE_DB_DEVICE_IOSTAT_COLLECTION       = 'iostat';
   CFRE_DB_SG_LOGS_COLLECTION             = 'sglogs';
 
+  CFRE_DB_FILESHARE_COLLECTION           = 'fileshare';
+
   CFRE_DB_DEVICE_DEV_ID_INDEX   = 'deviceId';
 
   CFRE_DB_ENCLOSURE_ID_INDEX   = 'deviceIdentifier';
@@ -532,12 +534,10 @@ type
 
   { TFRE_DB_VIRTUAL_FILESHARE }
 
-  TFRE_DB_VIRTUAL_FILESHARE=class(TFRE_DB_ZFS_DATASET)
+  TFRE_DB_VIRTUAL_FILESHARE=class(TFRE_DB_ZFS_DATASET_FILE)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-  published
-    procedure CALC_GetIcons              (const setter: IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_NFS_ACCESS }
@@ -3600,18 +3600,13 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ZFS_DATASET_FILE.ClassName);
-  scheme.AddSchemeField('cifs',fdbft_Boolean);
-  scheme.AddSchemeField('nfs',fdbft_Boolean);
-  scheme.AddSchemeField('afp',fdbft_Boolean);
-  scheme.AddSchemeField('ftp',fdbft_Boolean);
-  scheme.AddSchemeField('webdav',fdbft_Boolean);
-  scheme.AddCalcSchemeField('icons',fdbft_String,@CALC_GetIcons);
-  group:=scheme.AddInputGroup('share').Setup(GetTranslateableTextKey('scheme_share'));
-  group.AddInput('objname',GetTranslateableTextKey('scheme_sharename'));
-  group.AddInput('cifs',GetTranslateableTextKey('scheme_cifs'));
-  group.AddInput('afp',GetTranslateableTextKey('scheme_afp'));
-  group.AddInput('ftp',GetTranslateableTextKey('scheme_ftp'));
-  group.AddInput('webdav',GetTranslateableTextKey('scheme_webdav'));
+  scheme.AddSchemeField('name',fdbft_String).required:=true;
+
+  group:=scheme.ReplaceInputGroup('main');
+  group.AddInput('name',GetTranslateableTextKey('scheme_sharename'));
+  group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
+  group.AddInput('quota_mb',GetTranslateableTextKey('scheme_quota'));
+  group.AddInput('referenced_mb',GetTranslateableTextKey('scheme_referenced'));
 end;
 
 class procedure TFRE_DB_VIRTUAL_FILESHARE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3619,39 +3614,11 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
-    StoreTranslateableText(conn,'scheme_share','Share Properties');
     StoreTranslateableText(conn,'scheme_sharename','Share Name');
-    StoreTranslateableText(conn,'scheme_cifs','CIFS (Windows File Sharing)');
-    StoreTranslateableText(conn,'scheme_afp','AFP (Apple Filing Protocol)');
-    StoreTranslateableText(conn,'scheme_ftp','FTP (File Transfer Protocol)');
-    StoreTranslateableText(conn,'scheme_webdav','WebDAV');
+    StoreTranslateableText(conn,'scheme_description','Description');
+    StoreTranslateableText(conn,'scheme_quota','Quota [MB]');
+    StoreTranslateableText(conn,'scheme_referenced','Referenced Quota [MB]');
   end;
-
-end;
-
-procedure TFRE_DB_VIRTUAL_FILESHARE.CALC_GetIcons(const setter: IFRE_DB_CALCFIELD_SETTER);
-var    licon    : TFRE_DB_String;
-
-  procedure AddIcon(const fieldname: string);
-  begin
-   if FieldExists(fieldname) then begin
-    if Field(fieldname).AsBoolean then begin
-     if length(licon)>0 then begin
-      licon := licon +',';
-     end;
-     licon := licon + 'images_apps/firmbox_storage/'+fieldname+'.png';
-    end;
-   end;
-  end;
-
-begin
-  licon := '';
-  AddIcon('cifs');
-  AddIcon('afp');
-  AddIcon('nfs');
-  AddIcon('ftp');
-  AddIcon('webdav');
-  setter.SetAsString(licon);
 end;
 
 { TFRE_DB_NFS_FILESHARE }
