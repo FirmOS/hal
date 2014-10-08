@@ -56,7 +56,8 @@ uses
   fre_zfs,
   fre_scsi,
   fre_openssl_interface,
-  fre_monitoring;
+  fre_monitoring,
+  fre_process;
 
 const
 
@@ -94,6 +95,9 @@ type
 
    TFRE_DB_SERVICE=class(TFRE_DB_ObjectEx)
    protected
+     procedure       ClearErrors;
+     function        ExecuteCMD(const cmd:string;out outstring:string;const ignore_errors:boolean=false):integer;
+
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
@@ -767,6 +771,8 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        ConfigureHAL:integer;
   end;
 
   { TFRE_DB_CPE_OPENVPN_SERVICE }
@@ -775,6 +781,8 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        ConfigureHAL:integer;
   end;
 
   { TFRE_DB_CPE_DHCP_SERVICE }
@@ -783,6 +791,8 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        ConfigureHAL:integer;
   end;
 
   { TFRE_DB_CPE_VIRTUAL_FILESERVER }
@@ -1142,6 +1152,98 @@ begin
   end;
 end;
 
+function TFRE_DB_CPE_NETWORK_SERVICE.ConfigureHAL: integer;
+var errorlist: TStringList;
+    icount   : integer;
+
+
+  procedure _NetIterator(const device:IFRE_DB_Object);
+  var phys       : TFRE_DB_DATALINK_PHYS;
+      iptun      : TFRE_DB_DATALINK_IPTUN;
+      ipv4       : TFRE_DB_IPV4_ADDRESS;
+      ipv6       : TFRE_DB_IPV4_ADDRESS;
+      resultcode : integer;
+      outstring  : string;
+
+    procedure _IPIterator (const ip:IFRE_DB_Object);
+    var devname:string;
+    begin
+      if ip.IsA(TFRE_DB_IPV4_ADDRESS,ipv4) then
+        begin
+          if icount=0 then
+            devname := phys.ObjectName
+          else
+            begin
+              devname := phys.ObjectName+':'+inttostr(icount);
+              ExecuteCMD('ifconfig '+devname+' down',outstring,true);
+            end;
+          inc(icount);
+          if (ipv4.FieldExists('dhcp')) and (ipv4.Field('dhcp').asboolean=true) then
+            ExecuteCMD('dhclient '+devname,outstring)
+          else
+            if ipv4.Field('ip_net').asstring<>'' then
+              ExecuteCMD('ifconfig '+devname+' '+ipv4.Field('ip_net').asstring+' up',outstring);
+        end;
+      if ip.IsA(TFRE_DB_IPV6_ADDRESS,ipv6) then
+        begin
+          devname := phys.ObjectName;
+          if (ipv6.FieldExists('slaac')) and (ipv6.Field('slaac').asboolean=true) then
+            ExecuteCMD('ifconfig '+devname+' inet6 up',outstring)
+          else
+            if ipv6.Field('ip_net').asstring<>'' then
+              ExecuteCMD('ifconfig '+devname+' add '+ipv6.Field('ip_net').asstring+' up',outstring);
+        end;
+    end;
+
+    procedure _IPTunIterator (const ip:IFRE_DB_Object);
+    var devname:string;
+    begin
+      devname := iptun.ObjectName;
+      if ip.IsA(TFRE_DB_IPV4_ADDRESS,ipv4) then
+        begin
+          if ipv4.Field('ip_net').asstring<>'' then
+            ExecuteCMD('ip addr add '+ipv4.Field('ip_net').asstring+' dev '+devname,outstring);
+        end;
+      if ip.IsA(TFRE_DB_IPV6_ADDRESS,ipv6) then
+        begin
+          if ipv6.Field('ip_net').asstring<>'' then
+            ExecuteCMD('ip -6 addr add '+ipv6.Field('ip_net').asstring+' dev '+devname,outstring);
+        end;
+    end;
+
+  begin
+    if device.IsA(TFRE_DB_DATALINK_PHYS,phys) then
+      begin
+        writeln('PHYS:',phys.ObjectName);
+        ExecuteCMD('dhclient -r '+phys.ObjectName,outstring,true);
+        ExecuteCMD('ifconfig '+phys.Objectname+' down',outstring,true);
+        icount := 0;
+        device.ForAllObjects(@_IPIterator);
+      end;
+    if device.IsA(TFRE_DB_DATALINK_IPTUN,iptun) then
+      begin
+        writeln('IPTUN:',iptun.ObjectName);
+        if iptun.Field('mode').asstring='ip6ip6' then
+          begin
+            ExecuteCMD('ip -6 tunnel del '+iptun.Objectname,outstring,true);
+            ExecuteCMD('ip -6 tunnel add '+iptun.Objectname+' mode '+iptun.Field('mode').asstring+' remote '+iptun.Field('REMOTE_IP_NET_IPV6').asstring+' local '+iptun.Field('LOCAL_IP_NET_IPV6').asstring+' dev '+iptun.Field('device').asstring,outstring);
+          end
+        else
+          begin
+            ExecuteCMD('ip tunnel del '+iptun.Objectname,outstring,true);
+            ExecuteCMD('ip tunnel add '+iptun.Objectname+' mode '+iptun.Field('mode').asstring+' remote '+iptun.Field('REMOTE_IP_NET_IPV4').asstring+' local '+iptun.Field('LOCAL_IP_NET_IPV4').asstring+' dev '+iptun.Field('device').asstring,outstring);
+          end;
+        device.ForAllObjects(@_IPTunIterator);
+      end;
+  end;
+
+begin
+  writeln('SWL:CONFIGUREHAL');
+  ClearErrors;
+  ForAllObjects(@_NetIterator);
+  writeln('ERRORS:',Field('errors').asobject.DumpToString());
+end;
+
 { TFRE_DB_CPE_VPN_SERVICE }
 
 class procedure TFRE_DB_CPE_OPENVPN_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1167,6 +1269,52 @@ begin
   end;
 end;
 
+function TFRE_DB_CPE_OPENVPN_SERVICE.ConfigureHAL: integer;
+var sl        :TStringList;
+    i         :integer;
+    outstring :string;
+begin
+  writeln('SWL:CONFIGUREHAL OPENVPN');
+  ClearErrors;
+  sl:=TStringList.Create;
+  try
+    sl.Add('client');
+    sl.Add('dev '+Field('device').asstring);
+    sl.Add('proto '+Field('protocol').asstring);
+    for i:=0 to Field('remote').ValueCount-1 do
+      begin
+        sl.add('remote '+Field('remote').AsStringItem[i]);
+      end;
+    sl.add('remote-random');
+    sl.add('script-security 2');
+    if Pos('tap',Field('device').asstring)>0 then
+      begin
+        sl.add('up /etc/openvpn/'+lowercase(ObjectName)+'/tap_up.sh');
+        sl.add('down /etc/openvpn/'+lowercase(ObjectName)+'/tap_down.sh');
+      end;
+    sl.add('nobind');
+    sl.add('persist-key');
+    sl.add('persist-tun');
+    sl.add('ca /etc/openvpn/'+lowercase(ObjectName)+'_ca.crt');
+    sl.add('cert /etc/openvpn/'+lowercase(ObjectName)+'_crt.crt');
+    sl.add('key /etc/openvpn/'+lowercase(ObjectName)+'_crt.key');
+    sl.add('log /var/log/openvpn_'+lowercase(ObjectName)+'.log');
+    sl.add('verb 3');
+    sl.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'.conf');
+
+    Field('ca').AsStream.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_ca.crt');
+    Field('crt').AsStream.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_crt.crt');
+    Field('key').AsStream.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_crt.key');
+
+  finally
+    sl.Free;
+  end;
+  ExecuteProcess('/usr/sbin/openvpn','--writepid /var/run/openvpn.'+lowercase(ObjectName)+'.pid --daemon ovpn-'+lowercase(ObjectName)+' --status /var/run/openvpn.'+lowercase(ObjectName)+'.status 10 --cd /etc/openvpn --config /etc/openvpn/'+lowercase(ObjectName)+'.conf',[]);
+//  ExecuteCMD('/usr/sbin/openvpn --writepid /var/run/openvpn.'+lowercase(ObjectName)+'.pid --daemon ovpn-'+lowercase(ObjectName)+' --status /var/run/openvpn.'+lowercase(ObjectName)+'.status 10 --cd /etc/openvpn --config /etc/openvpn/'+lowercase(ObjectName)+'.conf',outstring);
+  writeln('OPENVPN STARTED');
+  writeln('ERRORS:',Field('errors').asobject.DumpToString());
+end;
+
 { TFRE_DB_CPE_DHCP_SERVICE }
 
 class procedure TFRE_DB_CPE_DHCP_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1179,6 +1327,57 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
   end;
+end;
+
+function TFRE_DB_CPE_DHCP_SERVICE.ConfigureHAL: integer;
+begin
+ // (TFRE_DB_DHCP_SUBNET)
+ //  DNS (STRING) : [ '8.8.8.8' ]
+ //  UID (GUID) : [ 'e51265c8c1a42c429260970c3d1a8a0d' ]
+ //  ROUTER (STRING) : [ '10.55.0.65' ]
+ //  SUBNET (STRING) : [ '10.55.0.64/27' ]
+ //  DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
+ //  RANGE_END (STRING) : [ '10.55.0.62' ]
+ //  RANGE_START (STRING) : [ '10.55.0.40' ]
+ //  OPTION_TFTP66 (STRING) : [ '192.168.82.3' ]
+ //  21E712D0D27491408E4384C42E163331 (OBJECT) :
+ //  {
+ //    (TFRE_DB_DHCP_FIXED)
+ //    IP (STRING) : [ '10.55.0.35' ]
+ //    MAC (STRING) : [ '00:15:65:20:d2:af' ]
+ //    UID (GUID) : [ '21e712d0d27491408e4384c42e163331' ]
+ //    OBJNAME (STRING) : [ 'yealinkb' ]
+ //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
+ //  }
+ //  5C1F2364D6D0A9429572D99095C1A2BF (OBJECT) :
+ //  {
+ //    (TFRE_DB_DHCP_FIXED)
+ //    IP (STRING) : [ '10.55.0.36' ]
+ //    MAC (STRING) : [ '00:15:65:20:d4:91' ]
+ //    UID (GUID) : [ '5c1f2364d6d0a9429572d99095c1a2bf' ]
+ //    OBJNAME (STRING) : [ 'yealinkc' ]
+ //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
+ //  }
+ //  6B29ED1506F06341AFF3DA6EE808567B (OBJECT) :
+ //  {
+ //    (TFRE_DB_DHCP_FIXED)
+ //    IP (STRING) : [ '10.55.0.37' ]
+ //    MAC (STRING) : [ 'ac:f2:c5:34:ac:6c' ]
+ //    UID (GUID) : [ '6b29ed1506f06341aff3da6ee808567b' ]
+ //    OBJNAME (STRING) : [ 'ataa' ]
+ //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
+ //  }
+ //  BC0BC92CBFC2384397E8377AE5369CC6 (OBJECT) :
+ //  {
+ //    (TFRE_DB_DHCP_FIXED)
+ //    IP (STRING) : [ '10.55.0.34' ]
+ //    MAC (STRING) : [ '00:15:65:32:9e:12' ]
+ //    UID (GUID) : [ 'bc0bc92cbfc2384397e8377ae5369cc6' ]
+ //    OBJNAME (STRING) : [ 'yealinka' ]
+ //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
+ //  }
+ //}
+ //
 end;
 
 { TFRE_DB_CPE_VIRTUAL_FILESERVER }
@@ -4244,7 +4443,33 @@ begin
 
 end;
 
- class procedure TFRE_DB_Service.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+ procedure TFRE_DB_SERVICE.ClearErrors;
+ begin
+   DeleteField('errors');
+ end;
+
+  function TFRE_DB_SERVICE.ExecuteCMD(const cmd: string; out outstring: string; const ignore_errors: boolean): integer;
+ var errorobj    : IFRE_DB_Object;
+     resultcode  : integer;
+     errorstring : string;
+ begin
+   resultcode    := FRE_ProcessCMD(cmd,outstring,errorstring);
+   if resultcode<>0 then
+     begin
+       if ignore_errors=false then
+         begin
+           errorobj  := GFRE_DBI.NewObject;
+           errorobj.Field('cmd').asstring       := cmd;
+           errorobj.Field('resultcode').AsInt32 := resultcode;
+           errorobj.Field('error').asstring     := errorstring;
+           errorobj.Field('output').asstring    := outstring;
+           Field('errors').AddObject(errorobj);
+         end;
+     end;
+ end;
+
+  class procedure TFRE_DB_SERVICE.RegisterSystemScheme(
+   const scheme: IFRE_DB_SCHEMEOBJECT);
  var group : IFRE_DB_InputGroupSchemeDefinition;
  begin
    inherited RegisterSystemScheme(scheme);
