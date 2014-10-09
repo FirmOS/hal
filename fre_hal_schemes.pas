@@ -70,7 +70,6 @@ const
   CFRE_DB_DATACENTER_COLLECTION        = 'datacenter';
   CFRE_DB_HOST_COLLECTION              = 'hosts';
   CFRE_DB_TEMPLATE_COLLECTION          = 'templates';
-  CFRE_DB_DATALINK_COLLECTION          = 'datalink';
   CFRE_DB_IP_COLLECTION                = 'ip';
   CFRE_DB_ROUTING_COLLECTION           = 'routing';
 
@@ -108,6 +107,7 @@ type
 
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     class function  OnlyOneServicePerZone : boolean; virtual;
    published
      procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
    end;
@@ -239,7 +239,7 @@ type
 
    { TFRE_DB_DATALINK }
 
-   TFRE_DB_DATALINK=class(TFRE_DB_ObjectEx)
+   TFRE_DB_DATALINK=class(TFRE_DB_SERVICE)
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -793,6 +793,7 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class function  OnlyOneServicePerZone : boolean; override;
   published
   end;
 
@@ -815,14 +816,6 @@ type
   { TFRE_DB_VIRTUAL_FILESERVER }
 
   TFRE_DB_VIRTUAL_FILESERVER=class(TFRE_DB_FILESERVER)
-  protected
-    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-  end;
-
-  { TFRE_DB_NETWORK_SERVICE }
-
-  TFRE_DB_NETWORK_SERVICE=class(TFRE_DB_SERVICE)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -1310,22 +1303,6 @@ begin
 end;
 
 class procedure TFRE_DB_IMAP_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionId:='1.0';
-  if currentVersionId='' then begin
-    currentVersionId := '1.0';
-  end;
-end;
-
-{ TFRE_DB_NETWORK_SERVICE }
-
-class procedure TFRE_DB_NETWORK_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
-end;
-
-class procedure TFRE_DB_NETWORK_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
@@ -2671,6 +2648,11 @@ begin
     StoreTranslateableText(conn,'scheme_main_group','Routing');
     StoreTranslateableText(conn,'scheme_default','Default Routing');
   end;
+end;
+
+class function TFRE_DB_Routing.OnlyOneServicePerZone: boolean;
+begin
+  result := true;
 end;
 
 { TFRE_DB_Radius }
@@ -4413,13 +4395,13 @@ end;
  var group : IFRE_DB_InputGroupSchemeDefinition;
  begin
    inherited RegisterSystemScheme(scheme);
-   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+   scheme.SetParentSchemeByName(TFRE_DB_SERVICE.Classname);
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
    scheme.AddSchemeField('ipmpparentid',fdbft_ObjLink).multiValues:=false;
    scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
    scheme.AddSchemeField('mtu',fdbft_Uint16);
-   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
    group.AddInput('objname',GetTranslateableTextKey('scheme_name'),true);
    group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
    group.AddInput('mtu',GetTranslateableTextKey('scheme_mtu'));
@@ -4809,8 +4791,7 @@ end;
      end;
  end;
 
-  class procedure TFRE_DB_SERVICE.RegisterSystemScheme(
-   const scheme: IFRE_DB_SCHEMEOBJECT);
+  class procedure TFRE_DB_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  var group : IFRE_DB_InputGroupSchemeDefinition;
  begin
    inherited RegisterSystemScheme(scheme);
@@ -4823,7 +4804,7 @@ end;
    group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
  end;
 
- class procedure TFRE_DB_Service.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+  class procedure TFRE_DB_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
    newVersionId:='1.0';
    if currentVersionId='' then begin
@@ -4831,6 +4812,11 @@ end;
      StoreTranslateableText(conn,'scheme_main_group','General Information');
      StoreTranslateableText(conn,'scheme_objname','Servicename');
    end;
+ end;
+
+ class function TFRE_DB_SERVICE.OnlyOneServicePerZone: boolean;
+ begin
+   result := false;
  end;
 
  procedure TFRE_DB_SERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
@@ -4924,6 +4910,7 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_TIME);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_HOSTNAME);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FC_PORT);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_PHYS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_VNIC);
@@ -4932,7 +4919,6 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_STUB);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_IPMP);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_DOMAIN);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_INSTANCE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATACENTER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FBZ_TEMPLATE);
@@ -4984,7 +4970,6 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUAL_FILESERVER);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SSH_SERVICE);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_NETWORK_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IMAP_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MTA_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_POSTGRES_SERVICE);
@@ -5008,10 +4993,20 @@ begin
 procedure CreateServicesCollections(const conn: IFRE_DB_COnnection);
 var
   collection: IFRE_DB_COLLECTION;
+  ix_def    : TFRE_DB_INDEX_DEF;
 begin
   if not conn.CollectionExists(CFOS_DB_SERVICES_COLLECTION) then begin
     collection  := conn.CreateCollection(CFOS_DB_SERVICES_COLLECTION);
-    collection.DefineIndexOnField('objname',fdbft_String,true,true,'def',false);
+    collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'def',false);
+  end else
+  begin
+    collection  := conn.GetCollection(CFOS_DB_SERVICES_COLLECTION);
+    ix_def      := collection.GetIndexDefinition('def');
+    if lowercase(ix_def.FieldName)='objname' then
+      begin
+        collection.DropIndex('def');
+        CheckDbResult(collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'def',false));
+      end;
   end;
   if not conn.CollectionExists(CFOS_DB_ZONES_COLLECTION) then begin
     collection  := conn.CreateCollection(CFOS_DB_ZONES_COLLECTION);
