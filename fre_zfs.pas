@@ -55,6 +55,7 @@ const
 
   CFRE_DB_ZFS_RAID_LEVEL      : array [TFRE_DB_ZFS_RAID_LEVEL] of string        = ('rl_stripe','rl_mirror','rl_z1','rl_z2','rl_z3','rl_undefined');
   CFRE_DB_ZFS_POOL_COLLECTION            = 'pool';
+  CFRE_DB_ZFS_DATASET_COLLECTION         = 'dataset';
   CFRE_DB_ZFS_VDEV_COLLECTION            = 'vdev';
   CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION     = 'blockdevice';
   CFRE_DB_ZFS_IOSTAT_COLLECTION          = 'ziostat';
@@ -3600,6 +3601,7 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ZFS_DATASET_FILE.ClassName);
+  scheme.AddSchemeField('fileserver',fdbft_ObjLink).required:=true;
   scheme.AddSchemeField('name',fdbft_String).required:=true;
 
   group:=scheme.ReplaceInputGroup('main');
@@ -3716,8 +3718,7 @@ begin
 
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
   scheme.GetSchemeField('objname').required:=true;
-  scheme.AddSchemeField('fileserver',fdbft_ObjLink).required:=true;
-  scheme.AddSchemeField('pool',fdbft_String).required:=true;
+  scheme.AddSchemeField('poolid',fdbft_ObjLink);
   scheme.AddSchemeField('reservation_mb',fdbft_UInt32);
   scheme.AddSchemeField('refres_mb',fdbft_UInt32);
   scheme.AddSchemeField('recordsize_kb',fdbft_UInt16);
@@ -3733,8 +3734,6 @@ begin
   scheme.AddCalcSchemeField ('displayname',fdbft_String,@CALC_GetDisplayName);
 
   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-  group.AddInput('fileserver','',true,true);
-  group.AddInput('pool',GetTranslateableTextKey('scheme_pool'),true);
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
   group:=scheme.AddInputGroup('advanced').Setup(GetTranslateableTextKey('scheme_advanced_group'));
   group.AddInput('reservation_mb',GetTranslateableTextKey('scheme_reservation'));
