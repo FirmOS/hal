@@ -241,6 +241,8 @@ type
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     class function getAllDataLinkClasses   : TFRE_DB_StringArray;
    published
      function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
    end;
@@ -4422,6 +4424,11 @@ end;
      DeleteTranslateableText(conn,'scheme_ip_net');
      DeleteTranslateableText(conn,'scheme_vlan');
    end;
+ end;
+
+ class function TFRE_DB_DATALINK.getAllDataLinkClasses: TFRE_DB_StringArray;
+ begin
+   Result:=TFRE_DB_StringArray.create(TFRE_DB_DATALINK_PHYS.ClassName,TFRE_DB_DATALINK_AGGR.ClassName,TFRE_DB_DATALINK_IPMP.ClassName,TFRE_DB_DATALINK_IPTUN.ClassName,TFRE_DB_DATALINK_STUB.ClassName,TFRE_DB_DATALINK_VNIC.ClassName);
  end;
 
  function TFRE_DB_DATALINK.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
