@@ -129,18 +129,8 @@ type
     procedure setIOStat             (const Avalue: TFRE_DB_IOSTAT);
     function  getMachineID          : TFRE_DB_GUID;
   protected
-    procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getChildrenString         (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
-    procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-
-    procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-
   public
     procedure removeFromPool          ;
     function  getPool                 (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_ROOTOBJ; virtual;
@@ -180,6 +170,14 @@ type
     property  MachineID               : TFRE_DB_GUID read GetMachineID write SetMachineID;
 
   published
+    procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
+    procedure _getDnDClass               (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getIcon                   (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getChildrenString         (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getDisableDrag            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -200,14 +198,6 @@ type
     function  getDeviceName                     : TFRE_DB_String;
     procedure setDeviceIdentifier               (AValue: TFRE_DB_String);
     procedure setDeviceName                     (AValue: TFRE_DB_String);
-
-    procedure _getDnDClass                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getDisableDrag             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getDisableDrop             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getMachineDevicename       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getMachineDeviceIdentifier (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
@@ -221,7 +211,13 @@ type
     property  DeviceName        : TFRE_DB_String read getDeviceName write setDeviceName;
     property  IsUnassigned      : Boolean read getisUnassigned write setIsUnassgined;
   published
-    function        WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    procedure _getDnDClass                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getDisableDrag             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getDisableDrop             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getMachineDevicename       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getMachineDeviceIdentifier (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    function  WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_OS_BLOCKDEVICE }
@@ -378,7 +374,6 @@ type
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-    procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
   public
     class function  CreateEmbeddedPoolObjectfromDB (const conn:IFRE_DB_CONNECTION; const db_zfs_pool_id:TFRE_DB_GUID;  const include_os_blockdevices:boolean): TFRE_DB_ZFS_POOL;
     function  GetDatastorage            (const conn: IFRE_DB_CONNECTION): TFRE_DB_ZFS_DATASTORAGE;
@@ -403,9 +398,9 @@ type
   published
     function  WEB_MOSContent                         (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_ZFSContent                         (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
-   published
+  published
+    procedure _getMOSCaption                         (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
     function  WEB_GetDefaultCollection               (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
-
   end;
 
   { TFRE_DB_ZFS_UNASSIGNED }

@@ -37,7 +37,6 @@ type
  private
    procedure SetCaption                 (const AValue: TFRE_DB_String);
    function  GetCaption                 : TFRE_DB_String;
-   procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
  protected
    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -48,6 +47,7 @@ type
    procedure SetMOSKey                  (const avalue: TFRE_DB_String);
    function  GetMOSKey                  : TFRE_DB_String;
  published
+   procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
    function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;

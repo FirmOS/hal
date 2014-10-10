@@ -106,14 +106,6 @@ type
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-
-    procedure _getLayoutCaption                 (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
-    procedure _getLayoutSubCaption              (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
-    procedure _getLayoutIcon                    (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
-    procedure _getSizeMB                        (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    procedure _getCaption                       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-
   public
     function  GetTargetPorts: TFRE_DB_StringArray;
     function  hasParentinEnclosure               : boolean;
@@ -133,6 +125,12 @@ type
     property OperationalPathCount                : Uint16 read GetOperationalPathCount write SetOperationalPathCount;
     property DiskLog                             : TFRE_DB_SG_LOGS read GetDiskLog write SetDiskLog;
   published
+    procedure _getLayoutCaption                 (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutSubCaption              (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutIcon                    (const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
+    procedure _getSizeMB                        (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+    procedure _getCaption                       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
+    procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
@@ -234,12 +232,6 @@ type
   public
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    procedure _getChildrenString                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
-    procedure _getLayoutCaption                 (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
-    procedure _getLayoutSubcaption              (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
-    procedure _getLayoutIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
-    procedure _getStatusIcon                    (const calc: IFRE_DB_CALCFIELD_SETTER);
-
   public
     procedure AddExpanderEmbedded               (const expander: TFRE_DB_SAS_Expander; const devicename: string='');
     function  GetDriveSlotEmbedded              (const slotnr:UInt16; out driveslot: TFRE_DB_DRIVESLOT):boolean;
@@ -260,6 +252,11 @@ type
     property  ParentInEnclosureUID : TFRE_DB_GUID read GetParentInEnclosureUID write SetParentInEnclosureUID;
 
   published
+    procedure _getChildrenString                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutCaption                 (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutSubcaption              (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getLayoutIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
+    procedure _getStatusIcon                    (const calc: IFRE_DB_CALCFIELD_SETTER);
     function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -2170,13 +2167,13 @@ end;
 procedure Register_DB_Extensions;
 begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_UNDEFINED_BLOCKDEVICE);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SG_LOGS);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_PHYS_DISK);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SAS_DISK);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SATA_DISK);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SAS_EXPANDER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DRIVESLOT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ENCLOSURE);
-  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SG_LOGS);
   GFRE_DBI.Initialize_Extension_Objects;
 end;
 

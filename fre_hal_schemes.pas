@@ -168,15 +168,13 @@ type
    protected
      class procedure RegisterSystemScheme       (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects           (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-     procedure       _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-     procedure       _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
-
    public
      procedure       DeleteReferencingToMe      (const conn: IFRE_DB_CONNECTION);
      procedure       SetMOSStatus               (const status: TFRE_DB_MOS_STATUS_TYPE; const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION);
      function        GetMOSStatus               : TFRE_DB_MOS_STATUS_TYPE;
-
    published
+     procedure       _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
+     procedure       _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
      procedure       CALC_GetDisplayAddress     (const setter:IFRE_DB_CALCFIELD_SETTER);
      procedure       CALC_GetDisplayName        (const setter:IFRE_DB_CALCFIELD_SETTER);
      function        WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
@@ -2633,7 +2631,7 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
   scheme.AddSchemeField('default',fdbft_String).required:=true;
-  scheme.AddSchemeFieldSubscheme('static','TFRE_DB_ROUTE').multiValues:=true;
+  //scheme.AddSchemeFieldSubscheme('static','TFRE_DB_ROUTE').multiValues:=true; { FIXXME:HH -> TFRE_DB_ROUTE }
 
   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
   group.UseInputGroup('TFRE_DB_SERVICE','main');
