@@ -1470,7 +1470,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HTTPTestcase);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPULoadTestcase);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_JobProgress);
-  GFRE_DBI.Initialize_Extension_Objects;
+  //GFRE_DBI.Initialize_Extension_Objects;
 end;
 
 function GetStatusIconURI(const status: string): string;

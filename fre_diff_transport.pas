@@ -110,7 +110,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_UPDATE_TRANSPORT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_INSERT_TRANSPORT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DELETE_TRANSPORT);
-  GFRE_DBI.Initialize_Extension_Objects;
+  //GFRE_DBI.Initialize_Extension_Objects;
 end;
 
 

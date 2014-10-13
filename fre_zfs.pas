@@ -3825,9 +3825,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_LUN);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUAL_FILESHARE);
 
-  GFRE_DBI.Initialize_Extension_Objects;
-
-  GFRE_DBI.Initialize_Extension_Objects;
+  //GFRE_DBI.Initialize_Extension_Objects;
 end;
 
 function String2DBZFSRaidLevelType(const fts: string): TFRE_DB_ZFS_RAID_LEVEL;

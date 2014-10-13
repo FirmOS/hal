@@ -2174,7 +2174,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SAS_EXPANDER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DRIVESLOT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ENCLOSURE);
-  GFRE_DBI.Initialize_Extension_Objects;
+  //GFRE_DBI.Initialize_Extension_Objects;
 end;
 
 

@@ -4992,7 +4992,7 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_HOSTNET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV4_NETROUTE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_NETROUTE);
-   GFRE_DBI.Initialize_Extension_Objects;
+   //GFRE_DBI.Initialize_Extension_Objects;
  end;
 
 procedure CreateServicesCollections(const conn: IFRE_DB_COnnection);
