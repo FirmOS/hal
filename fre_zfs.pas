@@ -3597,10 +3597,9 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ZFS_DATASET_FILE.ClassName);
   scheme.AddSchemeField('fileserver',fdbft_ObjLink).required:=true;
-  scheme.AddSchemeField('name',fdbft_String).required:=true;
 
   group:=scheme.ReplaceInputGroup('main');
-  group.AddInput('name',GetTranslateableTextKey('scheme_sharename'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_sharename'));
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
   group.AddInput('quota_mb',GetTranslateableTextKey('scheme_quota'));
   group.AddInput('referenced_mb',GetTranslateableTextKey('scheme_referenced'));

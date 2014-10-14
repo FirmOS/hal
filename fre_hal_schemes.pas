@@ -1167,9 +1167,8 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
-  scheme.AddSchemeField('name',fdbft_String).required:=true;
   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('cfs_scheme_main_group'));
-  group.AddInput('name',GetTranslateableTextKey('scheme_fileservername'),false);
+  group.AddInput('objname',GetTranslateableTextKey('scheme_fileservername'),false);
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
 end;
 
@@ -4926,7 +4925,6 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
   scheme.AddSchemeField('customer',fdbft_ObjLink).SetupFieldDef(true);
-  scheme.AddSchemeField('name',fdbft_String).required:=true;
   //scheme.AddSchemeField('ip',fdbft_String).required:=true;
   //scheme.AddSchemeField('pool',fdbft_String).required:=true;
   //scheme.AddSchemeField('interface',fdbft_String);
@@ -4934,7 +4932,7 @@ begin
 
   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('vfs_scheme_main_group'));
   group.AddInput('customer',GetTranslateableTextKey('scheme_customer'),false,false,CFOS_DB_VFS_CUSTOMERS_DCOLL,true);
-  group.AddInput('name',GetTranslateableTextKey('scheme_fileservername'),false);
+  group.AddInput('objname',GetTranslateableTextKey('scheme_fileservername'),false);
   //group.AddInput('pool',GetTranslateableTextKey('scheme_pool'),true);
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
   //group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
