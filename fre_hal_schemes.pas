@@ -1551,7 +1551,9 @@ var icount   : integer;
   var phys       : TFRE_DB_DATALINK_PHYS;
       iptun      : TFRE_DB_DATALINK_IPTUN;
       ipv4       : TFRE_DB_IPV4_HOSTNET;
-      ipv6       : TFRE_DB_IPV4_HOSTNET;
+      ipv6       : TFRE_DB_IPV6_HOSTNET;
+      r6         : TFRE_DB_IPV6_NETROUTE;
+      r4         : TFRE_DB_IPV4_NETROUTE;
       resultcode : integer;
       outstring  : string;
       param      : string;
@@ -1632,6 +1634,17 @@ var icount   : integer;
         device.ForAllObjects(@_IPTunIterator);
         ExecuteCMD('ip link set '+iptun.Objectname+' up',outstring,true);
       end;
+    if device.IsA(TFRE_DB_IPV6_NETROUTE,r6) then
+      begin
+        writeln('ROUTE6:',r6.ObjectName);
+        ExecuteCMD('ip -6 route add '+ r6.Field('ip_net').asstring+' via '+r6.Field('gateway').asstring,outstring,false);
+      end;
+    if device.IsA(TFRE_DB_IPV4_NETROUTE,r4) then
+      begin
+        writeln('ROUTE4:',r4.ObjectName);
+        ExecuteCMD('ip route add '+ r4.Field('ip_net').asstring+' via '+r4.Field('gateway').asstring,outstring,false);
+      end;
+
   end;
 
 begin
