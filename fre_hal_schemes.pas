@@ -44,7 +44,7 @@ unit fre_hal_schemes;
 interface
 uses
   Classes, SysUtils,FOS_TOOL_INTERFACES,
-  Process,
+  Process, unixutil,
 
   FRE_HAL_UTILS,
   FRE_DB_COMMON,
@@ -277,8 +277,6 @@ type
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
    end;
-
-   { TFRE_DB_IP_ADDRESS }
 
    { TFRE_DB_IP_HOSTNET }
 
@@ -797,6 +795,25 @@ type
   published
   end;
 
+  { TFRE_DB_FS_ENTRY }
+
+  TFRE_DB_FS_ENTRY=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    procedure InternalSetup ; override;
+    procedure SetIsFile     (const isfile:boolean);
+    function  GetIsFile     : Boolean;
+  public
+    procedure SetProperties (const name : TFRE_DB_String ; const is_file : boolean; const size : NativeInt ; const mode : Cardinal; const time : Longint);
+    function  FileDirName   : String;
+  published
+    function  WEB_Content       (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession ; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_Menu          (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession ; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_CreateZip     (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession ; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_CHILDRENDATA  (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession ; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+  end;
+
   { TFRE_DB_FILESERVER }
 
   TFRE_DB_FILESERVER=class(TFRE_DB_SERVICE)
@@ -1226,6 +1243,11 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main_group','Link Properties');
+    StoreTranslateableText(conn,'scheme_name','Link Name');
+    StoreTranslateableText(conn,'scheme_description','Description');
+    StoreTranslateableText(conn,'scheme_mtu','MTU');
   end;
 end;
 
@@ -4366,6 +4388,11 @@ end;
      currentVersionId := '1.1';
      StoreTranslateableText(conn,'scheme_vlan_group','Vlan Properties');
      StoreTranslateableText(conn,'scheme_vlan','Vlan');
+
+     StoreTranslateableText(conn,'scheme_main_group','Link Properties');
+     StoreTranslateableText(conn,'scheme_name','Link Name');
+     StoreTranslateableText(conn,'scheme_description','Description');
+     StoreTranslateableText(conn,'scheme_mtu','MTU');
    end;
  end;
 
@@ -4398,6 +4425,11 @@ end;
    newVersionId:='1.0';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+
+     StoreTranslateableText(conn,'scheme_main_group','Link Properties');
+     StoreTranslateableText(conn,'scheme_name','Link Name');
+     StoreTranslateableText(conn,'scheme_description','Description');
+     StoreTranslateableText(conn,'scheme_mtu','MTU');
    end;
  end;
 
@@ -4944,6 +4976,238 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
   end;
+end;
+
+{ TFRE_DB_FS_ENTRY }
+
+class procedure TFRE_DB_FS_ENTRY.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId := '1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+class procedure TFRE_DB_FS_ENTRY.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+procedure TFRE_DB_FS_ENTRY.InternalSetup;
+begin
+  inherited InternalSetup;
+  Field('isfile').AsBoolean:=true;
+  Field('mypath').AsString :='/';
+end;
+
+procedure TFRE_DB_FS_ENTRY.SetIsFile(const isfile: boolean);
+begin
+  Field('isfile').AsBoolean := isfile;
+  if isfile then begin
+    Field('children').AsString:='';
+  end else begin
+    Field('children').AsString:='UNCHECKED';
+  end;
+end;
+
+function TFRE_DB_FS_ENTRY.GetIsFile: Boolean;
+begin
+  result := Field('isfile').AsBoolean;
+end;
+
+procedure TFRE_DB_FS_ENTRY.SetProperties(const name: TFRE_DB_String; const is_file: boolean; const size: NativeInt; const mode: Cardinal; const time: Longint);
+var
+    y, mon, d, h, min, s: word;
+    fosdt : TFRE_DB_DateTime64;
+    icon  : String;
+    hrtype: String;
+
+   procedure mimeTypeToIconAndHRType(const mt: String; var icon: String; var hrtype: String);
+   var
+     mtp: TFRE_DB_StringArray;
+   begin
+     GFRE_BT.SeperateString(LowerCase(mt),'/',mtp);
+     icon:='images_apps/test/file.png';
+     hrtype:='Unknown';
+     case mtp[0] of
+       'audio': begin
+                  icon:='images_apps/test/audio-basic.png';
+                  hrtype:='Audio';
+                end;
+       'video': begin
+                  icon:='images_apps/test/video-x-generic-mplayer.png';
+                  hrtype:='Video';
+                end;
+       'image': begin
+                  hrtype:='Image';
+                  case mtp[1] of
+                    'bmp': icon:='images_apps/test/image-bmp.png';
+                    'jpeg': icon:='images_apps/test/image-jpeg.png';
+                    'tiff': icon:='images_apps/test/image-tiff.png';
+                    'gif': icon:='images_apps/test/image-gif.png';
+                    'png': icon:='images_apps/test/image-png.png';
+                  end;
+                end;
+       'application': begin
+                        hrtype:='Application file';
+                        case mtp[1] of
+                          'zip': icon:='images_apps/test/application-zip.png';
+                          'pdf': icon:='images_apps/test/application-pdf.png';
+                          'msword': icon:='images_apps/test/page-word.png';
+                          'postscript': icon:='images_apps/test/application-postscript-2.png';
+                          'rtf': icon:='images_apps/test/application-rtf.png';
+                          'wordperfect5.1': icon:='images_apps/test/application-vnd.wordperfect-abiword.png';
+                          'octet-stream': hrtype:='Unknown';
+                        end;
+                      end;
+     end;
+   end;
+
+begin
+  EpochToLocal(time,y,mon,d,h,min,s);
+  Field('date').AsDateTime := GFRE_DT.EncodeTime(y,mon,d,h,min,s,0);
+  Field('name').AsString   := name;
+  Field('size').AsUInt64   := size;
+  if is_file then begin
+    Field('sizeHR').AsString := GFRE_BT.ByteToString(size);
+    mimeTypeToIconAndHRType(FREDB_Filename2MimeType(name),icon,hrtype);
+    Field('typeHR').AsString   := hrtype;
+    Field('icon').AsString:=FREDB_getThemedResource(icon);
+    Field('objectclass').AsString:='TFRE_DB_TEST_FILE';
+  end else begin
+    Field('typeHR').AsString   := 'Folder';
+    Field('sizeHR').AsString := '';
+    Field('icon').AsString:=FREDB_getThemedResource('images_apps/test/folder.png');
+    Field('icon_open').AsString:=FREDB_getThemedResource('images_apps/test/folder-open.png');
+    Field('objectclass').AsString:='TFRE_DB_FS_ENTRY';
+  end;
+  Field('mode').AsUInt32   := mode;
+  SetIsFile(is_file);
+end;
+
+function TFRE_DB_FS_ENTRY.FileDirName: String;
+begin
+  result := Field('name').AsString;
+end;
+
+function TFRE_DB_FS_ENTRY.WEB_Content(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+    res : TFRE_DB_STORE_DATA_DESC;
+    obj : IFRE_DB_Object;
+    i   : Integer;
+begin
+  result := GFRE_DB_NIL_DESC;
+end;
+
+function TFRE_DB_FS_ENTRY.WEB_Menu(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  sel: TFRE_DB_String;
+  opd: IFRE_DB_Object;
+  inp: IFRE_DB_Object;
+
+  procedure GotAnswer(const ses: IFRE_DB_UserSession; const new_input: IFRE_DB_Object; const status: TFRE_DB_COMMAND_STATUS; const ocid: Qword; const opaquedata: IFRE_DB_Object);
+  var
+    res: TFRE_DB_MENU_DESC;
+    fd : TFRE_DB_FS_ENTRY;
+  begin
+    res:=TFRE_DB_MENU_DESC.create.Describe;
+    if new_input.FieldExists('info') then begin
+      fd:=new_input.Field('info').AsObject.Implementor_HC as TFRE_DB_FS_ENTRY;
+      if fd.GetIsFile then begin
+        res.AddEntry.DescribeDownload('Download','','/download'+opaquedata.Field('fileid').AsString);
+        ses.SendServerClientAnswer(res,ocid);
+      end else begin
+        res.AddEntry.Describe('Create ZIP','',TFRE_DB_SERVER_FUNC_DESC.create.Describe('TFRE_DB_FS_ENTRY',opaquedata.Field('rooTFRE_DB_GUID').AsGUID,'CreateZip'));
+        ses.SendServerClientAnswer(res,ocid);
+      end;
+    end else begin
+      ses.SendServerClientAnswer(res,ocid);
+      ses.SendServerClientRequest(TFRE_DB_MESSAGE_DESC.create.Describe('Error','File/Directory not found!',fdbmt_error));
+    end;
+  end;
+
+begin
+  opd := GFRE_DBI.NewObject;
+  inp := GFRE_DBI.NewObject;
+  inp.Field('fileid').AsString:=copy(input.Field('selected').AsString,1,Length(input.Field('selected').AsString)-1);
+  opd.Field('fileid').AsString:=inp.Field('fileid').AsString;
+  opd.Field('rooTFRE_DB_GUID').AsGUID:=UID;
+  if ses.InvokeRemoteRequest('SAMPLEFEEDER','GETFILEDIRINFO',inp,@GotAnswer,opd)=edb_OK then begin
+    result := GFRE_DB_SUPPRESS_SYNC_ANSWER;
+  end else begin
+    result := TFRE_DB_STORE_DATA_DESC.create.Describe(0);
+  end;
+end;
+
+function TFRE_DB_FS_ENTRY.WEB_CreateZip(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var
+  res : TFRE_DB_FORM_DIALOG_DESC;
+begin
+  Result:=GFRE_DB_NIL_DESC;
+  res:=TFRE_DB_FORM_DIALOG_DESC.create.Describe('ZIP');
+  res.AddDescription.Describe('','Your ZIP file is ready to download.');
+  res.AddButton.DescribeDownload('Download','/download/test.zip',true);
+  ses.SendServerClientRequest(res);
+end;
+
+function TFRE_DB_FS_ENTRY.WEB_CHILDRENDATA(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var obj      : IFRE_DB_Object;
+    inp      : IFRE_DB_Object;
+    response : IFRE_DB_Object;
+    opd      : IFRE_DB_Object;
+    lvl      : String;
+
+    procedure GotAnswer(const ses: IFRE_DB_UserSession; const new_input: IFRE_DB_Object; const status: TFRE_DB_COMMAND_STATUS; const ocid: Qword; const opaquedata: IFRE_DB_Object);
+    var res      : TFRE_DB_STORE_DATA_DESC;
+         i       : NativeInt;
+         cnt     : NativeInt;
+         newnew  : IFRE_DB_Object;
+
+         procedure addEntry(const fld : IFRE_DB_Field);
+         var mypath : string;
+             entry  : IFRE_DB_Object;
+         begin
+           if fld.FieldType=fdbft_Object then
+             begin
+               inc(cnt);
+               entry := fld.CheckOutObject;
+               entry.Field('uidpath').AsStringArr := opaquedata.Field('UIP').AsStringArr;
+               mypath                             := opaquedata.Field('LVL').AsString+ entry.Field('name').AsString +'/';
+               entry.Field('mypath').AsString     := mypath;
+               res.addTreeEntry(entry,entry.Field('isfile').AsBoolean=false);
+             end;
+         end;
+
+    begin
+      res:=TFRE_DB_STORE_DATA_DESC.create.Describe(0);
+      cnt := 0;
+      new_input.ForAllFields(@addEntry);
+      res.Describe(cnt);
+      ses.SendServerClientAnswer(res,ocid);
+      opaquedata.Finalize;
+    end;
+
+begin
+  //writeln('BROWSE CALL INPUT ',input.DumpToString());
+  inp := GFRE_DBI.NewObject;
+  lvl := input.Field('parentid').AsString;
+  inp.Field('level').AsString:= lvl;
+
+  opd := GFRE_DBI.NewObject;
+  opd.Field('UIP').AsGUIDArr := self.GetUIDPathUA;
+  opd.Field('LVL').AsString  := lvl;
+
+  if ses.InvokeRemoteRequest('SAMPLEFEEDER','BROWSEPATH',inp,@GotAnswer,opd)=edb_OK then
+    begin
+      result := GFRE_DB_SUPPRESS_SYNC_ANSWER;
+      exit;
+    end
+  else
+    begin
+      result := TFRE_DB_STORE_DATA_DESC.create.Describe(0);
+      inp.Finalize;
+      opd.Finalize;
+    end;
 end;
 
 { TFRE_DB_FILESERVER }
