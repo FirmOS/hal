@@ -403,6 +403,10 @@ var zp         : Pzpool_handle_t;
                    // writeln(StringOfChar(' ',indent),name,' <array of uint64_t>');
                  end;
              end;
+         DATA_TYPE_BOOLEAN :
+             begin
+               { skip here to cleanup output (feature flags) }
+             end;
          else
            begin
              writeln('unhandled config type ',nvpair_type(elem),' for name=',FOSNVPAIR_NAME(elem));

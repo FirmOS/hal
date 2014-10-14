@@ -2389,7 +2389,7 @@ var scheme            : IFRE_DB_SCHEMEOBJECT;
 
 begin
   if assigned(Parent) then begin
-    result := TFRE_DB_MESSAGE_DESC(result).Describe('SAVE','Error on saving! Saving of Subobject not supported!',fdbmt_error);
+    result := TFRE_DB_MESSAGE_DESC(result.Implementor).Describe('SAVE','Error on saving! Saving of Subobject not supported!',fdbmt_error);
     exit;
   end;
   result            := nil;
