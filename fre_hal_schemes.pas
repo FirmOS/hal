@@ -1544,8 +1544,7 @@ begin
 end;
 
 function TFRE_DB_CPE_NETWORK_SERVICE.ConfigureHAL: integer;
-var errorlist: TStringList;
-    icount   : integer;
+var icount   : integer;
 
 
   procedure _NetIterator(const device:IFRE_DB_Object);
@@ -1555,6 +1554,7 @@ var errorlist: TStringList;
       ipv6       : TFRE_DB_IPV4_HOSTNET;
       resultcode : integer;
       outstring  : string;
+      param      : string;
 
     procedure _IPIterator (const ip:IFRE_DB_Object);
     var devname:string;
@@ -1570,7 +1570,12 @@ var errorlist: TStringList;
             end;
           inc(icount);
           if (ipv4.FieldExists('dhcp')) and (ipv4.Field('dhcp').asboolean=true) then
-            ExecuteCMD('dhclient '+devname,outstring)
+            begin
+              param :='-v -pf /run/dhclient.'+devname+'.pid -lf /var/lib/dhcp/dhclient.'+devname+'.leases '+devname;
+              writeln('DHCLIENT:','dhclient ',param);
+              ExecuteCMD('ifconfig '+devname+' up',outstring);
+              ExecuteProcess('/sbin/dhclient',param,[]);
+            end
           else
             if ipv4.Field('ip_net').asstring<>'' then
               ExecuteCMD('ifconfig '+devname+' '+ipv4.Field('ip_net').asstring+' up',outstring);
@@ -1606,7 +1611,7 @@ var errorlist: TStringList;
     if device.IsA(TFRE_DB_DATALINK_PHYS,phys) then
       begin
         writeln('PHYS:',phys.ObjectName);
-        ExecuteCMD('dhclient -r '+phys.ObjectName,outstring,true);
+        ExecuteCMD('/sbin/dhclient -r '+phys.ObjectName,outstring,true);
         ExecuteCMD('ifconfig '+phys.Objectname+' down',outstring,true);
         icount := 0;
         device.ForAllObjects(@_IPIterator);
@@ -1625,6 +1630,7 @@ var errorlist: TStringList;
             ExecuteCMD('ip tunnel add '+iptun.Objectname+' mode '+iptun.Field('mode').asstring+' remote '+iptun.Field('REMOTE_IP_NET_IPV4').asstring+' local '+iptun.Field('LOCAL_IP_NET_IPV4').asstring+' dev '+iptun.Field('device').asstring,outstring);
           end;
         device.ForAllObjects(@_IPTunIterator);
+        ExecuteCMD('ip link set '+iptun.Objectname+' up',outstring,true);
       end;
   end;
 
@@ -1664,6 +1670,7 @@ function TFRE_DB_CPE_OPENVPN_SERVICE.ConfigureHAL: integer;
 var sl        :TStringList;
     i         :integer;
     outstring :string;
+    cmd       :string;
 begin
   writeln('SWL:CONFIGUREHAL OPENVPN');
   ClearErrors;
@@ -1680,8 +1687,8 @@ begin
     sl.add('script-security 2');
     if Pos('tap',Field('device').asstring)>0 then
       begin
-        sl.add('up /etc/openvpn/'+lowercase(ObjectName)+'/tap_up.sh');
-        sl.add('down /etc/openvpn/'+lowercase(ObjectName)+'/tap_down.sh');
+        sl.add('up /etc/openvpn/'+lowercase(ObjectName)+'_tap_up.sh');
+        sl.add('down /etc/openvpn/'+lowercase(ObjectName)+'_tap_down.sh');
       end;
     sl.add('nobind');
     sl.add('persist-key');
@@ -1697,10 +1704,27 @@ begin
     Field('crt').AsStream.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_crt.crt');
     Field('key').AsStream.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_crt.key');
 
+    if Pos('tap',Field('device').asstring)>0 then
+      begin
+        sl.Clear;
+        sl.add('#!/bin/sh');
+        sl.add('/sbin/ifconfig $dev up');
+        sl.add('/sbin/brctl addbr br0');
+        sl.add('/sbin/brctl addif br0 $dev eth1');
+        sl.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_tap_up.sh');
+        ExecuteCMD('chmod 755 /etc/openvpn/'+lowercase(ObjectName)+'_tap_up.sh',outstring,false);
+        sl.Clear;
+        sl.add('#!/bin/sh');
+        sl.add('/sbin/brctl delbr br0');
+        sl.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_tap_down.sh');
+        ExecuteCMD('chmod 755 /etc/openvpn/'+lowercase(ObjectName)+'_tap_down.sh',outstring,false);
+      end;
   finally
     sl.Free;
   end;
-  ExecuteProcess('/usr/sbin/openvpn','--writepid /var/run/openvpn.'+lowercase(ObjectName)+'.pid --daemon ovpn-'+lowercase(ObjectName)+' --status /var/run/openvpn.'+lowercase(ObjectName)+'.status 10 --cd /etc/openvpn --config /etc/openvpn/'+lowercase(ObjectName)+'.conf',[]);
+  cmd := '--writepid /var/run/openvpn.'+lowercase(ObjectName)+'.pid --daemon ovpn-'+lowercase(ObjectName)+' --status /var/run/openvpn.'+lowercase(ObjectName)+'.status 10 --cd /etc/openvpn --config /etc/openvpn/'+lowercase(ObjectName)+'.conf';
+  writeln('OPENVPN CMD:','/usr/sbin/openvpn ',cmd);
+  ExecuteProcess('/usr/sbin/openvpn',cmd,[]);
 //  ExecuteCMD('/usr/sbin/openvpn --writepid /var/run/openvpn.'+lowercase(ObjectName)+'.pid --daemon ovpn-'+lowercase(ObjectName)+' --status /var/run/openvpn.'+lowercase(ObjectName)+'.status 10 --cd /etc/openvpn --config /etc/openvpn/'+lowercase(ObjectName)+'.conf',outstring);
   writeln('OPENVPN STARTED');
   writeln('ERRORS:',Field('errors').asobject.DumpToString());
@@ -1721,54 +1745,74 @@ begin
 end;
 
 function TFRE_DB_CPE_DHCP_SERVICE.ConfigureHAL: integer;
+var sl        : TStringList;
+    outstring : string;
+    cmd,param : string;
+
+  procedure _SubnetIterator(const obj:IFRE_DB_Object);
+  var resultcode : integer;
+      outstring  : string;
+      subnet     : TFRE_DB_DHCP_Subnet;
+      ip,mask    : string;
+
+    procedure _FixedIterator(const fobj:IFRE_DB_Object);
+    var fixed    : TFRE_DB_DHCP_Fixed;
+    begin
+      if fobj.IsA(TFRE_DB_DHCP_Fixed,fixed) then
+        begin
+          sl.add('');
+          sl.add('  host '+fixed.ObjectName+' {');
+          sl.add('    hardware ethernet '+fixed.Field('mac').asstring+';');
+          sl.add('    fixed-address '+fixed.Field('ip').asstring+';');
+          sl.add('  }');
+        end;
+    end;
+
+  begin
+    if obj.IsA(TFRE_DB_DHCP_Subnet,subnet) then
+      begin
+        sl.add('');
+        SplitCIDR(subnet.Field('subnet').asstring,ip,mask);
+        sl.add('subnet '+ip+' netmask '+mask+' {');
+        sl.add(' range '+subnet.Field('range_start').asstring+' '+subnet.Field('range_end').asstring+';');
+        sl.add(' option routers '+subnet.Field('router').asstring+';');
+        sl.add(' option domain-name-servers '+subnet.Field('dns').asstring+';');
+        sl.add(' option tftp66  "'+subnet.Field('option_tftp66').asstring+'";');
+
+        subnet.ForAllObjects(@_FixedIterator);
+
+        sl.Add('}');
+      end;
+  end;
+
+
 begin
- // (TFRE_DB_DHCP_SUBNET)
- //  DNS (STRING) : [ '8.8.8.8' ]
- //  UID (GUID) : [ 'e51265c8c1a42c429260970c3d1a8a0d' ]
- //  ROUTER (STRING) : [ '10.55.0.65' ]
- //  SUBNET (STRING) : [ '10.55.0.64/27' ]
- //  DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
- //  RANGE_END (STRING) : [ '10.55.0.62' ]
- //  RANGE_START (STRING) : [ '10.55.0.40' ]
- //  OPTION_TFTP66 (STRING) : [ '192.168.82.3' ]
- //  21E712D0D27491408E4384C42E163331 (OBJECT) :
- //  {
- //    (TFRE_DB_DHCP_FIXED)
- //    IP (STRING) : [ '10.55.0.35' ]
- //    MAC (STRING) : [ '00:15:65:20:d2:af' ]
- //    UID (GUID) : [ '21e712d0d27491408e4384c42e163331' ]
- //    OBJNAME (STRING) : [ 'yealinkb' ]
- //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
- //  }
- //  5C1F2364D6D0A9429572D99095C1A2BF (OBJECT) :
- //  {
- //    (TFRE_DB_DHCP_FIXED)
- //    IP (STRING) : [ '10.55.0.36' ]
- //    MAC (STRING) : [ '00:15:65:20:d4:91' ]
- //    UID (GUID) : [ '5c1f2364d6d0a9429572d99095c1a2bf' ]
- //    OBJNAME (STRING) : [ 'yealinkc' ]
- //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
- //  }
- //  6B29ED1506F06341AFF3DA6EE808567B (OBJECT) :
- //  {
- //    (TFRE_DB_DHCP_FIXED)
- //    IP (STRING) : [ '10.55.0.37' ]
- //    MAC (STRING) : [ 'ac:f2:c5:34:ac:6c' ]
- //    UID (GUID) : [ '6b29ed1506f06341aff3da6ee808567b' ]
- //    OBJNAME (STRING) : [ 'ataa' ]
- //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
- //  }
- //  BC0BC92CBFC2384397E8377AE5369CC6 (OBJECT) :
- //  {
- //    (TFRE_DB_DHCP_FIXED)
- //    IP (STRING) : [ '10.55.0.34' ]
- //    MAC (STRING) : [ '00:15:65:32:9e:12' ]
- //    UID (GUID) : [ 'bc0bc92cbfc2384397e8377ae5369cc6' ]
- //    OBJNAME (STRING) : [ 'yealinka' ]
- //    DOMAINID (GUID) : [ '00000000000000000000000000000000' ]
- //  }
- //}
- //
+  sl:=TStringList.Create;
+  try
+    writeln('SWL:CONFIGUREHAL DHCP');
+    ClearErrors;
+
+    sl.add('default-lease-time 600;');
+    sl.add('max-lease-time 7200;');
+    sl.add('ddns-update-style none;');
+
+    sl.add('authoritative;');
+    sl.add('log-facility local7;');
+    sl.add('option tftp66 code 66 = string;');
+
+    ForAllObjects(@_SubnetIterator);
+
+    sl.SaveToFile('/etc/dhcp/dhcpd.conf');
+
+    cmd   := '/usr/sbin/dhcpd';
+    param := '-q -cf /etc/dhcp/dhcpd.conf -pf /var/run/dhcpd.pid';
+    writeln('DHCP CMD:',cmd,param);
+    ExecuteProcess(cmd,param,[]);
+
+    writeln('ERRORS:',Field('errors').asobject.DumpToString());
+  finally
+    sl.Free;
+  end;
 end;
 
 { TFRE_DB_CPE_VIRTUAL_FILESERVER }
