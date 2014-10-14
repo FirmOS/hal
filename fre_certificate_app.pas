@@ -262,8 +262,8 @@ begin
     GFRE_DBI.GetSystemSchemeByName(crt.SchemeClass,scheme);
     panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'crt_content_header'));
     panel.AddSchemeFormGroup(scheme.GetInputGroup('main_edit'),GetSession(input));
-    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_Stream',true,'application/octet-stream','certificate.crt'),false);
-    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_Stream',true,'application/octet-stream','certificate.key'),false);
+    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'crt_download_crt'),ses.GetDownLoadLink4StreamField(sel_guid,'crt_Stream',true,'application/octet-stream',crt.Field('objname').asstring+'.crt'),false);
+    panel.AddButton.DescribeDownload(app.FetchAppTextShort(ses,'crt_download_key'),ses.GetDownLoadLink4StreamField(sel_guid,'key_Stream',true,'application/octet-stream',crt.Field('objname').asstring+'.key'),false);
     panel.FillWithObjectValues(crt,GetSession(input));
     panel.contentId:='CRT_CONTENT';
     Result:=panel;

@@ -3713,6 +3713,7 @@ begin
 
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
   scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('dataset',fdbft_String);
   scheme.AddSchemeField('poolid',fdbft_ObjLink);
   scheme.AddSchemeField('reservation_mb',fdbft_UInt32);
   scheme.AddSchemeField('refres_mb',fdbft_UInt32);

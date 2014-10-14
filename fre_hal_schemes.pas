@@ -821,6 +821,14 @@ type
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
+  { TFRE_DB_CRYPTO_FILESERVER }
+
+  TFRE_DB_CRYPTO_FILESERVER=class(TFRE_DB_FILESERVER)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
   { TFRE_DB_SSH_SERVICE }
 
   TFRE_DB_SSH_SERVICE=class(TFRE_DB_SERVICE)
@@ -1134,6 +1142,30 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_CRYPTO_FILESERVER }
+
+class procedure TFRE_DB_CRYPTO_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
+  scheme.AddSchemeField('name',fdbft_String).required:=true;
+  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('cfs_scheme_main_group'));
+  group.AddInput('name',GetTranslateableTextKey('scheme_fileservername'),false);
+  group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
+end;
+
+class procedure TFRE_DB_CRYPTO_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'cfs_scheme_main_group','Crypto Fileserver Properties');
+    StoreTranslateableText(conn,'scheme_fileservername','Servername');
+    StoreTranslateableText(conn,'scheme_description','Description');
+  end;
+end;
 
 { TFRE_DB_IPV6_NETROUTE }
 
@@ -4393,14 +4425,28 @@ end;
 
  class procedure TFRE_DB_DATALINK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  var group : IFRE_DB_InputGroupSchemeDefinition;
+     enum  : IFRE_DB_Enum;
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName(TFRE_DB_SERVICE.Classname);
+
+   enum:=GFRE_DBI.NewEnum('datalink_network_type').Setup(GFRE_DBI.CreateText('$datalink_network_type','Datalink Network Type'));
+   enum.addEntry('generic',GetTranslateableTextKey('datalink_network_type_generic'));
+   enum.addEntry('internet',GetTranslateableTextKey('datalink_network_type_internet'));
+   enum.addEntry('lan',GetTranslateableTextKey('datalink_network_type_lan'));
+   enum.addEntry('mgmt',GetTranslateableTextKey('datalink_network_type_mgmt'));
+   enum.addEntry('cpe',GetTranslateableTextKey('datalink_network_type_cpe'));
+   enum.addEntry('vm',GetTranslateableTextKey('datalink_network_type_vm'));
+   enum.addEntry('link',GetTranslateableTextKey('datalink_network_type_link'));
+   GFRE_DBI.RegisterSysEnum(enum);
+
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
    scheme.AddSchemeField('ipmpparentid',fdbft_ObjLink).multiValues:=false;
    scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
    scheme.AddSchemeField('mtu',fdbft_Uint16);
+   scheme.AddSchemeField('type',fdbft_String).SetupFieldDef(true,false,'datalink_network_type');
+
    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
    group.AddInput('objname',GetTranslateableTextKey('scheme_name'),true);
    group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
@@ -4409,7 +4455,7 @@ end;
 
  class procedure TFRE_DB_DATALINK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.1';
+   newVersionId:='1.2';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
      StoreTranslateableText(conn,'scheme_main_group','Link Properties');
@@ -4423,6 +4469,16 @@ end;
      currentVersionId := '1.1';
      DeleteTranslateableText(conn,'scheme_ip_net');
      DeleteTranslateableText(conn,'scheme_vlan');
+   end;
+   if currentVersionId='1.1' then begin
+     currentVersionId := '1.2';
+     StoreTranslateableText(conn,'datalink_network_type_generic','Generic Interface');
+     StoreTranslateableText(conn,'datalink_network_type_internet','Internet');
+     StoreTranslateableText(conn,'datalink_network_type_lan','Lokal Network');
+     StoreTranslateableText(conn,'datalink_network_type_mgmt','Mgmt Network');
+     StoreTranslateableText(conn,'datalink_network_type_cpe','CPE Network');
+     StoreTranslateableText(conn,'datalink_network_type_vm','VM Interface');
+     StoreTranslateableText(conn,'datalink_network_type_link','Zone Interlink');
    end;
  end;
 
@@ -4973,6 +5029,7 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FILESERVER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_GLOBAL_FILESERVER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUAL_FILESERVER);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CRYPTO_FILESERVER);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SSH_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IMAP_SERVICE);
