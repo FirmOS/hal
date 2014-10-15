@@ -933,6 +933,8 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        ConfigureHAL:integer;
   end;
 
 
@@ -1734,10 +1736,12 @@ begin
         sl.add('/sbin/ifconfig $dev up');
         sl.add('/sbin/brctl addbr br0');
         sl.add('/sbin/brctl addif br0 $dev eth1');
+        sl.add('/sbin/ifconfig br0 up');
         sl.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_tap_up.sh');
         ExecuteCMD('chmod 755 /etc/openvpn/'+lowercase(ObjectName)+'_tap_up.sh',outstring,false);
         sl.Clear;
         sl.add('#!/bin/sh');
+        sl.add('/sbin/ifconfig br0 down');
         sl.add('/sbin/brctl delbr br0');
         sl.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_tap_down.sh');
         ExecuteCMD('chmod 755 /etc/openvpn/'+lowercase(ObjectName)+'_tap_down.sh',outstring,false);
@@ -1851,6 +1855,75 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+  end;
+end;
+
+function TFRE_DB_CPE_VIRTUAL_FILESERVER.ConfigureHAL: integer;
+var sl        : TStringList;
+    outstring : string;
+    cmd,param : string;
+
+  procedure _FileshareIterator(const obj:IFRE_DB_Object);
+  var resultcode : integer;
+      fs         : TFRE_DB_VIRTUAL_FILESHARE;
+  begin
+    if obj.IsA(TFRE_DB_VIRTUAL_FILESHARE,fs) then
+      begin
+        sl.add('');
+        sl.add('['+fs.ObjectName+']');
+        sl.add('path = /cfiler/'+lowercase(fs.ObjectName));
+        sl.add('public = yes');
+        sl.add('writable = yes');
+        sl.add('printable = no');
+        sl.add('guest ok = yes');
+      end;
+  end;
+
+
+begin
+  sl:=TStringList.Create;
+  try
+    writeln('SWL:CONFIGUREHAL SAMBA');
+    writeln(DumpToString());
+    ClearErrors;
+
+
+    sl.add('[global]');  // TODO
+    sl.add('workgroup = secure');
+    sl.add('netbios name = '+ObjectName);
+    sl.add('log level = 3');
+    sl.add('log file = /var/log/samba.log');
+    sl.add('guest account = nobody');
+    sl.add('map to guest = bad user');
+    sl.add('security = user');
+
+    ForAllObjects(@_FileshareIterator);
+
+    sl.SaveToFile('/etc/samba/smb.conf');
+
+    ExecuteCMD('mkdir /secfiler',outstring);
+    ExecuteCMD('mkdir /cfiler',outstring);
+
+    cmd:='mount -t nfs4 ';
+    if field('nfsmountoptions').asstring<>'' then
+      cmd := cmd+field('nfsmountoptions').asstring+' ';
+    cmd := cmd + field('nfsshare').asstring+' /secfiler';
+
+    ExecuteCMD(cmd,outstring);
+    ExecuteCMD('losetup /dev/loop0 /secfiler/'+Field('cryptofile').asstring,outstring);
+    ExecuteCMD('mount /dev/loop0 /cfiler',outstring);
+    ExecuteCMD('mount -t ecryptfs -o ecryptfs_fnek_sig='+Field('ecryptfs_fnek_sig').asstring+' -o ecryptfs_sig='+ Field('ecryptfs_fnek_sig').asstring+
+               ' -o ecryptfs_cipher=aes -o ecryptfs_key_bytes=16 -o no_sig_cache -o ecryptfs_enable_filename_crypto=y -o ecryptfs_passthrough=n '+
+               '-o key=passphrase:passphrase_passwd='+ Field('ecryptfs_key').asstring+' /cfiler /cfiler',outstring);
+
+    cmd   := '/usr/sbin/service';
+    param := 'samba restart';
+    writeln('SAMBA CMD:',cmd,param);
+    ExecuteProcess(cmd,param,[]);
+
+    writeln('ERRORS:',Field('errors').asobject.DumpToString());
+  finally
+    sl.Free;
   end;
 end;
 
