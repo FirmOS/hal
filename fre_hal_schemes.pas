@@ -5128,7 +5128,7 @@ begin
     mimeTypeToIconAndHRType(FREDB_Filename2MimeType(name),icon,hrtype);
     Field('typeHR').AsString   := hrtype;
     Field('icon').AsString:=FREDB_getThemedResource(icon);
-    Field('objectclass').AsString:='TFRE_DB_TEST_FILE';
+    Field('objectclass').AsString:='TFRE_DB_FS_ENTRY';
   end else begin
     Field('typeHR').AsString   := 'Folder';
     Field('sizeHR').AsString := '';
@@ -5368,6 +5368,8 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_HOSTNET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV4_NETROUTE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_NETROUTE);
+
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FS_ENTRY);
    //GFRE_DBI.Initialize_Extension_Objects;
  end;
 
