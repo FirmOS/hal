@@ -1167,6 +1167,7 @@ begin
   scheme.AddSchemeField('ecryptfs_fnek_sig',fdbft_String);
   scheme.AddSchemeField('ecryptfs_sig',fdbft_String);
   scheme.AddSchemeField('ecryptfs_key',fdbft_String);
+  scheme.AddSchemeField('cryptofile',fdbft_String);
   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('cfs_scheme_main_group'));
   group.AddInput('objname',GetTranslateableTextKey('scheme_fileservername'),false);
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
