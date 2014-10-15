@@ -929,7 +929,7 @@ type
 
   { TFRE_DB_CPE_VIRTUAL_FILESERVER }
 
-  TFRE_DB_CPE_VIRTUAL_FILESERVER=class(TFRE_DB_VIRTUAL_FILESERVER)
+  TFRE_DB_CPE_VIRTUAL_FILESERVER=class(TFRE_DB_CRYPTO_FILESERVER)
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -1162,6 +1162,11 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
+  scheme.AddSchemeField('nfsshare',fdbft_String);
+  scheme.AddSchemeField('nfsmountoptions',fdbft_String);
+  scheme.AddSchemeField('ecryptfs_fnek_sig',fdbft_String);
+  scheme.AddSchemeField('ecryptfs_sig',fdbft_String);
+  scheme.AddSchemeField('ecryptfs_key',fdbft_String);
   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('cfs_scheme_main_group'));
   group.AddInput('objname',GetTranslateableTextKey('scheme_fileservername'),false);
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
@@ -1528,6 +1533,7 @@ class procedure TFRE_DB_CPE_NETWORK_SERVICE.RegisterSystemScheme(const scheme: I
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+  scheme.AddSchemeField('ipv4_forward',fdbft_Boolean);
 end;
 
 class procedure TFRE_DB_CPE_NETWORK_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1539,7 +1545,8 @@ begin
 end;
 
 function TFRE_DB_CPE_NETWORK_SERVICE.ConfigureHAL: integer;
-var icount   : integer;
+var icount     : integer;
+    outstring  : string;
 
 
   procedure _NetIterator(const device:IFRE_DB_Object);
@@ -1550,7 +1557,6 @@ var icount   : integer;
       r6         : TFRE_DB_IPV6_NETROUTE;
       r4         : TFRE_DB_IPV4_NETROUTE;
       resultcode : integer;
-      outstring  : string;
       param      : string;
 
     procedure _IPIterator (const ip:IFRE_DB_Object);
@@ -1646,6 +1652,14 @@ begin
   writeln('SWL:CONFIGUREHAL');
   ClearErrors;
   ForAllObjects(@_NetIterator);
+  if field('ipv4_forward').asboolean=true then
+    begin
+      ExecuteCMD('sysctl -w net.ipv4.ip_forward=1',outstring);
+    end
+  else
+    begin
+      ExecuteCMD('sysctl -w net.ipv4.ip_forward=0',outstring);
+    end;
   writeln('ERRORS:',Field('errors').asobject.DumpToString());
 end;
 
@@ -1828,7 +1842,7 @@ end;
 class procedure TFRE_DB_CPE_VIRTUAL_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_VIRTUAL_FILESERVER.ClassName);
+  scheme.SetParentSchemeByName(TFRE_DB_CRYPTO_FILESERVER.ClassName);
 end;
 
 class procedure TFRE_DB_CPE_VIRTUAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
