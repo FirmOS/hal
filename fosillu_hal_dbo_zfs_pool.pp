@@ -84,7 +84,6 @@ var zp         : Pzpool_handle_t;
       result := StringReplace(result,'.','_',[rfReplaceAll]);
       if (elementname= ZPOOL_CONFIG_GUID) or (elementname= ZPOOL_CONFIG_POOL_GUID) then result := 'zfs_guid';
       if (elementname= ZPOOL_CONFIG_POOL_NAME) then result := 'objname';
-
     end;
 
   begin
@@ -233,186 +232,186 @@ var zp         : Pzpool_handle_t;
        vtype      : string;
        rl        : TFRE_DB_ZFS_RAID_LEVEL;
    begin
-     actual_obj   := parent_obj;
+     actual_obj := parent_obj;
+     temp_obj   := nil;
      if parsestate = psSubVdev then
-       temp_obj  := TFRE_DB_ZFS_OBJ.CreateForDB;  // temporary object
-
-     repeat
-//       writeln(StringOfChar(' ',indent),'NVLIST ',actual_obj.ClassName,' ',actual_obj.UID_String);
-       elem := nvlist_next_nvpair(list, elem);
-       if not assigned(elem) then
-         exit;
-       name := FOSNVPAIR_NAME(elem);
-       case nvpair_type(elem) of
-         DATA_TYPE_STRING,DATA_TYPE_UINT64 : begin
-               if parsestate=psVdev then
-                 begin
-                   _SetFieldFromNVElement(actual_obj,elem);
-                 end
-               else if parsestate=psVdevTree then
-                 begin
-                   if name=ZPOOL_CONFIG_TYPE then
-                     begin
-                       FOSNVGET_STRING(elem,strval);
-                       case strval of
-                         VDEV_TYPE_ROOT :
-                           begin
-                             actual_obj:=pool.createDatastorageEmbedded;
-                             actual_obj.SetName(VDEV_TYPE_ROOT);
-                             parsestate:=psVdev;
-                           end
-                       else
-                           raise EFRE_DB_Exception.Create('unknown type of vdev in vdev_tree '+strval);
-                       end;
-                     end
-                   else
-                     raise EFRE_DB_Exception.Create('first element of vdev_tree is not type as excpected :'+name);
-                 end
-               else if parsestate=psSubVdev then
-                 begin
-                   _SetFieldFromNVElement(temp_obj,elem);
-                   if (temp_obj.FieldExists(ZPOOL_CONFIG_TYPE) and temp_obj.FieldExists('zfs_guid')) then
-                     begin
-                       vtype := temp_obj.Field(ZPOOL_CONFIG_TYPE).asstring;
-                       case vtype of
-                       VDEV_TYPE_RAIDZ,VDEV_TYPE_MIRROR :
-                         begin
-                           if temp_obj.FieldExists(ZPOOL_CONFIG_IS_LOG) then
+       temp_obj  := TFRE_DB_ZFS_OBJ.CreateForDB;  { temporary object }
+     try
+       repeat
+  //       writeln(StringOfChar(' ',indent),'NVLIST ',actual_obj.ClassName,' ',actual_obj.UID_String);
+         elem := nvlist_next_nvpair(list, elem);
+         if not assigned(elem) then
+           exit;
+         name := FOSNVPAIR_NAME(elem);
+         case nvpair_type(elem) of
+           DATA_TYPE_STRING,DATA_TYPE_UINT64 : begin
+                 if parsestate=psVdev then
+                   begin
+                     _SetFieldFromNVElement(actual_obj,elem);
+                   end
+                 else if parsestate=psVdevTree then
+                   begin
+                     if name=ZPOOL_CONFIG_TYPE then
+                       begin
+                         FOSNVGET_STRING(elem,strval);
+                         case strval of
+                           VDEV_TYPE_ROOT :
                              begin
-                               if temp_obj.Field(ZPOOL_CONFIG_IS_LOG).AsUInt64=0 then
-                                 begin
-                                   actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(temp_obj.Field('zfs_guid').asstring);
-                                   actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
-                                   temp_obj.Finalize;
-                                   if vtype=VDEV_TYPE_MIRROR then
-                                     begin
-                                      (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror;
-                                      actual_obj.SetName(VDEV_TYPE_MIRROR);
-                                     end
-                                   else
-                                     begin
-                                       case actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64 of
-                                         1: rl := zfs_rl_z1;
-                                         2: rl := zfs_rl_z2;
-                                         3: rl := zfs_rl_z3;
-                                       else
-                                         raise EFRE_DB_Exception.Create('invalid parity nparity '+inttostr(actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64));
-                                       end;
-                                       (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).RaidLevel:=rl;
-                                       actual_obj.SetName(VDEV_TYPE_RAIDZ+inttostr(actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64));
-                                     end
-                                 end
-                               else
-                                 begin
-                                   actual_obj := _createLog;
-                                   actual_obj :=(actual_obj as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(temp_obj.Field('zfs_guid').asstring);
-                                   actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
-                                   temp_obj.Finalize;
-                                   if vtype=VDEV_TYPE_MIRROR then
-                                     begin
-                                      (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror;
-                                      actual_obj.SetName(VDEV_TYPE_MIRROR);
-                                     end;
-                                 end;
+                               actual_obj:=pool.createDatastorageEmbedded;
+                               actual_obj.SetName(VDEV_TYPE_ROOT);
                                parsestate:=psVdev;
-                             end;
+                             end
+                         else
+                             raise EFRE_DB_Exception.Create('unknown type of vdev in vdev_tree '+strval);
                          end;
-                       VDEV_TYPE_DISK, VDEV_TYPE_FILE :
-                         begin
-                           actual_obj:=(actual_obj as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded(temp_obj.Field('zfs_guid').asstring);
-                           actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
-                           temp_obj.Finalize;
-                           parsestate:=psVdev;
-                         end;
-                       VDEV_TYPE_SPARE :
-                         begin
-                           actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEV).createDiskSpareContainerEmbedded(temp_obj.Field('zfs_guid').asstring);
-                           actual_obj.setname(VDEV_TYPE_SPARE);
-                           actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
-                           temp_obj.Finalize;
-                           parsestate:=psVdev;
-                         end;
-                       VDEV_TYPE_REPLACING :
-                         begin
-                           actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEV).createDiskReplaceContainerEmbedded(temp_obj.Field('zfs_guid').asstring);
-                           actual_obj.setname(VDEV_TYPE_REPLACING);
-                           actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
-                           temp_obj.Finalize;
-                           parsestate:=psVdev;
-                         end;
-                       VDEV_TYPE_HOLE :
-                         begin
-                           //ignoring hole
-                         end;
-                       else
-                           raise EFRE_DB_Exception.Create('unknown type of children vdev:'+vtype);
+                       end
+                     else
+                       raise EFRE_DB_Exception.Create('first element of vdev_tree is not type as excpected :'+name);
+                   end
+                 else if parsestate=psSubVdev then
+                   begin
+                     _SetFieldFromNVElement(temp_obj,elem);
+                     if (temp_obj.FieldExists(ZPOOL_CONFIG_TYPE) and temp_obj.FieldExists('zfs_guid')) then
+                       begin
+                         vtype := temp_obj.Field(ZPOOL_CONFIG_TYPE).asstring;
+                         case vtype of
+                         VDEV_TYPE_RAIDZ,VDEV_TYPE_MIRROR :
+                           begin
+                             if temp_obj.FieldExists(ZPOOL_CONFIG_IS_LOG) then
+                               begin
+                                 if temp_obj.Field(ZPOOL_CONFIG_IS_LOG).AsUInt64=0 then
+                                   begin
+                                     actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(temp_obj.Field('zfs_guid').asstring);
+                                     actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
+                                     if vtype=VDEV_TYPE_MIRROR then
+                                       begin
+                                        (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror;
+                                        actual_obj.SetName(VDEV_TYPE_MIRROR);
+                                       end
+                                     else
+                                       begin
+                                         case actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64 of
+                                           1: rl := zfs_rl_z1;
+                                           2: rl := zfs_rl_z2;
+                                           3: rl := zfs_rl_z3;
+                                         else
+                                           raise EFRE_DB_Exception.Create('invalid parity nparity '+inttostr(actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64));
+                                         end;
+                                         (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).RaidLevel:=rl;
+                                         actual_obj.SetName(VDEV_TYPE_RAIDZ+inttostr(actual_obj.Field(ZPOOL_CONFIG_NPARITY).AsUInt64));
+                                       end
+                                   end
+                                 else
+                                   begin
+                                     actual_obj := _createLog;
+                                     actual_obj :=(actual_obj as TFRE_DB_ZFS_VDEVCONTAINER).createVdevEmbedded(temp_obj.Field('zfs_guid').asstring);
+                                     actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
+                                     if vtype=VDEV_TYPE_MIRROR then
+                                       begin
+                                        (actual_obj as TFRE_DB_ZFS_DISKCONTAINER).raidlevel:=zfs_rl_mirror;
+                                        actual_obj.SetName(VDEV_TYPE_MIRROR);
+                                       end;
+                                   end;
+                                 parsestate:=psVdev;
+                               end;
+                           end;
+                         VDEV_TYPE_DISK, VDEV_TYPE_FILE :
+                           begin
+                             actual_obj:=(actual_obj as TFRE_DB_ZFS_DISKCONTAINER).createBlockdeviceEmbedded(temp_obj.Field('zfs_guid').asstring);
+                             actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
+                             parsestate:=psVdev;
+                           end;
+                         VDEV_TYPE_SPARE :
+                           begin
+                             actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEV).createDiskSpareContainerEmbedded(temp_obj.Field('zfs_guid').asstring);
+                             actual_obj.setname(VDEV_TYPE_SPARE);
+                             actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
+                             parsestate:=psVdev;
+                           end;
+                         VDEV_TYPE_REPLACING :
+                           begin
+                             actual_obj:=(parent_obj as TFRE_DB_ZFS_VDEV).createDiskReplaceContainerEmbedded(temp_obj.Field('zfs_guid').asstring);
+                             actual_obj.setname(VDEV_TYPE_REPLACING);
+                             actual_obj.SetAllSimpleObjectFieldsFromObject(temp_obj);
+                             parsestate:=psVdev;
+                           end;
+                         VDEV_TYPE_HOLE :
+                           begin
+                             //ignoring hole
+                           end;
+                         else
+                             raise EFRE_DB_Exception.Create('unknown type of children vdev:'+vtype);
+                       end;
                      end;
                    end;
-                 end;
-             end;
-         DATA_TYPE_NVLIST :
-           begin
-             if name=ZPOOL_CONFIG_VDEV_TREE then
-               parsestate:=psVdevTree;
-
-             if FOSNVGET_NVLIST(elem,nvlist) then
-               begin
-                 //writeln(StringOfChar(' ',indent),'L',FOSNVPAIR_NAME(elem));
-                 parse_nvlist(nvlist,indent+4,actual_obj);
                end;
-           end;
-         DATA_TYPE_NVLIST_ARRAY :
-           begin
-             if FOSNVGET_NVARR(elem,nvlistarr,count) then
-               if name=ZPOOL_CONFIG_SPARES then
-                 begin
-                   newparent_obj := pool.createSpareEmbedded;
-                   newparent_obj.setZFSGuid('SPARE'+pool.getZFSGuid);
-                   newparent_obj.setname('spares');
-                 end
-               else if name=ZPOOL_CONFIG_L2CACHE then
-                 begin
-                   newparent_obj := pool.createCacheEmbedded;
-                   newparent_obj.setZFSGuid('CACHE'+pool.getZFSGuid);
-                   newparent_obj.setname('cache');
-                 end
-               else
-                 newparent_obj := actual_obj;
-               for i := 0 to count-1 do
-                 begin
-//                   writeln(StringOfChar(' ',indent),'A',FOSNVPAIR_NAME(elem),'[',i,']');
-                   if (name=ZPOOL_CONFIG_CHILDREN) or (name=ZPOOL_CONFIG_SPARES) or (name=ZPOOL_CONFIG_L2CACHE) then
-                     parsestate:=psSubVdev;
-                   parse_nvlist(nvlistarr[i],indent+8,newparent_obj);
-                 end;
-         end;
-         DATA_TYPE_UINT64_ARRAY :
+           DATA_TYPE_NVLIST :
              begin
-               name := FOSNVPAIR_NAME(elem);
-               if name = ZPOOL_CONFIG_VDEV_STATS then
-                 fetch_zfs_state(actual_obj,elem)
-               else if name = ZPOOL_CONFIG_SCAN_STATS then
+               if name=ZPOOL_CONFIG_VDEV_TREE then
+                 parsestate:=psVdevTree;
+
+               if FOSNVGET_NVLIST(elem,nvlist) then
                  begin
-                   if (actual_obj is TFRE_DB_ZFS_DATASTORAGE) then begin
-                     fetch_zfs_scan_stats(pool,elem);
+                   //writeln(StringOfChar(' ',indent),'L',FOSNVPAIR_NAME(elem));
+                   parse_nvlist(nvlist,indent+4,actual_obj);
+                 end;
+             end;
+           DATA_TYPE_NVLIST_ARRAY :
+             begin
+               if FOSNVGET_NVARR(elem,nvlistarr,count) then
+                 if name=ZPOOL_CONFIG_SPARES then
+                   begin
+                     newparent_obj := pool.createSpareEmbedded;
+                     newparent_obj.setZFSGuid('SPARE'+pool.getZFSGuid);
+                     newparent_obj.setname('spares');
+                   end
+                 else if name=ZPOOL_CONFIG_L2CACHE then
+                   begin
+                     newparent_obj := pool.createCacheEmbedded;
+                     newparent_obj.setZFSGuid('CACHE'+pool.getZFSGuid);
+                     newparent_obj.setname('cache');
+                   end
+                 else
+                   newparent_obj := actual_obj;
+                 for i := 0 to count-1 do
+                   begin
+  //                   writeln(StringOfChar(' ',indent),'A',FOSNVPAIR_NAME(elem),'[',i,']');
+                     if (name=ZPOOL_CONFIG_CHILDREN) or (name=ZPOOL_CONFIG_SPARES) or (name=ZPOOL_CONFIG_L2CACHE) then
+                       parsestate:=psSubVdev;
+                     parse_nvlist(nvlistarr[i],indent+8,newparent_obj);
                    end;
-                 end
-               else
-                 begin
-                   // skipping
-                   // writeln(StringOfChar(' ',indent),name,' <array of uint64_t>');
-                 end;
-             end;
-         DATA_TYPE_BOOLEAN :
-             begin
-               { skip here to cleanup output (feature flags) }
-             end;
-         else
-           begin
-             writeln('unhandled config type ',nvpair_type(elem),' for name=',FOSNVPAIR_NAME(elem));
            end;
-       end;
-     until false;
+           DATA_TYPE_UINT64_ARRAY :
+               begin
+                 name := FOSNVPAIR_NAME(elem);
+                 if name = ZPOOL_CONFIG_VDEV_STATS then
+                   fetch_zfs_state(actual_obj,elem)
+                 else if name = ZPOOL_CONFIG_SCAN_STATS then
+                   begin
+                     if (actual_obj is TFRE_DB_ZFS_DATASTORAGE) then begin
+                       fetch_zfs_scan_stats(pool,elem);
+                     end;
+                   end
+                 else
+                   begin
+                     // skipping
+                     // writeln(StringOfChar(' ',indent),name,' <array of uint64_t>');
+                   end;
+               end;
+           DATA_TYPE_BOOLEAN :
+               begin
+                 { skip here to cleanup output (feature flags) }
+               end;
+           else
+             begin
+               writeln('unhandled config type ',nvpair_type(elem),' for name=',FOSNVPAIR_NAME(elem));
+             end;
+         end;
+       until false;
+     finally
+       if assigned(temp_obj) then
+         temp_obj.Finalize;
+     end;
    end;
 
   procedure _checkLogDevices;

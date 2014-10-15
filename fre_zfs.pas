@@ -417,37 +417,49 @@ type
   end;
 
   { TFRE_DB_ZFS }
-
-  TFRE_DB_ZFS = class (TFRE_DB_Multiprocess)
+  TFRE_DB_ZFS = class (TFRE_DB_Multiprocess)    { helper object, not for db, embedded data }
   private
-    procedure       AddParameter                (const parameter : string; var  params  : TFRE_DB_StringArray);
-    procedure       AnalyzeSnapshots            (const proc   : TFRE_DB_Process);
+    procedure       AddParameter                (const parameter : string; var  params  : TFRE_DB_StringArray); { FREDB_AddString2Array ? }
+    procedure       AnalyzeSnapshotsLegacy      (const proc_OutputToString : string);deprecated;
+    procedure       BuildEmbeddedSnapshotList   (const proc_OutputToString : string);
     procedure       AnalyzeDataSetSpace         (const proc   : TFRE_DB_Process);
     procedure       AnalyzePoolList             (const proc   : TFRE_DB_Process);
   public
-    function        CreateSnapShot              (const dataset: string; const snapshotname : string; out error : string ) : integer;
-    procedure       GetSnapshots                (const dataset: string; const foscmdmode: boolean);
-    function        DestroySnapshot             (const dataset: string; const snapshotname : string; out error : string) : integer;
-    function        SnapShotExists              (const dataset: string; const snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string ; out exists : boolean;const foscmdmode: boolean=false) : integer;
-    function        GetLastSnapShot             (const dataset: string; const snapshotkey : string; out snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string;const foscmdmode: boolean=false) : integer;
+    const
+          TFRE_DB_ZFS_PROPNAMES:Array [0..53] of String = ( 'name','avail','clones','ratio','creation','defer_destroy','lrefer','lused',
+                                                            'mounted','origin','refratio','refer','type','used','usedchild','usedds','usedrefreserv','usedsnap',
+                                                            'userrefs','written','aclinherit','aclmode','atime','canmount','case','checksum','compress','dedup',
+                                                            'fscount','fslimit','logbias','mountpoint','nbmand','primarycache','quota','rdonly','recsize','refquota',
+                                                            'refreserv','reserv','secondarycache','sharenfs','sharesmb','snapdir','sscount','sslimit','sync','utf8only',
+                                                            'version','volblock','volsize','vscan','xattr','zoned');
+           TFRE_DB_ZFS_PROPNAMES_CNT : NativeInt = Length(TFRE_DB_ZFS_PROPNAMES);
 
-    procedure       TCPGetSnapshots             (const dataset: string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT);
-    function        TCPSnapShotExists           (const dataset: string; const snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string ; out exists : boolean;const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
-    function        TCPGetLastSnapShot          (const dataset: string; const snapshotkey : string; out snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
-    function        TCPDataSetExists            (const dataset: string; out error : string; out exists : boolean; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
-    function        TCPSendSnapshot             (const dataset: string; const snapshotname: string; const destinationhost: string; const destinationport: integer; const destinationdataset: string; out error: string; const incrementalsnapshot: string; const sendmode: TFRE_DB_ZFS_Sendmode; const compressed: boolean; const jobid: string): integer;
+    function        DumpDSPropertyNames         : String; { used to gather the real zfs prop names from output of cmd }
 
-    function        CreateDataset               (const dataset: string; out error: string) : integer;
-    function        DestroyDataset              (const dataset: string; out error: string; const recursive: boolean=false; const dependents: boolean=false ; const force : boolean=false) : integer;
+    function        CreateSnapShot    { Process } (const dataset: string; const snapshotname : string; out error : string ) : integer;
+    procedure       GetSnapshots      { Process } (const dataset: string; const foscmdmode: boolean ; const legacy : boolean = true);
+    function        DestroySnapshot   { Process } (const dataset: string; const snapshotname : string; out error : string) : integer;
+    function        SnapShotExists    { Process } (const dataset: string; const snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string ; out exists : boolean;const foscmdmode: boolean=false) : integer;
+    function        GetLastSnapShot   { Process } (const dataset: string; const snapshotkey : string; out snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string;const foscmdmode: boolean=false) : integer;
 
-    function        DataSetExists               (const dataset: string; out error : string; out exists : boolean; const foscmdmode :boolean=false) : integer;
+    procedure       TCPGetSnapshots   { Process } (const dataset: string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT);
+    function        TCPSnapShotExists { Process } (const dataset: string; const snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string ; out exists : boolean;const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
+    function        TCPGetLastSnapShot{ Process } (const dataset: string; const snapshotkey : string; out snapshotname : string; out creation_ts: TFRE_DB_DateTime64; out error : string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
+    function        TCPDataSetExists  { Process } (const dataset: string; out error : string; out exists : boolean; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT) : integer;
+    function        TCPSendSnapshot   { Process } (const dataset: string; const snapshotname: string; const destinationhost: string; const destinationport: integer; const destinationdataset: string; out error: string; const incrementalsnapshot: string; const sendmode: TFRE_DB_ZFS_Sendmode; const compressed: boolean; const jobid: string): integer;
+
+    function        CreateDataset  { Process }  (const dataset: string; out error: string) : integer;
+    function        DestroyDataset { Process }  (const dataset: string; out error: string; const recursive: boolean=false; const dependents: boolean=false ; const force : boolean=false) : integer;
+
+    function        DataSetExists  { Process }  (const dataset: string; out error : string; out exists : boolean; const foscmdmode :boolean=false) : integer;
     function        SendSnapshot                (const dataset: string; const snapshotname : string; const destinationhost : string; const destinationuser: string; const destinationdataset : string; const destinationkeyfilename :string; out error :string; const incrementalsnapshot: string=''; const sendmode : TFRE_DB_ZFS_Sendmode=zfsSend; const compressed : boolean=true; const destinationport: integer = 22;const foscmdmode: boolean=false) : integer;
 
-    function        Scrub                       (const poolname: string; out error : string) : integer;
-    function        GetPoolStatus               (const poolname: string; out error : string; out pool: IFRE_DB_Object) : integer;
-    function        GetDataset                  (const dataset: string; out error : string; out datasetobject: IFRE_DB_Object) : integer;
-    function        GetPools                    (out error: string; out pools:IFRE_DB_Object) : integer;
-    function        CreateDiskPool              (const pool_definition:IFRE_DB_Object; out pool_result:IFRE_DB_Object) : integer;
+    function        Scrub          { Process }  (const poolname: string; out error : string) : integer;
+    function        GetPoolStatus  { Process }  (const poolname: string; out error : string; out pool: IFRE_DB_Object) : integer;
+    function        GetDataset     { Process }  (const dataset: string; out error : string; out datasetobject: IFRE_DB_Object) : integer;
+    function        EmbedDatasets  { Process }  : boolean;
+    function        GetPools       { Process }  (out error: string; out pools:IFRE_DB_Object) : integer;
+    function        CreateDiskPool { Process }  (const pool_definition:IFRE_DB_Object; out pool_result:IFRE_DB_Object) : integer;
   end;
 
   { TFRE_DB_ZFSJob }
@@ -480,6 +492,7 @@ type
 
   TFRE_DB_ZFS_SNAPSHOT=class(TFRE_DB_ObjectEx)
   public
+    procedure       Setup                (const snapname: TFRE_DB_String; const creationtime_utc: TFRE_DB_DateTime64; const usedamount, referedamount: Int64);
   protected
     class procedure RegisterSystemScheme (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -489,10 +502,11 @@ type
 
   TFRE_DB_ZFS_DATASET=class(TFRE_DB_ObjectEx)
   protected
-    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+    procedure       SetupFromParseStrings (const props : TFRE_DB_StringArray);
   published
-    procedure CALC_GetDisplayName        (const setter : IFRE_DB_CALCFIELD_SETTER);
+    procedure CALC_GetDisplayName         (const setter : IFRE_DB_CALCFIELD_SETTER);
   end;
 
   { TFRE_DB_ZFS_DATASET_FILE }
@@ -2646,7 +2660,7 @@ begin
  params[high(params)] := parameter;
 end;
 
-procedure TFRE_DB_ZFS.AnalyzeSnapshots(const proc: TFRE_DB_Process);
+procedure TFRE_DB_ZFS.AnalyzeSnapshotsLegacy(const proc_OutputToString: string);
 var
   slist    : TStringList;
   props    : TFRE_DB_StringArray;
@@ -2654,22 +2668,49 @@ var
   i        : integer;
   snapname : string;
 begin
-  if proc.ExitStatus=0 then begin
-    slist := TStringList.Create;
-    try
-      slist.text  := proc.OutputToString;
-      for  i  := 0 to slist.count -1 do begin
-        GFRE_BT.SeperateString(slist[i],#9,props);
-        snapo := GFRE_DBI.NewObject;
-        snapname                               := GFRE_BT.SepRight(props[0],'@');
-        snapo.Field('name').AsString           := snapname;
-        snapo.Field('creation').AsDateTimeUTC  := StrToInt64(props[1])*1000;
-        snapo.Field('used').AsInt64            := StrToInt64(props[2]);
-        Field('snapshots').AddObject(snapo);
-      end;
-    finally
-      slist.Free;
+  slist := TStringList.Create;
+  try
+    slist.text  := proc_OutputToString;
+    for  i  := 0 to slist.count -1 do begin
+      GFRE_BT.SeperateString(slist[i],#9,props);
+      snapo := GFRE_DBI.NewObject;
+      snapname                               := GFRE_BT.SepRight(props[0],'@');
+      snapo.Field('name').AsString           := snapname;
+      snapo.Field('creation').AsDateTimeUTC  := StrToInt64(props[1])*1000;
+      snapo.Field('used').AsInt64            := StrToInt64(props[2]);
+      Field('snapshots').AddObject(snapo);
     end;
+  finally
+    slist.Free;
+  end;
+end;
+
+procedure TFRE_DB_ZFS.BuildEmbeddedSnapshotList(const proc_OutputToString: string);
+var
+  slist    : TStringList;
+  props    : TFRE_DB_StringArray;
+  snapo    : TFRE_DB_ZFS_SNAPSHOT;
+  i        : integer;
+  snapname : string;
+  creation : TFRE_DB_DateTime64;
+  used     : Int64;
+  referd   : Int64;
+begin
+  slist := TStringList.Create;
+  try
+    slist.text  := proc_OutputToString;
+    for  i  := 0 to slist.count -1 do begin
+      GFRE_BT.SeperateString(slist[i],#9,props);
+      snapo      := TFRE_DB_ZFS_SNAPSHOT.CreateForDB;
+      snapname   := GFRE_BT.SepRight(props[0],'@');
+      creation   := StrToInt64(props[1])*1000;
+      used       := StrToInt64(props[2]);
+      referd     := StrToInt64(props[3]);
+      snapo.Setup(snapname,creation,used,referd);
+      Field('embedded_snapshots').AddObject(snapo);
+    end;
+  finally
+    slist.Free;
   end;
 end;
 
@@ -2721,6 +2762,56 @@ begin
     llist.free;
     slist.Free;
   end;
+end;
+
+function TFRE_DB_ZFS.DumpDSPropertyNames: String;
+var
+  proc  : TFRE_DB_Process;
+
+  procedure BuildEmbeddedDatasetList;
+  var
+    slist      : TStringList;
+    props      : TFRE_DB_StringArray;
+    fieldnames : TFRE_DB_StringArray;
+    ds         : TFRE_DB_ZFS_DATASET;
+    i          : integer;
+    snapname   : string;
+    creation   : TFRE_DB_DateTime64;
+    used       : Int64;
+    referd     : Int64;
+    fieldcount  : NativeInt;
+  begin
+    slist := TStringList.Create;
+    try
+      slist.text  := proc.OutputToString;
+      GFRE_BT.SeperateString(slist[0],' ',props);
+      SetLength(fieldnames,length(props));
+      fieldcount:= 0;
+      for i:=0 to high(props) do
+        if props[i]<>'' then
+          begin
+            fieldnames[fieldcount]:=''''+lowercase(props[i])+'''';
+            inc(fieldcount);
+          end;
+      SetLength(fieldnames,fieldcount);
+      result := FREDB_CombineString(fieldnames,',');
+    finally
+      slist.Free;
+    end;
+  end;
+
+begin
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+  proc.SetupInput('zfs',TFRE_DB_StringArray.Create ('list','-p','-o','name,available,clones,compressratio,creation,defer_destroy,logicalreferenced,'+
+                                                    'logicalused,mounted,origin,refcompressratio,referenced,type,used,usedbychildren,usedbydataset,'+
+                                                    'usedbyrefreservation,usedbysnapshots,userrefs,written,aclinherit,aclmode,atime,canmount,casesensitivity,'+
+                                                    'checksum,compression,dedup,filesystem_count,filesystem_limit,logbias,mountpoint,nbmand,primarycache,quota,'+
+                                                    'readonly,recordsize,refquota,refreservation,reservation,secondarycache,sharenfs,sharesmb,snapdir,snapshot_count,'+
+                                                    'snapshot_limit,sync,utf8only,version,volblocksize,volsize,vscan,xattr,zoned'));
+  AddProcess(proc);
+  ExecuteMulti;
+  BuildEmbeddedDatasetList;
 end;
 
 
@@ -3012,21 +3103,27 @@ begin
 //  writeln('OUT:',proc.OutputToString);
 end;
 
-procedure TFRE_DB_ZFS.GetSnapshots(const dataset: string; const foscmdmode: boolean);
+{ dataset='' delivers all snapshots }
+procedure TFRE_DB_ZFS.GetSnapshots(const dataset: string; const foscmdmode: boolean ; const legacy : boolean);
 var
-  proc  : TFRE_DB_Process;
+  proc  : TFRE_DB_Process; { zfs list -t snapshot -o name,creation,used,referenced,logicalreferenced,logicalused,userrefs }
 begin
   ClearProcess;
   proc := TFRE_DB_Process.create;
   if foscmdmode=false then begin
-    proc.SetupInput('zfs',TFRE_DB_StringArray.Create('list','-r','-H','-p','-t','snapshot','-o','name,creation,used',dataset));
+    proc.SetupInput('zfs',TFRE_DB_StringArray.Create('list','-r','-H','-p','-t','snapshot','-o','name,creation,used,referenced,logicalreferenced,logicalused,userrefs',dataset));
   end else begin
     proc.SetupInput('foscmd',TFRE_DB_StringArray.Create('GETSNAPSHOTS',dataset));
   end;
   proc.Field('dataset').AsString:=dataset;
   AddProcess(proc);
   ExecuteMulti;
-  AnalyzeSnapshots(proc);
+  if (legacy)
+      and (proc.ExitStatus=0) then
+        AnalyzeSnapshotsLegacy(proc.OutputToString);
+  if (not legacy)
+     and (proc.ExitStatus=0) then
+       BuildEmbeddedSnapshotList(proc.OutputToString);
 end;
 
 procedure TFRE_DB_ZFS.TCPGetSnapshots(const dataset: string; const destinationhost: string; const destinationport: integer);
@@ -3043,7 +3140,8 @@ begin
   proc.Field('dataset').AsString:=dataset;
   AddProcess(proc);
   ExecuteMulti;
-  AnalyzeSnapshots(proc);
+  if proc.ExitStatus=0 then
+    AnalyzeSnapshotsLegacy(proc.OutputToString);
 end;
 
 function TFRE_DB_ZFS.DestroySnapshot(const dataset: string; const snapshotname: string; out error: string): integer;
@@ -3151,6 +3249,8 @@ function TFRE_DB_ZFS.GetDataset(const dataset: string; out error: string; out da
 var
   proc  : TFRE_DB_Process;
 begin
+  if dataset='' then
+    raise EFRE_DB_Exception.Create(edb_ERROR,'you can use this function only to get one dataset');
   ClearProcess;
   proc := TFRE_DB_Process.create;
   proc.SetupInput('zfs',TFRE_DB_StringArray.Create ('list','-p','-o','name,used,avail,refer',dataset));
@@ -3160,6 +3260,49 @@ begin
   datasetobject := proc.Field('datasetobject').AsObject;
   result        := proc.Field('exitstatus').AsInt32;
   error         := proc.Field('errorstring').AsString;
+end;
+
+function TFRE_DB_ZFS.EmbedDatasets: boolean;
+var
+  proc  : TFRE_DB_Process;
+
+  procedure BuildEmbeddedDatasetList;
+  var
+    slist      : TStringList;
+    props      : TFRE_DB_StringArray;
+    ds         : TFRE_DB_ZFS_DATASET;
+    i          : integer;
+    fieldcount  : NativeInt;
+  begin
+    slist := TStringList.Create;
+    try
+      slist.text  := proc.OutputToString;
+      fieldcount  := Length(TFRE_DB_ZFS_PROPNAMES);
+      for  i  := 0 to slist.count -1 do begin
+        GFRE_BT.SeperateString(slist[i],#9,props);
+        if Length(props)<>TFRE_DB_ZFS_PROPNAMES_CNT then
+          raise EFRE_DB_Exception.Create(edb_ERROR,'got not enough properties for zfs dataset expected [%d] got [%d] line [%s]',[TFRE_DB_ZFS_PROPNAMES_CNT,length(props),slist[i]]);
+        ds := TFRE_DB_ZFS_DATASET.CreateForDB;
+        ds.SetupFromParseStrings(props);
+        Field('embedded_ds').AddObject(ds);
+      end;
+    finally
+      slist.Free;
+    end;
+  end;
+
+begin
+  ClearProcess;
+  proc := TFRE_DB_Process.create;
+  proc.SetupInput('zfs',TFRE_DB_StringArray.Create ('list','-p','-H','-o','name,available,clones,compressratio,creation,defer_destroy,logicalreferenced,'+
+                                                    'logicalused,mounted,origin,refcompressratio,referenced,type,used,usedbychildren,usedbydataset,'+
+                                                    'usedbyrefreservation,usedbysnapshots,userrefs,written,aclinherit,aclmode,atime,canmount,casesensitivity,'+
+                                                    'checksum,compression,dedup,filesystem_count,filesystem_limit,logbias,mountpoint,nbmand,primarycache,quota,'+
+                                                    'readonly,recordsize,refquota,refreservation,reservation,secondarycache,sharenfs,sharesmb,snapdir,snapshot_count,'+
+                                                    'snapshot_limit,sync,utf8only,version,volblocksize,volsize,vscan,xattr,zoned'));
+  AddProcess(proc);
+  ExecuteMulti;
+  BuildEmbeddedDatasetList;
 end;
 
 function TFRE_DB_ZFS.GetPools(out error: string; out pools: IFRE_DB_Object): integer;
@@ -3327,6 +3470,15 @@ end;
 
 
 { TFRE_DB_ZFS_SNAPSHOT }
+
+procedure TFRE_DB_ZFS_SNAPSHOT.Setup(const snapname: TFRE_DB_String; const creationtime_utc: TFRE_DB_DateTime64; const usedamount, referedamount: Int64);
+begin
+  Field('objname').AsString := snapname;
+  //Field('parentid',fdbft_ObjLink);    //parent id e.g. fileshare,lun
+  Field('creation').AsDateTimeUTC := creationtime_utc;
+  Field('used_mb').AsInt64        := usedamount;
+  Field('refer_mb').AsInt64       := referedamount;
+end;
 
 class procedure TFRE_DB_ZFS_SNAPSHOT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var group : IFRE_DB_InputGroupSchemeDefinition;
@@ -3789,6 +3941,82 @@ begin
     StoreTranslateableText(conn,'enum_sync_disabled','Disabled');
   end;
 
+end;
+
+procedure TFRE_DB_ZFS_DATASET.SetupFromParseStrings(const props: TFRE_DB_StringArray);
+var
+  i: NativeInt;
+
+  procedure Setupfield(const fname:string;const prop:string);
+  var val:NativeInt;
+
+    procedure SetDateUTC;
+    begin
+      Field(fname).AsDateTimeUTC:=StrToInt64(prop)*1000;
+    end;
+
+    procedure SetInteger;
+    begin
+      if prop='-' then
+        begin
+          Field(fname).AsInt64:=-1;
+          exit;
+        end;
+      Field(fname).AsInt64:=StrToInt64(prop);
+    end;
+
+  begin
+    case fname of
+        'creation' :
+          begin
+            SetDateUTC;
+            exit;
+          end;
+        'fscount',
+        'fslimit',
+        'sscount',
+        'sslimit':
+          begin
+             if (prop='18446744073709551615') or (prop='-') then
+               begin
+                 Field(fname).AsInt64 := 0;
+                 exit;
+               end;
+             SetInteger;
+             exit;
+          end;
+        'mounted':
+          begin
+            if prop='yes' then
+              Field(fname).AsBoolean:=true
+            else
+              Field(fname).AsBoolean:=false;
+            exit;
+          end;
+        'used','avail','lused','quota','refer',
+        'lrefer','reserv','usedds','recsize','written','refquota','usedsnap','refreserv','usedchild','usedrefreserv' :
+          begin
+            SetInteger;
+            exit;
+          end;
+
+    end;
+    if prop='on' then
+      begin
+        field(fname).AsBoolean:=true;
+        exit;
+      end;
+    if prop='off' then
+      begin
+        field(fname).AsBoolean:=false;
+        exit;
+      end;
+     Field(fname).AsString:=prop; { fallback }
+  end;
+
+begin
+  for i:=0 to high(TFRE_DB_ZFS.TFRE_DB_ZFS_PROPNAMES) do
+    SetupField(TFRE_DB_ZFS.TFRE_DB_ZFS_PROPNAMES[i],props[i]);
 end;
 
 procedure TFRE_DB_ZFS_DATASET.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
