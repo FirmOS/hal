@@ -122,7 +122,7 @@ var
   procedure _Update(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field);
   var diff_step : IFRE_DB_Object;
   begin
-    diff_step := TFRE_DB_UPDATE_TRANSPORT.CreateUpdateObject(is_child_update,update_obj,update_type,new_field,old_field);
+    diff_step := TFRE_DB_UPDATE_TRANSPORT.CreateUpdateObject(is_child_update,update_obj,update_type,new_field,old_field);       //TODO: Combine fields in one update object with only changed fields
     if assigned(diff_step) then
       begin
         if update_type=cev_UpdateBlockStart then

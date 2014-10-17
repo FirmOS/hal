@@ -68,7 +68,6 @@ const
   CFOS_DB_ZONES_COLLECTION             = 'zones';
   CFRE_DB_ASSET_COLLECTION             = 'assets';
   CFRE_DB_DATACENTER_COLLECTION        = 'datacenter';
-  CFRE_DB_HOST_COLLECTION              = 'hosts';
   CFRE_DB_TEMPLATE_COLLECTION          = 'templates';
   CFRE_DB_IP_COLLECTION                = 'ip';
   CFRE_DB_ROUTING_COLLECTION           = 'routing';
