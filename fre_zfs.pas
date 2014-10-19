@@ -1386,7 +1386,13 @@ end;
 procedure TFRE_DB_ZFS_OBJ.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
-    Field('mosparentIds').AddObjectLink(AValue);
+    begin
+      Field('mosparentIds').AddObjectLink(AValue);
+    end;
+  if FREDB_GuidInArray(AValue,Field('serviceParent').AsObjectLinkArray)=-1 then
+    begin
+      Field('serviceParent').AddObjectLink(AValue);
+    end;
 end;
 
 procedure TFRE_DB_ZFS_OBJ.RemoveMosParentID(const avalue: TFRE_DB_GUID);
@@ -1394,7 +1400,14 @@ var lp:NativeInt;
 begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
   if lp>=0 then
-    Field('mosparentIds').RemoveObjectLink(lp);
+    begin
+      Field('mosparentIds').RemoveObjectLink(lp);
+    end;
+  lp := FREDB_GuidInArray(AValue,Field('serviceParent').AsObjectLinkArray);
+  if lp>=0 then
+    begin
+      Field('serviceParent').RemoveObjectLink(lp);
+    end;
 end;
 
 procedure TFRE_DB_ZFS_OBJ.SetName(const avalue: TFRE_DB_String);

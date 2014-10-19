@@ -778,7 +778,13 @@ end;
 procedure TFRE_DB_ENCLOSURE.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
-    Field('mosparentIds').AddObjectLink(AValue);
+    begin
+      Field('mosparentIds').AddObjectLink(AValue);
+    end;
+  if FREDB_GuidInArray(AValue,Field('serviceparent').AsObjectLinkArray)=-1 then
+    begin
+      Field('serviceparent').AddObjectLink(AValue);
+    end;
 end;
 
 procedure TFRE_DB_ENCLOSURE.RemoveMosParentID(const avalue: TFRE_DB_GUID);
@@ -786,7 +792,14 @@ var lp:NativeInt;
 begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
   if lp>=0 then
-    Field('mosparentIds').RemoveObjectLink(lp);
+    begin
+      Field('mosparentIds').RemoveObjectLink(lp);
+    end;
+  lp := FREDB_GuidInArray(AValue,Field('serviceparent').AsObjectLinkArray);
+  if lp>=0 then
+    begin
+      Field('serviceparent').RemoveObjectLink(lp);
+    end;
 end;
 
 function TFRE_DB_ENCLOSURE.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -1890,7 +1903,10 @@ end;
 procedure TFRE_DB_PHYS_DISK.ClearSlotandEnclosureInformation;
 begin
   if FieldExists('enclosure_uid') then
-    Field('mosparentIds').RemoveObjectLinkByUID(Field('enclosure_uid').AsGUID);
+    begin
+      Field('mosparentIds').RemoveObjectLinkByUID(Field('enclosure_uid').AsGUID);
+      Field('serviceParent').RemoveObjectLinkByUID(Field('enclosure_uid').AsGUID);
+    end;
   Field('parent_in_enclosure_uid').Clear;
   Field('enclosure_uid').Clear;
   EnclosureNr         := 0;
@@ -1968,7 +1984,10 @@ end;
 
 function TFRE_DB_DRIVESLOT.GetSlotNr: UInt16;
 begin
-  result := Field('slotnr').AsUInt16;
+  if FieldExists('slotnr') then
+    result := Field('slotnr').AsUInt16
+  else
+    result := 0;
 end;
 
 function TFRE_DB_DRIVESLOT.GetParentInEnclosureUID: TFRE_DB_GUID;
@@ -2023,7 +2042,13 @@ end;
 procedure TFRE_DB_DRIVESLOT.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
-    Field('mosparentIds').AddObjectLink(AValue);
+    begin
+      Field('mosparentIds').AddObjectLink(AValue);
+    end;
+  if FREDB_GuidInArray(AValue,Field('serviceparent').AsObjectLinkArray)=-1 then
+    begin
+      Field('serviceParent').AddObjectLink(avalue);
+    end;
 end;
 
 procedure TFRE_DB_DRIVESLOT.RemoveMosParentID(const avalue: TFRE_DB_GUID);
@@ -2031,7 +2056,14 @@ var lp:NativeInt;
 begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
   if lp>=0 then
-    Field('mosparentIds').RemoveObjectLink(lp);
+    begin
+      Field('serviceParent').RemoveObjectLink(lp);
+    end;
+  lp := FREDB_GuidInArray(AValue,Field('serviceparent').AsObjectLinkArray);
+  if lp>=0 then
+    begin
+      Field('serviceParent').RemoveObjectLink(lp);
+    end;
 end;
 
 procedure TFRE_DB_DRIVESLOT.SetAttachedTo(const port_nr: Byte; const AValue: string);
@@ -2148,6 +2180,8 @@ procedure TFRE_DB_SAS_EXPANDER.AddMosParentID(const avalue: TFRE_DB_GUID);
 begin
   if FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray)=-1 then
     Field('mosparentIds').AddObjectLink(AValue);
+  if FREDB_GuidInArray(AValue,Field('serviceParent').AsObjectLinkArray)=-1 then
+    Field('serviceparent').AddObjectLink(AValue);
 end;
 
 procedure TFRE_DB_SAS_EXPANDER.RemoveMosParentID(const avalue: TFRE_DB_GUID);
@@ -2156,6 +2190,9 @@ begin
   lp := FREDB_GuidInArray(AValue,Field('mosparentIds').AsObjectLinkArray);
   if lp>=0 then
     Field('mosparentIds').RemoveObjectLink(lp);
+  lp := FREDB_GuidInArray(AValue,Field('serviceparent').AsObjectLinkArray);
+  if lp>=0 then
+    Field('serviceparent').RemoveObjectLink(lp);
 end;
 
 function TFRE_DB_SAS_EXPANDER.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
