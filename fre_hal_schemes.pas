@@ -888,14 +888,6 @@ type
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
-  { TFRE_DB_VOIP_SERVICE }
-
-  TFRE_DB_VOIP_SERVICE=class(TFRE_DB_SERVICE)
-  protected
-    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-  end;
-
   { TFRE_DB_CPE_NETWORK_SERVICE }
 
   TFRE_DB_CPE_NETWORK_SERVICE=class(TFRE_DB_SERVICE)
@@ -1249,23 +1241,6 @@ begin
     StoreTranslateableText(conn,'scheme_name','Link Name');
     StoreTranslateableText(conn,'scheme_description','Description');
     StoreTranslateableText(conn,'scheme_mtu','MTU');
-  end;
-end;
-
-
-{ TFRE_DB_VOIP_SERVICE }
-
-class procedure TFRE_DB_VOIP_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
-  inherited RegisterSystemScheme(scheme);
-end;
-
-class procedure TFRE_DB_VOIP_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionId:='1.0';
-  if currentVersionId='' then begin
-    currentVersionId := '1.0';
   end;
 end;
 
@@ -5316,7 +5291,6 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_POSTGRES_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MYSQL_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HTTP_SERVICE);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VOIP_SERVICE);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CRYPTOCPE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_NETWORK_SERVICE);
