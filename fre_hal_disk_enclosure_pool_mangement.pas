@@ -710,7 +710,7 @@ var mdata: IFRE_DB_Object;
             mpath := GFRE_DBI.NewObject;
             mpath.Field('OPATHCOUNT').AsUInt16:=obj.Field('OPATHCOUNT').AsUInt16;
             mpath.Field('TPATHCOUNT').AsUInt16:=obj.Field('TPATHCOUNT').AsUInt16;
-            writeln('SENDSTAT MPATH ',old_obj.UID_String,' ',mpath.DumpToString());  //TODO SENDSTAT
+//            writeln('SENDSTAT MPATH ',old_obj.UID_String,' ',mpath.DumpToString());  //TODO SENDSTAT
             mpath := nil;
           end
         else
