@@ -84,6 +84,7 @@ var zp         : Pzpool_handle_t;
       result := StringReplace(result,'.','_',[rfReplaceAll]);
       if (elementname= ZPOOL_CONFIG_GUID) or (elementname= ZPOOL_CONFIG_POOL_GUID) then result := 'zfs_guid';
       if (elementname= ZPOOL_CONFIG_POOL_NAME) then result := 'objname';
+      if (uppercase(result)='COM_DELPHIX:EMPTY_BPOBJ') then result :='';  //skip
     end;
 
   begin
@@ -124,7 +125,10 @@ var zp         : Pzpool_handle_t;
               //writeln('SWL:POOLSTATE',poolstate);
             end
           else
-            obj.Field(mapname).asuint64 := u64;
+            begin
+              if mapname<>'' then
+                obj.Field(mapname).asuint64 := u64;
+            end;
       end;
     else
       begin
