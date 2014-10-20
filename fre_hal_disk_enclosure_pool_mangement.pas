@@ -204,6 +204,7 @@ var
       slot             : TFRE_DB_DRIVESLOT;
       i                : NativeInt;
       ua               : TFRE_DB_ZFS_UNASSIGNED;
+      sglog            : TFRE_DB_SG_LOGS;
 
   begin
     feed_disk := obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE;
@@ -220,10 +221,9 @@ var
             new_disk.SetAllSimpleObjectFieldsFromObject(feed_disk);
             if feed_disk.FieldExists('log') then
               begin
-                if (new_disk.FieldExists('log')) then
-                    new_disk.Field('log').AsObject.SetAllSimpleObjectFieldsFromObject(feed_disk.Field('log').AsObject)
-                else
-                    new_disk.Field('log').AsObject := feed_disk.Field('log').AsObject.CloneToNewObject;
+                sglog := (feed_disk.Field('log').CheckOutObject.Implementor_HC as TFRE_DB_SG_LOGS);
+ //               writeln('SENDSTAT SGLOG, SEND HERE :',sglog.DumpToString());  // TODO SENDSTAT
+                sglog := nil;
               end;
             if not struct_obj.isA(TFRE_DB_UNDEFINED_BLOCKDEVICE.ClassName) then
               begin
