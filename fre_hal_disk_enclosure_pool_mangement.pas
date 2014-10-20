@@ -153,9 +153,9 @@ var subfeedmodule : string;
     dummy         : IFRE_DB_Object;
 begin
 //  writeln('SWL: DISKHAL RECEIVED',dbo.DumpToString());
-  //dummy:=GFRE_DBI.CreateFromFile('/opt/local/fre/hal/diskenc.dbo');
-  //machinename   := dummy.Field('MACHINENAME').asstring;
-  //UpdateDiskAndEnclosure(dummy.Field('data').asobject,machinename);
+//  dummy:=GFRE_DBI.CreateFromFile('/opt/local/fre/hal/diskenc.dbo');
+//  machinename   := dummy.Field('MACHINENAME').asstring;
+//  UpdateDiskAndEnclosure(dummy.Field('data').asobject,machinename);
   //exit;
   subfeedmodule := dbo.Field('SUBFEED').asstring;
   writeln('SUBFEEDMODULE:',subfeedmodule);
@@ -174,7 +174,7 @@ begin
         end
       else
         if subfeedmodule='MPATH' then
-//          UpdateMpath(dbo.Field('data').asobject,machinename)
+          UpdateMpath(dbo.Field('data').asobject,machinename)
         else
           writeln('UNHANDLED SUBFEEDMODULE ',subfeedmodule);
 end;
@@ -208,6 +208,7 @@ var
 
   begin
     feed_disk := obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE;
+
     feed_disk.MachineID := mdata.UID;
     if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_disk.DeviceIdentifier,struct_obj,'') then
       begin
@@ -697,6 +698,7 @@ end;
 
 procedure TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.UpdateMpath(const dbo: IFRE_DB_Object; const machinename: TFRE_DB_NameType);
 var mdata: IFRE_DB_Object;
+    mpath: IFRE_DB_Object;
 
   procedure _UpdateMPath(const obj:IFRE_DB_Object);
   var old_obj   : IFRE_DB_OBject;
@@ -705,8 +707,11 @@ var mdata: IFRE_DB_Object;
       begin
         if (old_obj.Implementor_HC is TFRE_DB_PHYS_DISK) then
           begin
-            (old_obj.Implementor_HC as TFRE_DB_PHYS_DISK).OperationalPathCount := obj.Field('OPATHCOUNT').AsUInt16;
-            (old_obj.Implementor_HC as TFRE_DB_PHYS_DISK).TotalPathCount       := obj.Field('TPATHCOUNT').AsUInt16;
+            mpath := GFRE_DBI.NewObject;
+            mpath.Field('OPATHCOUNT').AsUInt16:=obj.Field('OPATHCOUNT').AsUInt16;
+            mpath.Field('TPATHCOUNT').AsUInt16:=obj.Field('TPATHCOUNT').AsUInt16;
+            writeln('SENDSTAT MPATH ',old_obj.UID_String,' ',mpath.DumpToString());  //TODO SENDSTAT
+            mpath := nil;
           end
         else
           writeln('device is not a phys diskin mpath update:',obj.Field('DEVICE').asstring);

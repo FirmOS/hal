@@ -141,6 +141,7 @@ var zp         : Pzpool_handle_t;
       ps           : Ppool_scan_stat_t;
       func_s       : string;
       state_s      : string;
+      zpool_iostat : TFRE_DB_ZPOOL_IOSTAT;
   begin
     if FOSNVGET_U64ARR(elem,uia,c) then
       begin
@@ -149,18 +150,25 @@ var zp         : Pzpool_handle_t;
 //        WriteLn(StringOfChar(' ',10),'FUNC = ', func_s);
         WriteStr(state_s,dsl_scan_state_t(ps^.pss_state));
 //        WriteLn(StringOfChar(' ',10),'STATE = ', state_s);
-        zfs_obj.Field('pss_func').asstring := func_s;
-        zfs_obj.Field('pss_func_ord').AsUInt64 := ps^.pss_func;
-        zfs_obj.Field('pss_state').asstring := state_s;
-        zfs_obj.Field('pss_start_time').AsDateTimeUTC := ps^.pss_start_time*1000;
-        zfs_obj.Field('pss_end_time').AsDateTimeUTC := ps^.pss_end_time*1000;
-        zfs_obj.Field('pss_to_examine').AsUInt64 := ps^.pss_to_examine;
-        zfs_obj.Field('pss_examined').AsUInt64 := ps^.pss_examined;
-        zfs_obj.Field('pss_to_process').AsUInt64 := ps^.pss_to_process;
-        zfs_obj.Field('pss_processed').AsUInt64 := ps^.pss_processed;
-        zfs_obj.Field('pss_errors').AsUInt64 := ps^.pss_errors;
-        zfs_obj.Field('pss_pass_exam').AsUInt64 := ps^.pss_pass_exam;
-        zfs_obj.Field('pss_pass_start').AsUInt64 := ps^.pss_pass_start;
+        if zfs_obj.FieldExists('zpooliostat') then
+          zpool_iostat := zfs_obj.getZpoolIoStatEmbedded
+        else
+          begin
+            zpool_iostat := TFRE_DB_ZPOOL_IOSTAT.CreateForDB;
+            zfs_obj.setZpoolIoStatEmbedded(zpool_iostat);
+          end;
+        zpool_iostat.Field('pss_func').asstring := func_s;
+        zpool_iostat.Field('pss_func_ord').AsUInt64 := ps^.pss_func;
+        zpool_iostat.Field('pss_state').asstring := state_s;
+        zpool_iostat.Field('pss_start_time').AsDateTimeUTC := ps^.pss_start_time*1000;
+        zpool_iostat.Field('pss_end_time').AsDateTimeUTC := ps^.pss_end_time*1000;
+        zpool_iostat.Field('pss_to_examine').AsUInt64 := ps^.pss_to_examine;
+        zpool_iostat.Field('pss_examined').AsUInt64 := ps^.pss_examined;
+        zpool_iostat.Field('pss_to_process').AsUInt64 := ps^.pss_to_process;
+        zpool_iostat.Field('pss_processed').AsUInt64 := ps^.pss_processed;
+        zpool_iostat.Field('pss_errors').AsUInt64 := ps^.pss_errors;
+        zpool_iostat.Field('pss_pass_exam').AsUInt64 := ps^.pss_pass_exam;
+        zpool_iostat.Field('pss_pass_start').AsUInt64 := ps^.pss_pass_start;
       end;
   end;
 
@@ -176,34 +184,38 @@ var zp         : Pzpool_handle_t;
   begin
     if FOSNVGET_U64ARR(elem,uia,c) then
       begin
+        if zfs_obj.FieldExists('zpooliostat') then
+          zpool_iostat := zfs_obj.getZpoolIoStatEmbedded
+        else
+          begin
+            zpool_iostat := TFRE_DB_ZPOOL_IOSTAT.CreateForDB;
+            zfs_obj.setZpoolIoStatEmbedded(zpool_iostat);
+          end;
         vs := Pvdev_stat_t(uia);
         WriteStr(state_s,vdev_state(vs^.vs_state));
-        zfs_obj.Field('state').asstring := state_s;
-        zfs_obj.Field('state_ord').asUint64 := vs^.vs_state;
-        zfs_obj.Field('timestamp').AsUint64 := vs^.vs_timestamp;
+        zpool_iostat.Field('state').asstring := state_s;
+        zpool_iostat.Field('state_ord').asUint64 := vs^.vs_state;
+        zpool_iostat.Field('timestamp').AsUint64 := vs^.vs_timestamp;
         zfs_obj.Field('aux').asstring := state_s;
-        zfs_obj.Field('state_ord').asUint64 := vs^.vs_state;
         WriteStr(aux_s,vdev_aux(vs^.vs_aux));
         zfs_obj.Field('aux').asstring := aux_s;
         zfs_obj.Field('aux_ord').asUint64 := vs^.vs_aux;
-        zfs_obj.Field('alloc').asUint64 := vs^.vs_alloc;
-        zfs_obj.Field('space').asUint64 := vs^.vs_space;
-        zfs_obj.Field('dspace').asUint64 := vs^.vs_dspace;
-        zfs_obj.Field('rsize').asUint64 := vs^.vs_rsize;
-        zfs_obj.Field('esize').asUint64 := vs^.vs_esize;
-        zfs_obj.Field('r_errors').asUint64 := vs^.vs_read_errors;
-        zfs_obj.Field('w_errors').asUint64 := vs^.vs_write_errors;
-        zfs_obj.Field('c_errors').asUint64 := vs^.vs_checksum_errors;
-        zfs_obj.Field('scan_removing').asUint64 := vs^.vs_scan_removing;
-        zfs_obj.Field('scan_processed').asUint64 := vs^.vs_scan_processed;
-        zpool_iostat := TFRE_DB_ZPOOL_IOSTAT.CreateForDB;
+        zpool_iostat.Field('alloc').asUint64 := vs^.vs_alloc;
+        zpool_iostat.Field('space').asUint64 := vs^.vs_space;
+        zpool_iostat.Field('dspace').asUint64 := vs^.vs_dspace;
+        zpool_iostat.Field('rsize').asUint64 := vs^.vs_rsize;
+        zpool_iostat.Field('esize').asUint64 := vs^.vs_esize;
+        zpool_iostat.Field('r_errors').asUint64 := vs^.vs_read_errors;
+        zpool_iostat.Field('w_errors').asUint64 := vs^.vs_write_errors;
+        zpool_iostat.Field('c_errors').asUint64 := vs^.vs_checksum_errors;
+        zpool_iostat.Field('scan_removing').asUint64 := vs^.vs_scan_removing;
+        zpool_iostat.Field('scan_processed').asUint64 := vs^.vs_scan_processed;
         for i:=0 to ord(ZIO_TYPES)-1 do
           begin
             WriteStr(type_s,zio_type_t(i));
             zpool_iostat.Field(type_s+'_OPS').AsUInt64   := vs^.vs_ops[i];
             zpool_iostat.Field(type_s+'_BYTES').AsUInt64 := vs^.vs_bytes[i];
           end;
-        zfs_obj.setZpoolIoStatEmbedded(zpool_iostat);
       end;
   end;
 
