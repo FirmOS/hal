@@ -107,6 +107,8 @@ type
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
      class function  OnlyOneServicePerZone : boolean; virtual;
+   public
+     class function  GetMachineUIDForService(const conn : IFRE_DB_CONNECTION ; service_uid : TFRE_DB_GUID):TFRE_DB_GUID;
    published
      procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
    end;
@@ -5023,6 +5025,25 @@ end;
  class function TFRE_DB_SERVICE.OnlyOneServicePerZone: boolean;
  begin
    result := false;
+ end;
+
+ class function TFRE_DB_SERVICE.GetMachineUIDForService(const conn: IFRE_DB_CONNECTION; service_uid: TFRE_DB_GUID): TFRE_DB_GUID;
+ var parentObj : IFRE_DB_Object;
+ begin
+   CheckDbResult(conn.Fetch(service_uid,parentObj));
+   while (parentObj.FieldExists('serviceParent') and not parentObj.IsA('TFRE_DB_MACHINE')) do
+     begin
+       service_uid := parentObj.Field('serviceParent').AsGUID;
+       parentObj.Finalize;
+       CheckDbResult(conn.Fetch(service_uid,parentObj));
+     end;
+   result := parentObj.UID;
+   try
+     if not parentObj.IsA('TFRE_DB_MACHINE') then
+       raise EFRE_DB_Exception.Create(edb_ERROR,'No Machine found for service [%s]',[service_uid.AsHexString]);
+   finally
+     parentObj.Finalize;
+   end;
  end;
 
  procedure TFRE_DB_SERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
