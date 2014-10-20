@@ -1777,7 +1777,8 @@ var sl        : TStringList;
         sl.add('');
         SplitCIDR(subnet.Field('subnet').asstring,ip,mask);
         sl.add('subnet '+ip+' netmask '+mask+' {');
-        sl.add(' range '+subnet.Field('range_start').asstring+' '+subnet.Field('range_end').asstring+';');
+        if (subnet.Field('range_start').asstring<>'') and (subnet.Field('range_end').asstring<>'') then
+          sl.add(' range '+subnet.Field('range_start').asstring+' '+subnet.Field('range_end').asstring+';');
         sl.add(' option routers '+subnet.Field('router').asstring+';');
         sl.add(' option domain-name-servers '+subnet.Field('dns').asstring+';');
         sl.add(' option tftp66  "'+subnet.Field('option_tftp66').asstring+'";');
@@ -1794,6 +1795,8 @@ begin
   try
     writeln('SWL:CONFIGUREHAL DHCP');
     ClearErrors;
+    ExecuteCMD('killall dhcpd',outstring);
+    writeln('killed');
 
     sl.add('default-lease-time 600;');
     sl.add('max-lease-time 7200;');
