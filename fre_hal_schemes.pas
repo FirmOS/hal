@@ -72,9 +72,6 @@ const
   CFRE_DB_IP_COLLECTION                = 'ip';
   CFRE_DB_ROUTING_COLLECTION           = 'routing';
 
-
-  CFOS_DB_VFS_CUSTOMERS_DCOLL          = 'vfs_customers_chooser';
-
 type
 
 
@@ -4751,7 +4748,7 @@ end;
 
  class procedure TFRE_DB_VMACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
 
@@ -4761,6 +4758,12 @@ end;
 
      StoreTranslateableText(conn,'enum_type_kvm','KVM');
      StoreTranslateableText(conn,'enum_type_os','OS');
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
+
+     StoreTranslateableText(conn,'scheme_main_group','General Information');
+     StoreTranslateableText(conn,'scheme_objname','Servicename');
    end;
  end;
 
@@ -5086,24 +5089,15 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_FILESERVER.Classname);
   scheme.AddSchemeField('customer',fdbft_ObjLink).SetupFieldDef(true);
-  //scheme.AddSchemeField('ip',fdbft_String).required:=true;
-  //scheme.AddSchemeField('pool',fdbft_String).required:=true;
-  //scheme.AddSchemeField('interface',fdbft_String);
-  //scheme.AddSchemeField('vlan',fdbft_UInt16);
 
   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('vfs_scheme_main_group'));
-  group.AddInput('customer',GetTranslateableTextKey('scheme_customer'),false,false,CFOS_DB_VFS_CUSTOMERS_DCOLL,true);
   group.AddInput('objname',GetTranslateableTextKey('scheme_fileservername'),false);
-  //group.AddInput('pool',GetTranslateableTextKey('scheme_pool'),true);
   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
-  //group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
-  //group.AddInput('interface',GetTranslateableTextKey('scheme_interface'));
-  //group.AddInput('vlan',GetTranslateableTextKey('scheme_vlan'));
 end;
 
 class procedure TFRE_DB_VIRTUAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.1';
+  newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'vfs_scheme_main_group','Virtual Fileserver Properties');
@@ -5113,10 +5107,6 @@ begin
     //StoreTranslateableText(conn,'scheme_ip','IP');
     //StoreTranslateableText(conn,'scheme_interface','Interface');
     //StoreTranslateableText(conn,'scheme_vlan','Vlan');
-  end;
-  if currentVersionId='1.0' then begin
-    currentVersionId := '1.1';
-    StoreTranslateableText(conn,'scheme_customer','Customer');
   end;
 end;
 
