@@ -1613,6 +1613,7 @@ var icount     : integer;
         ExecuteCMD('ifconfig '+phys.Objectname+' down',outstring,true);
         icount := 0;
         device.ForAllObjects(@_IPIterator);
+        ExecuteCMD('ifconfig '+phys.Objectname+' up',outstring,true);
       end;
     if device.IsA(TFRE_DB_DATALINK_IPTUN,iptun) then
       begin
@@ -1715,6 +1716,10 @@ begin
     sl.add('key /etc/openvpn/'+lowercase(ObjectName)+'_crt.key');
     sl.add('log /var/log/openvpn_'+lowercase(ObjectName)+'.log');
     sl.add('verb 3');
+    for i:=0 to Field('extra').ValueCount-1 do
+      begin
+        sl.add(Field('extra').AsStringItem[i]);
+      end;
     sl.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'.conf');
 
     Field('ca').AsStream.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_ca.crt');
@@ -1728,7 +1733,7 @@ begin
         sl.add('/sbin/ifconfig $dev up');
         sl.add('/sbin/brctl addbr br0');
         sl.add('/sbin/brctl addif br0 $dev eth1');
-        sl.add('/sbin/ifconfig br0 up');
+        sl.add('/sbin/ifconfig br0 '+Field('bridgeip').asstring+' up');
         sl.SaveToFile('/etc/openvpn/'+lowercase(ObjectName)+'_tap_up.sh');
         ExecuteCMD('chmod 755 /etc/openvpn/'+lowercase(ObjectName)+'_tap_up.sh',outstring,false);
         sl.Clear;
@@ -1811,7 +1816,7 @@ begin
   try
     writeln('SWL:CONFIGUREHAL DHCP');
     ClearErrors;
-    ExecuteCMD('killall dhcpd',outstring);
+    ExecuteCMD('pkill dhcpd',outstring);
     writeln('killed');
 
     sl.add('default-lease-time 600;');
