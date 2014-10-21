@@ -1746,6 +1746,7 @@ begin
   finally
     sl.Free;
   end;
+  ExecuteCMD('modprobe cryptodev',outstring);
   cmd := '--writepid /var/run/openvpn.'+lowercase(ObjectName)+'.pid --daemon ovpn-'+lowercase(ObjectName)+' --status /var/run/openvpn.'+lowercase(ObjectName)+'.status 10 --cd /etc/openvpn --config /etc/openvpn/'+lowercase(ObjectName)+'.conf';
   writeln('OPENVPN CMD:','/usr/sbin/openvpn ',cmd);
   ExecuteProcess('/usr/sbin/openvpn',cmd,[]);
