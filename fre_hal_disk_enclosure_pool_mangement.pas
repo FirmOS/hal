@@ -326,6 +326,7 @@ var
     var feed_slot     : TFRE_DB_DRIVESLOT;
         stat_slot     : IFRE_DB_Object;
         new_slot      : IFRE_DB_Object;
+        slotnr        : string;
     begin
       feed_slot                       := slotobj.Implementor_HC as TFRE_DB_DRIVESLOT;
       if mdata.FetchObjWithStringFieldValue('DEVICEIDENTIFIER',feed_slot.DeviceIdentifier,stat_slot,'') then
@@ -339,7 +340,8 @@ var
         end;
       (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddDriveSlotEmbedded(feed_slot.SlotNr,new_slot.Implementor_HC as TFRE_DB_DRIVESLOT);
       (new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).ParentInEnclosureUID  := new_enclosure.UID;
-      (new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).ObjectName            := inttostr((new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).SlotNr);
+      slotnr := '0'+inttostr((new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).SlotNr);
+      (new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).ObjectName            := Copy(slotnr,length(slotnr)-1,2);
     end;
 
     procedure _UpdateExpanders(const expanderobj:IFRE_DB_Object);
