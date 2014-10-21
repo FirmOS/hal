@@ -1205,11 +1205,17 @@ end;
 { TFRE_DB_IPV4_NETROUTE }
 
 class procedure TFRE_DB_IPV4_NETROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_IPV4_HOSTNET.ClassName);
   scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
   scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ip');
+
+  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
+  group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
 end;
 
 class procedure TFRE_DB_IPV4_NETROUTE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1217,6 +1223,10 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
+    StoreTranslateableText(conn,'scheme_gateway','Gateway');
   end;
 end;
 
@@ -1363,10 +1373,15 @@ end;
 { TFRE_DB_DATACENTER }
 
 class procedure TFRE_DB_DATACENTER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
   scheme.GetSchemeField('objname').required:=true;
+
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
 end;
 
 class procedure TFRE_DB_DATACENTER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1374,6 +1389,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1490,7 +1508,7 @@ begin
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
     scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ip');
     scheme.AddSchemeField('dhcp',fdbft_Boolean).required:=true;
-    group:=scheme.AddInputGroup('ip').Setup(GetTranslateableTextKey('scheme_ipv4_group'));
+    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
 end;
@@ -1500,7 +1518,7 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
-    StoreTranslateableText(conn,'scheme_ipv4_group','IPv4 Properties');
+    StoreTranslateableText(conn,'scheme_main_group','IPv4 Properties');
     StoreTranslateableText(conn,'scheme_ip_net','IP/Subnet');
     StoreTranslateableText(conn,'scheme_dhcp','DHCP');
   end;

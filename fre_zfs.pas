@@ -178,7 +178,6 @@ type
     procedure _getDisableDrop            (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getCaption                (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getMOSCaption             (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
-    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
     function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
@@ -726,6 +725,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
@@ -1045,7 +1047,7 @@ begin
 
   scheme.AddSchemeField('state',fdbft_String);
 
-  group:=scheme.AddInputGroup('zfs').Setup(GetTranslateableTextKey('scheme_zfs'));
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
   group.AddInput('state',GetTranslateableTextKey('scheme_state'));
 end;
 
@@ -1054,9 +1056,8 @@ begin
   newVersionId:='1.0';
   if (currentVersionId='') or (currentVersionId='UNUSED') then begin
     currentVersionId := '1.0';
-    StoreTranslateableText(conn,'scheme_zfs','General Information');
+    StoreTranslateableText(conn,'scheme_main','General Information');
     StoreTranslateableText(conn,'scheme_state','State');
-    StoreTranslateableText(conn,'zfs_content_header','ZFS Information');
   end;
 end;
 
@@ -1411,18 +1412,6 @@ end;
 procedure TFRE_DB_ZFS_OBJ.SetName(const avalue: TFRE_DB_String);
 begin
   field('objname').asstring := avalue;
-end;
-
-function TFRE_DB_ZFS_OBJ.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-var
-  panel         : TFRE_DB_FORM_PANEL_DESC;
-  scheme        : IFRE_DB_SchemeObject;
-begin
-  GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'zfs_content_header'),true,false);
-  panel.AddSchemeFormGroup(scheme.GetInputGroup('zfs'),GetSession(input));
-  panel.FillWithObjectValues(self,GetSession(input));
-  Result:=panel;
 end;
 
 function TFRE_DB_ZFS_OBJ.WEB_MOSChildStatusChanged(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;

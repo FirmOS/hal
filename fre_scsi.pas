@@ -167,6 +167,7 @@ type
     procedure SetDeviceIdentifier(AValue: TFRE_DB_String);
     procedure SetParentInEnclosureUID(AValue: TFRE_DB_GUID);
   public
+    class procedure RegisterSystemScheme        (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
     procedure AddMosParentID                    (const avalue : TFRE_DB_GUID);
@@ -1826,7 +1827,7 @@ begin
 
   scheme.AddSchemeFieldSubscheme('log',TFRE_DB_SG_LOGS.Classname);
 
-  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
+  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
   group.AddInput('deviceidentifier',GetTranslateableTextKey('scheme_deviceidentifier'),true);
   group.AddInput('manufacturer',GetTranslateableTextKey('scheme_manufacturer'),true);
   group.AddInput('model_number',GetTranslateableTextKey('scheme_model_number'),true);
@@ -2019,14 +2020,20 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
 class procedure TFRE_DB_DRIVESLOT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
   scheme.AddCalcSchemeField ('displayname',fdbft_String,@CALC_GetDisplayName);
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
 end;
 
 procedure TFRE_DB_DRIVESLOT.AddMosParentID(const avalue: TFRE_DB_GUID);
@@ -2158,11 +2165,22 @@ begin
   AddMosParentID(AValue);
 end;
 
+class procedure TFRE_DB_SAS_EXPANDER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
+end;
+
 class procedure TFRE_DB_SAS_EXPANDER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
