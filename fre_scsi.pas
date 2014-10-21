@@ -131,7 +131,7 @@ type
     procedure _getSizeMB                        (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getCaption                       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
     procedure _getMOSCaption                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
-    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSContent                    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_SATA_DISK }
@@ -257,10 +257,10 @@ type
     procedure _getLayoutSubcaption              (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getLayoutIcon                    (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER);
     procedure _getStatusIcon                    (const calc: IFRE_DB_CALCFIELD_SETTER);
-    function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
-    function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
-    function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
-    function  WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSContent                    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSChildStatusChanged         (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_MOSStatus                     (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    function  WEB_GetDefaultCollection          (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
   end;
 
   { TFRE_DB_SCSI }
@@ -555,12 +555,8 @@ begin
     StoreTranslateableText(conn,'scheme_log_tp1','Target Port 1 Information');
     StoreTranslateableText(conn,'scheme_log_tp2','Target Port 2 Information');
 
+    StoreTranslateableText(conn,'phys_disk_content_header','SATA Disk Information');
   end;
-  if (currentVersionId='1.0') then begin
-  //next update code
-  end;
-
-
 end;
 
 { TFRE_DB_ENCLOSURE }
@@ -642,13 +638,9 @@ begin
     StoreTranslateableText(conn,'scheme__deviceidentifier','Enclosure Identifier');
     StoreTranslateableText(conn,'scheme_enclosure_nr','Enclosure Nr');
     StoreTranslateableText(conn,'scheme_drive_slots','Drive Slots');
-
+    StoreTranslateableText(conn,'enclosure_content_header','Enclosure Information');
   end;
-  if (currentVersionId='1.0') then begin
-  //next update code
-  end;
-
-
+  StoreTranslateableText(conn,'enclosure_content_header','Enclosure Information');
 end;
 
 class procedure TFRE_DB_ENCLOSURE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -808,7 +800,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'enclosure_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'enclosure_content_header'),true,false);
   panel.AddSchemeFormGroup(scheme.GetInputGroup('enclosure'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
@@ -1858,9 +1850,11 @@ end;
 
 class procedure TFRE_DB_PHYS_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newversionID:='1.0';
+  newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'phys_disk_content_header','Disk Information');
   end;
 end;
 
@@ -1919,7 +1913,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'phys_disk_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'phys_disk_content_header'));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   panel.AddSchemeFormGroup(scheme.GetInputGroup('log_common'),GetSession(input)).SetCollapseState(false,true);
   panel.AddSchemeFormGroup(scheme.GetInputGroup('log_ec'),GetSession(input)).SetCollapseState(true);
@@ -1957,12 +1951,8 @@ begin
     StoreTranslateableText(conn,'scheme_log_tp1','Target Port 1 Information');
     StoreTranslateableText(conn,'scheme_log_tp2','Target Port 2 Information');
 
+    StoreTranslateableText(conn,'phys_disk_content_header','SAS Disk Information');
   end;
-  if (currentVersionId='1.0') then begin
-  //next update code
-  end;
-
-
 end;
 
 { TFRE_DB_DRIVESLOT }

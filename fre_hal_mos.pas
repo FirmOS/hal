@@ -300,13 +300,11 @@ end;
 
 class procedure TFRE_DB_MOS_SNMP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited;
   newVersionId:='1.0';
-  if (currentVersionId='') then
-    begin
-      currentVersionId:='1.0';
-    end;
-   
+  if (currentVersionId='') then begin
+    currentVersionId:='1.0';
+    StoreTranslateableText(conn,'snmp_content_header','SNMP Information');
+  end;
 end;
 
 procedure TFRE_DB_MOS_SNMP.Configure(const oid: string; const host: string; const version: integer; const community: string);
@@ -345,7 +343,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'snmp_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'snmp_content_header'),true,false);
   panel.AddSchemeFormGroup(scheme.GetInputGroup('snmp'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;

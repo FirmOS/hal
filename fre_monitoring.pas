@@ -50,7 +50,7 @@ type
    procedure _getStatusIcon             (const calc: IFRE_DB_CALCFIELD_SETTER);
    function  WEB_MOSChildStatusChanged  (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    function  WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
-   function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+   function  WEB_MOSContent             (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;virtual;abstract;
  end;
 
 
@@ -151,10 +151,6 @@ begin
   //GFRE_DBI.Initialize_Extension_Objects;
 end;
 
-
-
-
-
 { TFRE_DB_VIRTUALMOSOBJECT }
 
 function TFRE_DB_VIRTUALMOSOBJECT.GetCaption: TFRE_DB_String;
@@ -222,11 +218,6 @@ function TFRE_DB_VIRTUALMOSOBJECT.WEB_MOSStatus(const input: IFRE_DB_Object; con
 begin
   Result:=GFRE_DBI.NewObject;
   Result.Field('status_mos').AsString:=Field('status_mos').AsString;
-end;
-
-function TFRE_DB_VIRTUALMOSOBJECT.WEB_MOSContent(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-begin
-  Result:=TFRE_DB_HTML_DESC.create.Describe('');
 end;
 
 end.

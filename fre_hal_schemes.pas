@@ -4777,13 +4777,18 @@ end;
 
  class procedure TFRE_DB_MACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
      StoreTranslateableText(conn,'scheme_address_group','Site Address');
      StoreTranslateableText(conn,'scheme_main','General');
      StoreTranslateableText(conn,'scheme_name','Machine Name');
      StoreTranslateableText(conn,'machine_content_header_short','Machine Information');
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
+     DeleteTranslateableText(conn,'machine_content_header_short');
+     StoreTranslateableText(conn,'machine_content_header','Machine Information');
    end;
  end;
 
@@ -4878,7 +4883,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'machine_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'machine_content_header'),true,false);
   panel.AddSchemeFormGroup(scheme.GetInputGroup('machine'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;

@@ -1056,9 +1056,7 @@ begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_zfs','General Information');
     StoreTranslateableText(conn,'scheme_state','State');
-  end;
-  if (currentVersionId='1.0') then begin
- //next update code
+    StoreTranslateableText(conn,'zfs_content_header','ZFS Information');
   end;
 end;
 
@@ -1421,7 +1419,7 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'zfs_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'zfs_content_header'),true,false);
   panel.AddSchemeFormGroup(scheme.GetInputGroup('zfs'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
@@ -1797,9 +1795,7 @@ begin
    StoreTranslateableText(conn,'scheme_scan','Scan');
    StoreTranslateableText(conn,'scheme_errors','Errors');
 
- end;
- if (currentVersionId='1.0') then begin
- //next update code
+   StoreTranslateableText(conn,'pool_content_header','Pool Information');
  end;
 end;
 
@@ -2272,10 +2268,8 @@ var
   scheme        : IFRE_DB_SchemeObject;
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
-  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(app.FetchAppTextShort(ses,'pool_content_header'));
+  panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'pool_content_header'),true,false);
   panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool'),GetSession(input));
-  panel.AddSchemeFormGroup(scheme.GetInputGroup('zfs'),GetSession(input));
-//  panel.AddSchemeFormGroup(scheme.GetInputGroup('zpool_iostat'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
 end;
