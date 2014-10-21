@@ -45,7 +45,7 @@ interface
 
 uses
   Classes, SysUtils,FRE_DB_INTERFACE, FRE_DB_COMMON, FRE_PROCESS, FOS_BASIS_TOOLS,
-  FOS_TOOL_INTERFACES,fre_testcase,fre_system,fre_monitoring,cthreads, ctypes,strutils;
+  FOS_TOOL_INTERFACES,fre_testcase,fre_system,fre_monitoring,cthreads, ctypes,fos_strutils;
 
 type
 
@@ -400,6 +400,7 @@ type
   published
     procedure _getMOSCaption                         (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); override;
     function  WEB_GetDefaultCollection               (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    class procedure STAT_TRANSFORM                   (const transformed_output : IFRE_DB_Object ; const stat_data : IFRE_DB_Object ; const statfieldname : TFRE_DB_Nametype);
   end;
 
   { TFRE_DB_ZFS_UNASSIGNED }
@@ -2299,6 +2300,14 @@ function TFRE_DB_ZFS_POOL.WEB_GetDefaultCollection(const input: IFRE_DB_Object; 
 begin
  result:=GFRE_DBI.NewObject;
  result.Field('collection').asstring:=CFRE_DB_ZFS_POOL_COLLECTION;
+end;
+
+class procedure TFRE_DB_ZFS_POOL.STAT_TRANSFORM(const transformed_output: IFRE_DB_Object; const stat_data: IFRE_DB_Object; const statfieldname: TFRE_DB_Nametype);
+begin
+ if assigned(stat_data) then
+   begin
+     transformed_output.Field(statfieldname).AsString := stat_data.Field('zpool_desc').AsString;
+   end;
 end;
 
 { TFRE_DB_ZFSJob }
