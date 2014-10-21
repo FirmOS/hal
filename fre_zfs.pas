@@ -609,6 +609,9 @@ begin
   newVersionId:='1.0';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+
+     StoreTranslateableText(conn,'scheme_main','General Information');
+     StoreTranslateableText(conn,'scheme_state','State');
    end;
 end;
 
@@ -634,6 +637,9 @@ begin
   newVersionId:='1.0';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+
+     StoreTranslateableText(conn,'scheme_main','General Information');
+     StoreTranslateableText(conn,'scheme_state','State');
    end;
 end;
 
@@ -932,6 +938,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
@@ -962,6 +971,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
@@ -1449,6 +1461,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
@@ -1464,6 +1479,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
@@ -1490,6 +1508,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
@@ -1520,6 +1541,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
@@ -1652,6 +1676,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main','General Information');
+    StoreTranslateableText(conn,'scheme_state','State');
   end;
 end;
 
