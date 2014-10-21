@@ -2306,7 +2306,7 @@ class procedure TFRE_DB_ZFS_POOL.STAT_TRANSFORM(const transformed_output: IFRE_D
 begin
  if assigned(stat_data) then
    begin
-     transformed_output.Field(statfieldname).AsString := stat_data.Field('zpool_desc').AsString;
+     transformed_output.Field(statfieldname).AsString := stat_data.Field('PSS_STATETEXT').AsString;
    end;
 end;
 

@@ -180,6 +180,7 @@ type
      function        WEB_MOSStatus              (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
      function        WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
      function        WEB_REQUEST_DISK_ENC_POOL_DATA   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+     function        WEB_REQUEST_SERVICE_STRUCTURE    (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
    end;
 
    { TFRE_DB_MACHINE_SETTING }
@@ -5001,6 +5002,40 @@ begin
 
  // writeln('SWL REQUEST_DISC_ENC_POOL: ',result.DumpToString);
 
+end;
+
+function TFRE_DB_MACHINE.WEB_REQUEST_SERVICE_STRUCTURE(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+var mo          : IFRE_DB_Object;
+
+    procedure _getsubreferences(const obj:IFRE_DB_Object; const level:integer);
+    var  refs        : TFRE_DB_ObjectReferences;
+         sobj        : IFRE_DB_Object;
+         clonedobj   : IFRE_DB_Object;
+         i           : integer;
+    begin
+      refs := conn.GetReferencesDetailed(obj.uid,false);
+      for i:=0 to high(refs) do
+        begin
+          if (refs[i].fieldname='SERVICEPARENT') or (refs[i].fieldname='ZONEID') then
+            begin
+              CheckDbResult(conn.Fetch(refs[i].linked_uid,sobj),' could not fetch referencing object '+refs[i].linked_uid.AsHexString);
+//              writeln('SWL SET FIELD LEVEL',level,' ',obj.UID_String,' ',sobj.UID_String,' ',sobj.SchemeClass);
+              clonedobj := sobj.CloneToNewObject;
+              obj.Field(sobj.UID_String).AsObject:=clonedobj;
+              _getsubreferences(clonedobj,level+1);
+            end;
+        end;
+    end;
+
+begin
+  result := GFRE_DBI.NewObject;
+
+  mo     := CloneToNewObject;
+  result.Field(field('objname').asstring).AsObject := mo;
+
+  _getsubreferences(mo,0);
+
+ //writeln('SWL SERVICE STRUCTURE: ',result.DumpToString);
 end;
 
  procedure TFRE_DB_SERVICE.ClearErrors;
