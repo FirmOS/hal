@@ -99,7 +99,7 @@ type
 
    { TFRE_DB_SERVICE }
 
-   TFRE_DB_SERVICE=class(TFRE_DB_ObjectEx)
+   TFRE_DB_SERVICE=class(TFRE_DB_VIRTUALMOSOBJECT)
    protected
      procedure       ClearErrors;
      function        ExecuteCMD(const cmd:string;out outstring:string;const ignore_errors:boolean=false):integer;
