@@ -330,6 +330,7 @@ var update_obj   : IFRE_DB_Object;
 begin
   update_obj := nil;
 //  writeln('SWL DIFF:',transport_object.DumpToString);
+try
   if transport_object.FieldExists(CDIFF_INSERT_LIST) then
     begin
       // setup insert array
@@ -373,6 +374,11 @@ begin
           _processDiff(transport_object.Field(CDIFF_DELETE_LIST).AsObjectItem[i]);
         end;
     end;
+except
+  on E:Exception do begin
+    writeln('SWL EXCEPTION IN FREDIFF_Applytransport :',E.Message);  //FIXXME
+  end;
+ end;
 end;
 
 { TFRE_DB_DELETE_TRANSPORT }
