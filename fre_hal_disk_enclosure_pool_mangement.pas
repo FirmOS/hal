@@ -575,30 +575,8 @@ var mdata    : IFRE_DB_Object;
           if new_obj.FieldExists('zpooliostat') then
             begin
               zpool_iostat:=(new_obj.Field('zpooliostat').CheckOutObject.Implementor_HC as TFRE_DB_ZPOOL_IOSTAT);
-              if new_obj.IsA(TFRE_DB_ZFS_POOL,statpool) then
-                begin
-                  s := statpool.Field('STATE').AsString;
-                  if zpool_iostat.Field('PSS_FUNC').asstring='POOL_SCAN_SCRUB' then
-                    begin
-                      zpool_iostat.Field('PSS_SCRUBPERCENT').asreal32 := zpool_iostat.Field('PSS_EXAMINED').AsUInt64/zpool_iostat.Field('PSS_TO_EXAMINE').AsUInt64*100;
-                      n:=GFRE_DT.Now_UTC;
-                      diff:=(n-zpool_iostat.field('PSS_START_TIME').AsDateTimeUTC) div 1000;
-                      writeln('SWL TIMEDIFF',diff);
-                      zpool_iostat.Field('PSS_SCRUBRATE').asUint64 := zpool_iostat.Field('PSS_EXAMINED').AsUInt64 div diff;
-                      zpool_iostat.Field('PSS_SCRUBTOGO').asUint64 := (zpool_iostat.Field('PSS_TO_EXAMINE').AsUInt64-zpool_iostat.Field('PSS_EXAMINED').AsUInt64) div zpool_iostat.Field('PSS_SCRUBRATE').asUint64;
-                      s:=s+', scrubbing  '+GFRE_BT.ByteToString(zpool_iostat.Field('PSS_EXAMINED').AsUInt64)+ ' of '+GFRE_BT.ByteToString(zpool_iostat.Field('PSS_TO_EXAMINE').AsUInt64)+' scanned, '+FloatToStrF(zpool_iostat.Field('PSS_SCRUBPERCENT').asreal32,ffFixed,5,3)+'% done. Rate '+GFRE_BT.ByteToString(zpool_iostat.Field('PSS_SCRUBRATE').AsUInt64)+'/s';
-                    end;
-
-//                  518G scanned out of 9,75T at 561M/s, 4h47m to go
-//                  0 repaired, 5,19% done
-                  zpool_iostat.Field('PSS_STATETEXT').asstring := s;
-//                  writeln('SENDSTAT zpool iostat for id:',new_obj.UID_String,' ',zpool_iostat.DumpToString());
-                end
-//              else
-//                zpool_iostat:=nil;  // only for pool, no other zfs objects
-
-              // TODO SENDSTAT
-//              writeln('SENDSTAT zpool iostat for id:',new_obj.UID_String,' ',zpool_iostat.DumpToString());
+              if new_obj.isA(TFRE_DB_ZFS_POOL,statpool) then
+                zpool_iostat.Field('state').asstring := statpool.Field('state').asstring;
             end;
           if old_pool.FetchObjWithStringFieldValue('ZFS_GUID',zfs_guid,zfs_obj,'') then
             begin

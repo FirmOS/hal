@@ -217,6 +217,7 @@ type
     procedure _getMachineDevicename       (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     procedure _getMachineDeviceIdentifier (const calcfieldsetter : IFRE_DB_CALCFIELD_SETTER); virtual;
     function  WEB_GetDefaultCollection   (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object;
+    class procedure STAT_TRANSFORM              (const transformed_output : IFRE_DB_Object ; const stat_data : IFRE_DB_Object ; const statfieldname : TFRE_DB_Nametype);
   end;
 
   { TFRE_DB_OS_BLOCKDEVICE }
@@ -281,6 +282,8 @@ type
   public
     function  mayHaveZFSChildren       : Boolean; override;
     function  acceptsNewZFSChildren     (const conn: IFRE_DB_CONNECTION): Boolean; override;
+  published
+    class procedure STAT_TRANSFORM      (const transformed_output : IFRE_DB_Object ; const stat_data : IFRE_DB_Object ; const statfieldname : TFRE_DB_Nametype);
   end;
 
   { TFRE_DB_ZFS_VDEV }
@@ -293,7 +296,9 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
-    function acceptsNewZFSChildren  (const conn: IFRE_DB_CONNECTION): Boolean; override;
+    function acceptsNewZFSChildren              (const conn: IFRE_DB_CONNECTION): Boolean; override;
+  published
+    class procedure STAT_TRANSFORM              (const transformed_output : IFRE_DB_Object ; const stat_data : IFRE_DB_Object ; const statfieldname : TFRE_DB_Nametype);
   end;
 
   { TFRE_DB_ZFS_VDEVCONTAINER }
@@ -317,6 +322,8 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   public
+  published
+    class procedure STAT_TRANSFORM              (const transformed_output : IFRE_DB_Object ; const stat_data : IFRE_DB_Object ; const statfieldname : TFRE_DB_Nametype);
   end;
 
   { TFRE_DB_ZFS_SPARE }
@@ -624,6 +631,12 @@ end;
 function TFRE_DB_ZFS_DISKSPARECONTAINER.acceptsNewZFSChildren(const conn: IFRE_DB_CONNECTION): Boolean;
 begin
   Result:=false;
+end;
+
+class procedure TFRE_DB_ZFS_DISKSPARECONTAINER.STAT_TRANSFORM(const transformed_output: IFRE_DB_Object; const stat_data: IFRE_DB_Object; const statfieldname: TFRE_DB_Nametype);
+begin
+   if assigned(stat_data) then
+     transformed_output.Field(statfieldname).AsString := stat_data.Field('STATE').AsString;
 end;
 
 { TFRE_DB_ZFS_DISKREPLACECONTAINER }
@@ -976,6 +989,22 @@ begin
     StoreTranslateableText(conn,'scheme_main','General Information');
     StoreTranslateableText(conn,'scheme_state','State');
   end;
+end;
+
+class procedure TFRE_DB_ZFS_DATASTORAGE.STAT_TRANSFORM(const transformed_output: IFRE_DB_Object; const stat_data: IFRE_DB_Object; const statfieldname: TFRE_DB_Nametype);
+var s,d,a : double;
+    r,c,w : UInt64;
+begin
+  if assigned(stat_data) then
+    begin
+      s := stat_data.Field('SPACE').AsUInt64 / (1024*1024*1024*1024);
+      d := stat_data.Field('DSPACE').AsUInt64 / (1024*1024*1024*1024);
+      a := stat_data.Field('ALLOC').AsUInt64/(1024*1024*1024*1024);
+      r := stat_data.Field('R_ERRORS').AsUInt64;
+      w := stat_data.Field('W_ERRORS').AsUInt64;
+      c := stat_data.Field('C_ERRORS').AsUInt64;
+      transformed_output.Field(statfieldname).AsString := stat_data.Field('STATE').AsString+' '+format('S/D/A %f TB %f TB %f TB R/W/C Errors(%d/%d/%d)',[s,d,a,r,w,c]);
+    end;
 end;
 
 { TFRE_DB_ZFS_OBJ }
@@ -1560,6 +1589,12 @@ begin
   end;
 end;
 
+class procedure TFRE_DB_ZFS_VDEV.STAT_TRANSFORM(const transformed_output: IFRE_DB_Object; const stat_data: IFRE_DB_Object; const statfieldname: TFRE_DB_Nametype);
+begin
+  if assigned(stat_data) then
+    transformed_output.Field(statfieldname).AsString := stat_data.Field('STATE').AsString;
+end;
+
 { TFRE_DB_ZFS_BLOCKDEVICE }
 
 function TFRE_DB_ZFS_BLOCKDEVICE.getDeviceName: TFRE_DB_String;
@@ -1728,6 +1763,12 @@ function TFRE_DB_ZFS_BLOCKDEVICE.WEB_GetDefaultCollection(const input: IFRE_DB_O
 begin
  result:=GFRE_DBI.NewObject;
  result.Field('collection').asstring:=CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION;
+end;
+
+class procedure TFRE_DB_ZFS_BLOCKDEVICE.STAT_TRANSFORM(const transformed_output: IFRE_DB_Object; const stat_data: IFRE_DB_Object; const statfieldname: TFRE_DB_Nametype);
+begin
+  if assigned(stat_data) then
+    transformed_output.Field(statfieldname).AsString := stat_data.Field('STATE').AsString;
 end;
 
 { TFRE_DB_ZFS_POOL }
@@ -2303,10 +2344,34 @@ begin
 end;
 
 class procedure TFRE_DB_ZFS_POOL.STAT_TRANSFORM(const transformed_output: IFRE_DB_Object; const stat_data: IFRE_DB_Object; const statfieldname: TFRE_DB_Nametype);
+var s    : string;
+    diff : NativeInt;
 begin
  if assigned(stat_data) then
    begin
-     transformed_output.Field(statfieldname).AsString := stat_data.Field('PSS_STATETEXT').AsString;
+     s := stat_data.Field('STATE').AsString;
+     if stat_data.Field('PSS_FUNC').asstring='POOL_SCAN_SCRUB' then
+       begin
+         stat_data.Field('PSS_SCRUBPERCENT').asreal32 := stat_data.Field('PSS_EXAMINED').AsUInt64/stat_data.Field('PSS_TO_EXAMINE').AsUInt64*100;
+         diff:=(GFRE_DT.Now_UTC-stat_data.field('PSS_START_TIME').AsDateTimeUTC) div 1000;
+         writeln('SWL TIMEDIFF',diff);
+         stat_data.Field('PSS_SCRUBRATE').asUint64 := stat_data.Field('PSS_EXAMINED').AsUInt64 div diff;
+         stat_data.Field('PSS_SCRUBTOGO').asUint64 := (stat_data.Field('PSS_TO_EXAMINE').AsUInt64-stat_data.Field('PSS_EXAMINED').AsUInt64) div stat_data.Field('PSS_SCRUBRATE').asUint64;
+         if stat_data.Field('PSS_STATE').AsString = 'DSS_FINISHED' then
+           begin
+             s:=s+', last scrub of '+GFRE_BT.ByteToString(stat_data.Field('PSS_TO_EXAMINE').AsUInt64)+' finished on '+stat_data.Field('PSS_END_TIME').AsString;
+           end
+         else
+           begin
+             s:=s+', scrubbing  '+GFRE_BT.ByteToString(stat_data.Field('PSS_EXAMINED').AsUInt64)+ ' of '+GFRE_BT.ByteToString(stat_data.Field('PSS_TO_EXAMINE').AsUInt64)+' scanned, '+FloatToStrF(stat_data.Field('PSS_SCRUBPERCENT').asreal32,ffFixed,5,3)+'% done. Rate '+GFRE_BT.ByteToString(stat_data.Field('PSS_SCRUBRATE').AsUInt64)+'/s';
+           end;
+       end;
+
+//                  518G scanned out of 9,75T at 561M/s, 4h47m to go
+//                  0 repaired, 5,19% done
+     //stat_data.Field('PSS_STATETEXT').asstring := s;
+     //writeln('SENDSTAT zpool iostat for id:',new_obj.UID_String,' ',zpool_iostat.DumpToString());
+     transformed_output.Field(statfieldname).AsString := s;
    end;
 end;
 
