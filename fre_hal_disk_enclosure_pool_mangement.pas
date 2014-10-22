@@ -224,7 +224,7 @@ var
               begin
                 sglog := (feed_disk.Field('log').CheckOutObject.Implementor_HC as TFRE_DB_SG_LOGS);
  //               writeln('SENDSTAT SGLOG, SEND HERE :',sglog.DumpToString());  // TODO SENDSTAT
-                sglog := nil;
+                feed_disk.DeleteField('log');
               end;
             if not struct_obj.isA(TFRE_DB_UNDEFINED_BLOCKDEVICE.ClassName) then
               begin
