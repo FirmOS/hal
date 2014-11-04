@@ -94,7 +94,7 @@ var coll   :IFRE_DB_Collection;
  procedure _addnetworks(const ep:IFRE_DB_Object);
  var i     :integer;
      j     :integer;
-     nw_uid:TGUID;
+     nw_uid:TFRE_DB_GUID;
      nw    :IFRE_DB_Object;
      rnwo  :IFRE_DB_Object;
      nn    :string;
@@ -103,12 +103,12 @@ var coll   :IFRE_DB_Collection;
 
      procedure _addredirection(const fname:string);
      var  rd     :IFRE_DB_Object;
-          rd_uid :TGUID;
+          rd_uid :TFRE_DB_GUID;
      begin
       if nw.FieldExists(fname)=false then exit;
       rd_uid:=nw.Field(fname).AsObjectLink;
       if conn.Fetch(rd_uid,rd)<>edb_OK then begin
-       LogError('Could not find RedirectionPage '+GFRE_BT.GUID_2_HexString(rd_uid)+' for Network '+nw.UID_String);
+       LogError('Could not find RedirectionPage '+rd_uid.AsHexString+' for Network '+nw.UID_String);
        exit;
       end;
       url:=rd.Field('url').AsString;
@@ -126,7 +126,7 @@ var coll   :IFRE_DB_Collection;
   referenced:=conn.GetReferences(ep.UID,false,'');
   for i:=0 to high(referenced) do begin
    if conn.Fetch(referenced[i],nw)<>edb_OK then begin
-    LogError('Could not find Network '+GFRE_BT.GUID_2_HexString(nw_uid)+' for Endpoint '+ep.UID_String);
+    LogError('Could not find Network '+nw_uid.AsHexString+' for Endpoint '+ep.UID_String);
     continue;
    end;
    if nw.FieldExists('endpoint') then begin
@@ -197,17 +197,17 @@ var coll   :IFRE_DB_Collection;
      insertpoint : integer;
      i           : integer;
      j           : integer;
-     nwg_uid     : TGUID;
+     nwg_uid     : TFRE_DB_GUID;
      nwg         : IFRE_DB_Object;
      nn          : string;
      intnw       : IFRE_DB_Object;
      nowd        : TFRE_DB_DateTime64;
      nw          : IFRE_DB_Object;
-     nw_uid      : TGUID;
+     nw_uid      : TFRE_DB_GUID;
      k           : integer;
      fn          : string;
      found       : boolean;
-     ad_uid      : TGUID;
+     ad_uid      : TFRE_DB_GUID;
      c           : integer;
 begin
   nowd:=GFRE_DT.Now_UTC;
@@ -235,7 +235,7 @@ begin
      for i:=0 to obj.Field('networkgroups').ValueCount-1 do begin
       nwg_uid:=obj.Field('networkgroups').AsObjectLinkItem[i];
       if conn.Fetch(nwg_uid,nwg)<>edb_OK then begin
-       LogError('Could not find Network Group'+GFRE_BT.GUID_2_HexString(nwg_uid)+' for Ad '+obj.UID_String);
+       LogError('Could not find Network Group'+nwg_uid.AsHexString+' for Ad '+obj.UID_String);
        continue;
       end;
       writeln(obj.DumpToString());
@@ -243,7 +243,7 @@ begin
       for j:=0 to nwg.Field('networks').ValueCount-1 do begin
        nw_uid:=nwg.Field('networks').AsObjectLinkItem[j];
        if conn.Fetch(nw_uid,nw)<>edb_OK then begin
-        LogError('Could not find Network '+GFRE_BT.GUID_2_HexString(nw_uid)+' for Networkgroup '+nwg.UID_String);
+        LogError('Could not find Network '+nw_uid.AsHexString+' for Networkgroup '+nwg.UID_String);
         continue;
        end;
        nn:=GetNetworkID(nw);
@@ -290,7 +290,7 @@ begin
  coll.ForAllBreak(@_findcms,hlt);
 
  if not Assigned(cmsob) then begin
-  LogError('Could not find CMS for ServiceGroup '+GFRE_BT.GUID_2_HexString(serviceobj.uid));
+  LogError('Could not find CMS for ServiceGroup '+serviceobj.uid.AsHexString);
   exit;
  end;
 

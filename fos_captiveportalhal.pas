@@ -249,7 +249,7 @@ function GetRedirection(const redir_object:IFRE_DB_Object;const ip:string;const 
      search_next:boolean;
 
    function _doAd(const insertpoint:string):boolean;
-   var ad_guid   : TGUID;
+   var ad_guid   : TFRE_DB_GUID;
        ad_select : integer;
        ads       : IFRE_DB_Object;
        ad        : IFRE_DB_Object;
@@ -281,11 +281,11 @@ function GetRedirection(const redir_object:IFRE_DB_Object;const ip:string;const 
     while ((result=false) and (ad_try>0)) do begin
 //     writeln('ad_select:',ad_select);
      ad_guid   := nw.Field(insertpoint).AsGUIDItem[ad_select];
-     ad        := ads.Field(GFRE_BT.GUID_2_HexString(ad_guid)).asobject;
+     ad        := ads.Field(ad_guid.AsHexString).asobject;
      // get ad count
      ad_max      := ad.Field('MAX_INSERTS').AsUInt32;
      ad_show_hal := ad.Field('SHOWN_INSERTS').AsUInt32;
-     ad_show_cur:=GetAdCount (GFRE_BT.GUID_2_HexString(ad_guid));
+     ad_show_cur:=GetAdCount (ad_guid.AsHexString);
 //     writeln('ad:',GFRE_BT.GUID_2_HexString(ad_guid),' Max:',ad_max,' Show hal:',ad_show_hal,' Show cur:',ad_show_cur);
      if (ad_show_hal+ad_show_cur)<ad_max then begin
       if ((ad.Field('start_time').AsDateTimeUTC<nowd) and (ad.Field('end_time').AsDateTimeUTC>nowd)) then begin
@@ -303,7 +303,7 @@ function GetRedirection(const redir_object:IFRE_DB_Object;const ip:string;const 
           redir_rec.url:=ad.Field('url').AsString;
           inc(ad_show_cur);
           if nextstate=true then begin      // count only on nextstate requests for forwards
-           SetAdCount(GFRE_BT.GUID_2_HexString(ad_guid),ad_show_cur,ip);
+           SetAdCount(ad_guid.AsHexString,ad_show_cur,ip);
           end;
          end;
        end;
