@@ -135,8 +135,8 @@ const
   ZPROP_MAX_COMMENT = 32;  
   ZPROP_CONT = -(2);  
   ZPROP_INVAL = -(1);  
-  ZPROP_VALUE = 'value';  
-  ZPROP_SOURCE = 'source';  
+  ZPROP_VALUE:string = 'value';  
+  ZPROP_SOURCE:string = 'source';  
 type
   zprop_source_t = (ZPROP_SRC_NONE := $1,ZPROP_SRC_DEFAULT := $2,
     ZPROP_SRC_TEMPORARY := $4,ZPROP_SRC_LOCAL := $8,

@@ -340,6 +340,9 @@ procedure libzfs_fini(_para1:Plibzfs_handle_t);cdecl;external external_zfs_libra
 function zpool_get_handle(_para1:Pzpool_handle_t):Plibzfs_handle_t;cdecl;external external_zfs_library name 'zpool_get_handle';
 function zfs_get_handle(_para1:Pzfs_handle_t):Plibzfs_handle_t;cdecl;external external_zfs_library name 'zfs_get_handle';
 procedure libzfs_print_on_error(_para1:Plibzfs_handle_t; _para2:boolean_t);cdecl;external external_zfs_library name 'libzfs_print_on_error';
+
+procedure libzfs_set_cachedprops(_para1:Plibzfs_handle_t; _para2:boolean_t);cdecl;external external_zfs_library name 'libzfs_set_cachedprops';
+
 procedure zfs_save_arguments(argc:cint; _para2:Ppchar; _para3:pchar; _para4:cint);cdecl;external external_zfs_library name 'zfs_save_arguments';
 
 function zpool_log_history(_para1:Plibzfs_handle_t; _para2:pchar):cint;cdecl;external external_zfs_library name 'zpool_log_history';
@@ -634,7 +637,7 @@ function zfs_get_user_props(_para1:Pzfs_handle_t):Pnvlist_t;cdecl;external exter
 function zfs_get_recvd_props(_para1:Pzfs_handle_t):Pnvlist_t;cdecl;external external_zfs_library name 'zfs_get_recvd_props';
 function zfs_get_clones_nvl(_para1:Pzfs_handle_t):Pnvlist_t;cdecl;external external_zfs_library name 'zfs_get_clones_nvl';
 
-function zfs_expand_proplist(_para1:Pzfs_handle_t; _para2:PPzprop_list_t; received:boolean_t; literal:boolean_t):cint;cdecl;external external_zfs_library name 'zfs_expand_proplist';
+function  zfs_expand_proplist(_para1:Pzfs_handle_t; _para2:PPzprop_list_t; received:boolean_t; literal:boolean_t):cint;cdecl;external external_zfs_library name 'zfs_expand_proplist';
 procedure zfs_prune_proplist(_para1:Pzfs_handle_t; props:Puint8_t);cdecl;external external_zfs_library name 'zfs_prune_proplist';
 
 const
@@ -663,7 +666,9 @@ function zpool_prop_align_right(_para1:zpool_prop_t):boolean_t;cdecl;external ex
   }
 function zprop_iter(func:zprop_func; cb:pointer; show_all:boolean_t; ordered:boolean_t; _type:zfs_type_t):cint;cdecl;external external_zfs_library name 'zprop_iter';
 function zprop_get_list(_para1:Plibzfs_handle_t; _para2:pchar; _para3:PPzprop_list_t; _para4:zfs_type_t):cint;cdecl;external external_zfs_library name 'zprop_get_list';
+
 procedure zprop_free_list(_para1:Pzprop_list_t);cdecl;external external_zfs_library name 'zprop_free_list';
+
 {
  * Functions for printing zfs or zpool properties
   }
@@ -682,6 +687,7 @@ function zfs_iter_children(_para1:Pzfs_handle_t; _para2:zfs_iter_f; _para3:point
 function zfs_iter_dependents(_para1:Pzfs_handle_t; _para2:boolean_t; _para3:zfs_iter_f; _para4:pointer):cint;cdecl;external external_zfs_library name 'zfs_iter_dependents';
 function zfs_iter_filesystems(_para1:Pzfs_handle_t; _para2:zfs_iter_f; _para3:pointer):cint;cdecl;external external_zfs_library name 'zfs_iter_filesystems';
 function zfs_iter_snapshots(_para1:Pzfs_handle_t; _para2:zfs_iter_f; _para3:pointer):cint;cdecl;external external_zfs_library name 'zfs_iter_snapshots';
+function zfs_iter_bookmarks(_para1:Pzfs_handle_t; _para2:zfs_iter_f; _para3:pointer):cint;cdecl;external external_zfs_library name 'zfs_iter_bookmarks';
 function zfs_iter_snapshots_sorted(_para1:Pzfs_handle_t; _para2:zfs_iter_f; _para3:pointer):cint;cdecl;external external_zfs_library name 'zfs_iter_snapshots_sorted';
 
 function zfs_iter_snapspec(_para1:Pzfs_handle_t; _para2:pchar; _para3:zfs_iter_f; _para4:pointer):cint;cdecl;external external_zfs_library name 'zfs_iter_snapspec';
