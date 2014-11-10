@@ -4173,6 +4173,7 @@ end;
    scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('templateid',fdbft_ObjLink);
+   scheme.AddSchemeField('zonepath',fdbft_String);
    scheme.AddSchemeField('hostid',fdbft_ObjLink).required:=true;
    scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
    scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);

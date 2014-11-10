@@ -106,6 +106,9 @@ const
 
   MAXAUTHS = 4096;
   ZONE_MGMT_PROF = 'Zone Management';
+
+  ZONE_INT32SZ	= 11;
+
 { Owner, group, and mode (defined by packaging) for the config directory  }
 { root  }
   ZONE_CONFIG_UID = 0;
@@ -133,6 +136,9 @@ const
   ALIAS_SHARES       = 'cpu-shares';
   ALIAS_CPUCAP       = 'cpu-cap';
   ALIAS_MAXPROCS     = 'max-processes';
+  ALIAS_MAXPHYSMEM   = 'physical';
+  ALIAS_ZFSPRI	     = 'zfs-io-priority';
+
 { Default name for zone detached manifest  }
   ZONE_DETACHED = 'SUNWdetached.xml';
 {
@@ -177,6 +183,8 @@ Type
   Pzone_userauths    = ^zone_userauths;
   Pzone_userauths_t  = ^zone_userauths_t;
   Pzoneent           = ^zoneent;
+  Pzone_res_attrtab  = ^zone_res_attrtab;
+
 {$IFDEF FPC}
 {$PACKRECORDS C}
 {$ENDIF}
@@ -241,17 +249,28 @@ Type
       zone_fs_raw : array[0..(MAXPATHLEN)-1] of cchar;
     end;
 
+  zone_res_attrtab = record
+      zone_res_attr_name : array [0..(MAXNAMELEN)-1] of cchar;
+      zone_res_attr_value: array [0..(MAXNAMELEN)-1] of cchar;
+      zone_res_attr_next : Pzone_res_attrtab;
+  end;
+
 { shared-ip only  }
 { excl-ip only  }
   zone_nwiftab = record
       zone_nwif_address : array[0..(INET6_ADDRSTRLEN)-1] of cchar;
       zone_nwif_allowed_address : array[0..(INET6_ADDRSTRLEN)-1] of cchar;
       zone_nwif_physical : array[0..(LIFNAMSIZ)-1] of cchar;
-      zone_nwif_defrouter : array[0..(INET6_ADDRSTRLEN)-1] of cchar;
+      zone_nwif_mac      : array[0..(MAXMACADDRLEN)-1] of cchar;		// excl-ip only
+      zone_nwif_vlan_id  : array[0..(ZONE_INT32SZ)-1] of cchar;	                // excl-ip only
+      zone_nwif_gnic     : array[0..(LIFNAMSIZ)-1] of cchar;          		// excl-ip only
+      zone_nwif_defrouter: array[0..(INET6_ADDRSTRLEN)-1] of cchar;
+      zone_nwif_attrp    : Pzone_res_attrtab;
     end;
 
   zone_devtab = record
       zone_dev_match : array[0..(MAXPATHLEN)-1] of cchar;
+      zone_dev_attrp : Pzone_res_attrtab;
     end;
 
   zone_rctlvaltab = record
@@ -369,6 +388,9 @@ function zonecfg_set_bootargs(_para1:zone_dochandle_t; _para2:pchar):cint;cdecl;
 function zonecfg_get_sched_class(_para1:zone_dochandle_t; _para2:pchar; _para3:size_t):cint;cdecl;external External_library name 'zonecfg_get_sched_class';
 function zonecfg_set_sched(_para1:zone_dochandle_t; _para2:pchar):cint;cdecl;external External_library name 'zonecfg_set_sched';
 function zonecfg_get_dflt_sched_class(_para1:zone_dochandle_t; _para2:pchar; _para3:cint):cint;cdecl;external External_library name 'zonecfg_get_dflt_sched_class';
+function zonecfg_get_did(_para1:zone_dochandle_t):zoneid_t;cdecl;external External_library name 'zonecfg_get_did';
+procedure zonecfg_set_did(_para1:zone_dochandle_t);cdecl;external External_library name 'zonecfg_set_did';
+
 {
  * Set/retrieve the brand for the zone
   }
@@ -387,6 +409,14 @@ procedure zonecfg_free_fs_option_list(_para1:Pzone_fsopt_t);cdecl;external Exter
 
 
 function zonecfg_find_mounts(_para1:pchar; _para2:zoncfg_find_mounts_cb; _para3:pointer):cint;cdecl;external External_library name 'zonecfg_find_mounts';
+
+{
+ * Resource key/value attributes (properties).
+ }
+//extern	int	zonecfg_add_res_attr(struct zone_res_attrtab **, struct zone_res_attrtab *);
+//extern	void	zonecfg_free_res_attr_list(struct zone_res_attrtab *);
+//extern	int	zonecfg_remove_res_attr(struct zone_res_attrtab **, struct zone_res_attrtab *);
+
 {
  * Network interface configuration.
   }

@@ -50,6 +50,7 @@ const
   MAXNAMELEN        = 256;
   MAXPATHLEN        = 1024;
   BUFSIZ            = 4096; // ?
+  MAXMACADDRLEN     = 20;
   UUID_PRINTABLE_STRING_LENGTH = 37;
 
 type
