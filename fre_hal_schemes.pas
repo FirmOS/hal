@@ -57,6 +57,9 @@ uses
   fre_scsi,
   fre_openssl_interface,
   fre_monitoring,
+  {$IFDEF SOLARIS}
+  fos_firmbox_zonectrl,
+  {$ENDIF}
   fre_process;
 
 const
@@ -441,6 +444,7 @@ type
      function        WEB_SaveOperation     (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
      function        hasNAS                (const conn: IFRE_DB_CONNECTION):Boolean;
      function        hasDNS                (const conn: IFRE_DB_CONNECTION):Boolean;
+     function        RIF_ZoneCreate        : IFRE_DB_Object;
    end;
 
   { TFRE_DB_DEVICE }
@@ -4217,6 +4221,13 @@ end;
  function TFRE_DB_ZONE.hasDNS(const conn: IFRE_DB_CONNECTION): Boolean;
  begin
    Result:=conn.IsReferenced(UID,false,TFRE_DB_DNS.ClassName,'serviceParent');
+ end;
+
+ function TFRE_DB_ZONE.RIF_ZoneCreate: IFRE_DB_Object;
+ begin
+   {$IFDEF SOLARIS}
+   result := fre_create_zone(self);
+   {$ENDIF SOLARIS}
  end;
 
  { TFRE_DB_MACHINE_SETTING_TIME }
