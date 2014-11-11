@@ -256,7 +256,7 @@ type
     cb_error,
     cb_doclones     : boolean;
     cb_target       : pzfs_handle_t;
-    cb_deferdestroy : boolean;
+    cb_deferdestroy : boolean_t;
     cb_parsable     : boolean;
     cb_nvl          : Pnvlist_t;
     cb_batchedsnaps : Pnvlist_t;
@@ -279,7 +279,6 @@ var cbp   : pdestroy_cbdata;
     label myout;
 
 begin
-  writeln('ENTER -');
   cbp    := data;
   name   := zfs_get_name(zhp);
   tname  := zfs_get_name(cbp^.cb_target);
@@ -321,19 +320,69 @@ begin
     result := 0;
 end;
 
+function destroy_callback(zhp : Pzfs_handle_t; data:pointer):cint;cdecl;
+var cb        : pdestroy_cbdata;
+    name      : pchar;
+    ztype     : zfs_type_t;
+    error     : NativeInt;
+    umounmask : cint;
+begin
+  cb     := data;
+  name   := zfs_get_name(zhp);
+  ztype  := zfs_get_type(zhp);
+  if cb^.cb_force then
+    umounmask:=MS_FORCE
+  else
+    umounmask:=0;
+  //tname  := zfs_get_name(cbp^.cb_target);
+  //zttyps := zfs_type_to_name(zttype);
+  //lastc  := name[Length(tname)+1];
+
+  if (pos('/',name)=0) and { ignore pools }
+     (ztype=ZFS_TYPE_FILESYSTEM) then
+       begin
+         zfs_close(zhp);
+         exit(0);
+       end;
+  if (ztype=ZFS_TYPE_SNAPSHOT) then
+    fnvlist_add_boolean(cb^.cb_batchedsnaps,pcchar(name))
+  else
+    begin
+      error := zfs_destroy_snaps_nvl(GILLUMOS_LIBZFS_HANDLE,cb^.cb_batchedsnaps,B_FALSE);
+      fnvlist_free(cb^.cb_batchedsnaps);
+      cb^.cb_batchedsnaps := fnvlist_alloc;
+      if (error<>0) or
+         (zfs_unmount(zhp,nil,umounmask)<>0) or
+         (zfs_destroy(zhp,cb^.cb_deferdestroy)<>0) then
+           begin
+             zfs_close(zhp);
+             exit(-1);
+           end;
+    end;
+  zfs_close(zhp);
+  result := 0;
+end;
+
 function fosillu_zfs_destroy_ds(const ds_name: string; recurse,defer:boolean ; out error: string): integer;
 
-var clones,at,pound : boolean;
+var at,pound        : boolean;
     slash           : boolean;
     zhp             : Pzfs_handle_t;
     typ             : zfs_type_t = ZFS_TYPE_DATASET;
     cb              : destroy_cbdata;
     zname           : string;
+    err             : NativeInt;
+    rv              : NativeInt;
+    label myout;
 
 begin
+  rv := 0;
   cb := Default(destroy_cbdata);
   cb.cb_recurse      := recurse;
-  cb.cb_deferdestroy := defer;
+  if defer then
+    cb.cb_deferdestroy := B_TRUE
+  else
+    cb.cb_deferdestroy := B_FALSE;
   at    := pos('@',ds_name)>0;
   pound := pos('@',ds_name)>0;
   if at then
@@ -378,7 +427,25 @@ begin
             exit(1);
           end;
         cb.cb_batchedsnaps := fnvlist_alloc;
+        err := zfs_iter_dependents(zhp,B_FALSE,@destroy_callback,@cb);
+        if err<>0 then
+          begin
+            rv := 1;
+            goto myout;
+          end;
+
+        err := destroy_callback(zhp,@cb);
+        zhp := nil;
+        if err=0 then
+          err := zfs_destroy_snaps_nvl(GILLUMOS_LIBZFS_HANDLE,cb.cb_batchedsnaps,cb.cb_deferdestroy);
+
     end;
+   myout:
+     fnvlist_free(cb.cb_batchedsnaps);
+     fnvlist_free(cb.cb_nvl);
+     if assigned(zhp) then
+       zfs_close(zhp);
+     exit(rv);
 end;
 
 procedure zfs_ds_test;
@@ -390,8 +457,13 @@ begin
   //writeln('create ds with illegal name');
   //res := fosillu_zfs_create_ds(err,'1hallo');
   //writeln('Illegal create ',res,'  ',err);
-  //writeln(fosillu_zfs_destroy_ds('syspool/zoneguid',true,false,err),err);
-  writeln('---');
+  if ParamStr(1)='destroy' then
+    begin
+      writeln('DESTROY TEST');
+      writeln(fosillu_zfs_destroy_ds('syspool/zoneguid',true,false,err),err);
+      writeln('---');
+      exit;
+    end;
   //writeln(fosillu_zfs_destroy_ds('syspool/zoneguid',true,false,false,err),err);
   writeln(fosillu_zfs_create_ds('syspool/zoneguid',err),err);
   writeln(fosillu_zfs_create_ds('syspool/zoneguid/vmdisk',err),err);

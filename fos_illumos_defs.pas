@@ -52,6 +52,7 @@ const
   BUFSIZ            = 4096; // ?
   MAXMACADDRLEN     = 20;
   UUID_PRINTABLE_STRING_LENGTH = 37;
+  MS_FORCE          = $400; { forced unmount }
 
 type
   {FOS Alias}
