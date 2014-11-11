@@ -56,6 +56,8 @@ function  fosillu_zfs_create_ds          (const ds_name:string ; out error:strin
 function  fosillu_zfs_create_zvol        (const ds_name:string ; volsize : QWord ; volblocksize : NativeUInt ; const ommit_reservation : boolean ; out error:string):integer;
 function  fosillu_zfs_destroy_ds         (const ds_name: string; recurse,defer : boolean ; out error: string): integer;
 function  fosillu_zfs_clone_ds           (const source_snap : string ; const destination : string ; out error:string):integer;
+function  fosillu_zfs_set_property       (const ds_name :string ; const prop,val :string ; out error:string):integer;
+function  fosillu_zfs_get_property       (const ds_name :string ; const prop:string ; out val : string ; out error:string):integer;
 
 implementation
 
@@ -207,6 +209,7 @@ begin
 end;
 
 function fosillu_zfs_create_ds(const ds_name: string; out error: string): integer;  {}
+var zhp   : pzfs_handle_t;
 begin
   error  :='';
   Result := zfs_create(GILLUMOS_LIBZFS_HANDLE,pchar(ds_name),ZFS_TYPE_FILESYSTEM,nil);
@@ -215,6 +218,28 @@ begin
       error := libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
       exit;
     end;
+  zhp := zfs_open(GILLUMOS_LIBZFS_HANDLE,pchar(ds_name),ZFS_TYPE_FILESYSTEM);
+  if not assigned(zhp) then
+    begin
+      error := libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+      exit;
+    end;
+  try
+    result := zfs_mount(zhp,nil,0);
+    if result<>0 then
+      begin
+        error := 'MOUNT: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+        exit;
+      end;
+    result := zfs_share(zhp);
+    if result<>0 then
+      begin
+        error := 'SHARE: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+        exit;
+      end;
+  finally
+    zfs_close(zhp);
+  end;
 end;
 
 function fosillu_zfs_clone_ds(const source_snap : string ; const destination : string ; out error:string):integer;
@@ -226,27 +251,96 @@ begin
   if not assigned(zhp) then
     begin
       error := 'OPEN: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
-      exit;
+      exit(1);
     end;
-  result := zfs_clone(zhp,pchar(destination),nil);
-  if result<>0 then
-    begin
-      error := 'CLONE: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
-      exit;
-    end;
-  clone := zfs_open(GILLUMOS_LIBZFS_HANDLE,pchar(destination),ZFS_TYPE_DATASET);
-  if assigned(clone) then
-    begin
-      if zfs_get_type(clone) <> ZFS_TYPE_VOLUME then
-        begin
-          Result := zfs_mount(clone,nil,0);
-          if Result=0 then
-            begin
-              result := zfs_share(clone);
-            end;
-        end;
-      zfs_close(clone);
-    end;
+  try
+    result := zfs_clone(zhp,pchar(destination),nil);
+    if result<>0 then
+      begin
+        error := 'CLONE: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+        exit;
+      end;
+    clone := zfs_open(GILLUMOS_LIBZFS_HANDLE,pchar(destination),ZFS_TYPE_DATASET);
+    if assigned(clone) then
+      begin
+        if zfs_get_type(clone) <> ZFS_TYPE_VOLUME then
+          begin
+            Result := zfs_mount(clone,nil,0);
+            if Result=0 then
+              begin
+                result := zfs_share(clone);
+                if result<>0 then
+                  begin
+                    error := 'SHARE: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+                    exit;
+                  end;
+              end
+            else
+              begin
+                error := 'MOUNT: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+                exit;
+              end;
+          end;
+        zfs_close(clone);
+      end;
+  finally
+    zfs_close(zhp);
+  end;
+end;
+
+function fosillu_zfs_set_property(const ds_name: string; const prop, val: string; out error: string): integer;
+var zhp   : pzfs_handle_t;
+    clone : pzfs_handle_t;
+begin
+  error  :='';
+  zhp := zfs_open(GILLUMOS_LIBZFS_HANDLE,pchar(ds_name),ZFS_TYPE_DATASET);
+  try
+    if not assigned(zhp) then
+      begin
+        error := 'OPEN: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+        exit(1);
+      end;
+    result := zfs_prop_set(zhp,pchar(prop),pchar(val));
+    if result<>0 then
+      error := 'PROPSET: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+  finally
+    zfs_close(zhp);
+  end;
+end;
+
+function fosillu_zfs_get_property(const ds_name: string; const prop: string; out val: string; out error: string): integer;
+var zhp      : pzfs_handle_t;
+    clone    : pzfs_handle_t;
+    zprop    : zfs_prop_t;
+    zpropbuf : array [0..2047] of char;
+begin
+  error  :='';
+  zhp := zfs_open(GILLUMOS_LIBZFS_HANDLE,pchar(ds_name),ZFS_TYPE_DATASET);
+  try
+    if not assigned(zhp) then
+      begin
+        error := 'OPEN: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+        exit(1);
+      end;
+    zprop  := zfs_name_to_prop(pchar(prop));
+    if ord(zprop) = ZPROP_INVAL then
+      begin
+        error := 'PROGET: invalid or user property selected';
+        exit(1);
+      end;
+    result := zfs_prop_get(zhp,zprop,pchar(zpropbuf),sizeof(zpropbuf),nil,nil,0,B_TRUE);
+    if result<>0 then
+      begin
+        error := 'PROGET: '+libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+        exit(1);
+      end
+    else
+      begin
+        val := PChar(zpropbuf)
+      end;
+  finally
+    zfs_close(zhp);
+  end;
 end;
 
 type
@@ -514,8 +608,9 @@ begin
 end;
 
 procedure zfs_ds_test;
-var err : string;
-    res : integer;
+var err  : string;
+    res  : integer;
+    pval : string;
 begin
   InitIllumosLibraryHandles;
   CheckIllumosZFSLib;
@@ -539,6 +634,10 @@ begin
   writeln(fosillu_zfs_clone_ds('syspool/template/fbz093/var@final','syspool/zoneguid/zonedata/var',err),err);
   writeln(fosillu_zfs_clone_ds('syspool/template/fbz093/optetc@final','syspool/zoneguid/zonedata/optetc',err),err);
   writeln(fosillu_zfs_clone_ds('syspool/template/fbz093/optfre@final','syspool/zoneguid/zonedata/optfre',err),err);
+  writeln(fosillu_zfs_set_property('syspool/zoneguid','fos:tester','SuPeR1',err),err);
+  writeln(fosillu_zfs_set_property('syspool/zoneguid','sync','disabled',err),err);
+  writeln(fosillu_zfs_get_property('syspool/zoneguid','sync',pval,err),'pval=',pval,' err=',err);
+  writeln(fosillu_zfs_get_property('syspool/zoneguid','fos:tester',pval,err),'pval=',pval,' err=',err);
 end;
 
 end.
