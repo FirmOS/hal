@@ -53,6 +53,7 @@ procedure zfs_ds_test;
 
 function  fosillu_zfs_GetZFSFilesystems  (out error: string; out zfsfs:IFRE_DB_Object) : integer;
 function  fosillu_zfs_create_ds          (const ds_name:string ; out error:string):integer;
+function  fosillu_zfs_create_zvol        (const ds_name:string ; volsize : QWord ; volblocksize : NativeUInt ; const ommit_reservation : boolean ; out error:string):integer;
 function  fosillu_zfs_destroy_ds         (const ds_name: string; recurse,defer : boolean ; out error: string): integer;
 function  fosillu_zfs_clone_ds           (const source_snap : string ; const destination : string ; out error:string):integer;
 
@@ -363,6 +364,70 @@ begin
   result := 0;
 end;
 
+function fosillu_zfs_create_zvol(const ds_name: string; volsize: QWord; volblocksize: NativeUInt; const ommit_reservation: boolean; out error: string): integer;
+var props      : Pnvlist_t;
+    real_props : Pnvlist_t;
+    zhp        : pzfs_handle_t;
+    msg        : array [0..1023] of char;
+    strval     : pchar;
+begin
+  if nvlist_alloc(@props,NV_UNIQUE_NAME,0)<>0 then
+    begin
+      error := 'no memory';
+      exit(1);
+    end;
+  try
+    if nvlist_add_uint64(props,PCchar(zfs_prop_to_name(ZFS_PROP_VOLSIZE)),volsize)<>0 then
+      begin
+        error := 'no memory/vsize';
+        exit(1);
+      end;
+    if volblocksize=0 then
+      volblocksize := 1024*8;
+
+    if nvlist_add_uint64(props,PCchar(zfs_prop_to_name(ZFS_PROP_VOLBLOCKSIZE)),volblocksize)<>0 then
+      begin
+        error := 'no memory/vsize';
+        exit(1);
+      end;
+
+    if not ommit_reservation then
+      begin
+        real_props := zfs_valid_proplist(GILLUMOS_LIBZFS_HANDLE,ZFS_TYPE_VOLUME,props,0,nil,@msg[0]);
+        try
+          if not assigned(real_props) then
+            begin
+              error := 'RESERVE: '+pchar(msg);
+              exit(1);
+            end;
+          volsize := zvol_volsize_to_reservation(volsize,real_props);
+        finally
+          nvlist_free(real_props);
+        end;
+        if nvlist_lookup_string(props,pcchar(zfs_prop_to_name(ZFS_PROP_REFRESERVATION)),ppcchar(strval))<>0 then
+          begin
+            if nvlist_add_uint64(props,pcchar(zfs_prop_to_name(ZFS_PROP_REFRESERVATION)),volsize)<>0 then
+              begin
+                error := 'RESERVE LOOKUP';
+                exit(1);
+              end;
+          end;
+      end;
+
+    error  :='';
+    Result := zfs_create(GILLUMOS_LIBZFS_HANDLE,pchar(ds_name),ZFS_TYPE_VOLUME,props);
+    if result<>0 then
+      begin
+        error := libzfs_error_description(GILLUMOS_LIBZFS_HANDLE);
+        exit;
+      end;
+  finally
+    nvlist_free(props);
+  end;
+
+ // zhp :=
+end;
+
 function fosillu_zfs_destroy_ds(const ds_name: string; recurse,defer:boolean ; out error: string): integer;
 
 var at,pound        : boolean;
@@ -467,6 +532,7 @@ begin
   //writeln(fosillu_zfs_destroy_ds('syspool/zoneguid',true,false,false,err),err);
   writeln(fosillu_zfs_create_ds('syspool/zoneguid',err),err);
   writeln(fosillu_zfs_create_ds('syspool/zoneguid/vmdisk',err),err);
+  writeln(fosillu_zfs_create_zvol('syspool/zoneguid/vmdisk/linux1',1024*1024*1024,1024*8,false,err),err);
   writeln(fosillu_zfs_create_ds('syspool/zoneguid/zonedata',err),err);
   writeln(fosillu_zfs_create_ds('syspool/zoneguid/zonedata/vfiler',err),err);
   writeln(fosillu_zfs_clone_ds('syspool/template/fbz093/etc@final','syspool/zoneguid/zonedata/etc',err),err);
