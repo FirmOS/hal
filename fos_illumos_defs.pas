@@ -51,6 +51,7 @@ const
   MAXPATHLEN        = 1024;
   BUFSIZ            = 4096; // ?
   MAXMACADDRLEN     = 20;
+  BOOTARGS_MAX      = 256;
   UUID_PRINTABLE_STRING_LENGTH = 37;
   MS_FORCE          = $400; { forced unmount }
 

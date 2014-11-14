@@ -148,7 +148,7 @@ const
 
 
 Type
-  zone_cmd_arg_t = record end;
+  //zone_cmd_arg_t = record end;
   //Pboolean_t  = ^boolean_t;
   PFILE            = ^FILE;
   //Pint64_t  = ^int64_t;
@@ -208,6 +208,21 @@ Type
 //{$include <limits.h>}
 //{$include <utmpx.h>}
 
+ // from zone.h
+
+ zone_cmd = (Z_READY, Z_BOOT, Z_FORCEBOOT, Z_REBOOT, Z_HALT, Z_NOTE_UNINSTALLING, Z_MOUNT, Z_FORCEMOUNT, Z_UNMOUNT, Z_SHUTDOWN);
+ zone_cmd_t = zone_cmd;
+
+ zone_cmd_arg = record
+    uniqid    : Uint64_t;
+    cmd       : zone_cmd_t;
+    debug     : uint32_t;
+    locale    : array[0..(MAXPATHLEN)-1] of cchar;
+    bootbuf   : array[0..(BOOTARGS_MAX)-1] of cchar;
+ end;
+ zone_cmd_arg_t = zone_cmd_arg;
+
+
 {
  * The integer field expresses the current values on a get.
  * On a put, it represents the new values if >= 0 or "don't change" if < 0.
@@ -217,6 +232,9 @@ Type
 { path to zone storage  }
 { unique ID for zone  }
 { for doing renames  }
+
+
+
   zoneent = record
       zone_name    : array[0..(ZONENAME_MAX)-1] of cchar;
       zone_state   : cint;

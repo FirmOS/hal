@@ -271,6 +271,7 @@ type
    published
      function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function        RIF_CreateVNIC         : IFRE_DB_Object;
    end;
 
    { TFRE_DB_DATALINK_IPTUN }
@@ -441,7 +442,8 @@ type
      class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
-     procedure Embed(const conn: IFRE_DB_CONNECTION);
+     procedure       Embed(const conn: IFRE_DB_CONNECTION);
+     procedure       BootingHookConfigure  ;
    published
      procedure       CALC_GetDisplayName   (const setter: IFRE_DB_CALCFIELD_SETTER);
      class function  WBC_NewOperation      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
@@ -4202,7 +4204,7 @@ end;
    end;
  end;
 
-  procedure TFRE_DB_ZONE.Embed(const conn: IFRE_DB_CONNECTION);
+ procedure TFRE_DB_ZONE.Embed(const conn: IFRE_DB_CONNECTION);
  var refs      : TFRE_DB_ObjectReferences;
      obj       : IFRE_DB_Object;
      i         : integer;
@@ -4251,6 +4253,23 @@ end;
        else
          obj.Finalize;
      end;
+ end;
+
+
+ procedure TFRE_DB_ZONE.BootingHookConfigure;
+
+   procedure _objIterator(const obj:IFRE_DB_Object);
+   var dl_vnic : TFRE_DB_DATALINK_VNIC;
+   begin
+     if obj.IsA(TFRE_DB_DATALINK_VNIC,dl_vnic) then
+       begin
+         dl_vnic.Field('zonename').asstring := UID.AsHexString;
+         dl_vnic.RIF_CreateVNIC;
+       end;
+   end;
+
+ begin
+   ForAllObjects(@_objIterator,true);
  end;
 
  procedure TFRE_DB_ZONE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
@@ -4616,6 +4635,57 @@ end;
  function TFRE_DB_DATALINK_VNIC.IMI_Delete(const input: IFRE_DB_Object): IFRE_DB_Object;
  begin
    result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
+ end;
+
+ function TFRE_DB_DATALINK_VNIC.RIF_CreateVNIC: IFRE_DB_Object;
+ var parent_if  : string;
+     mac        : string;
+     tmpvnic    : string;
+     vlan       : Uint16;
+     cmd        : string;
+     zonename   : string;
+ begin
+   tmpvnic   := 'v'+Copy(UID.AsHexString,1,8)+'0';
+   parent_if := Field('parent').AsObject.Field('objname').AsString;
+   if FieldExists('zonename') then
+     zonename  := Field('zonename').asstring
+   else
+     zonename  := '';
+   if FieldExists('UNIQUEPHYSICALID') then
+     mac       := Field('UNIQUEPHYSICALID').asstring
+   else
+     mac       := '';
+   if FieldExists('vlan') then
+     vlan := Field('vlan').AsUInt16
+   else
+     vlan := 0;
+
+   if zonename<>'' then
+     begin
+       cmd := 'dladm create-vnic -t -p zone='+zonename+' -l '+parent_if;
+       if vlan<>0 then
+         cmd := cmd+' -v '+inttostr(vlan);
+       if mac<>'' then
+         cmd := cmd+' --mac-address='+mac;
+       cmd := cmd +' '+tmpvnic;
+       writeln('SWL create vnic:',cmd);
+       FRE_ProcessCMD(cmd);
+       cmd := 'dladm rename-link -z '+zonename+' '+tmpvnic+' '+ObjectName;
+       writeln('SWL rename vnic:',cmd);
+       FRE_ProcessCMD(cmd);
+      end
+    else
+      begin
+        abort;  //untested
+        cmd := 'dladm create-vnic -t -l '+parent_if;
+        if vlan<>0 then
+          cmd := cmd+' -v '+inttostr(vlan);
+        if mac<>'' then
+          cmd := cmd+' --mac-address='+mac;
+        cmd := cmd +' '+ObjectName;
+        writeln(cmd);
+        FRE_ProcessCMD(cmd);
+      end;
  end;
 
  { TFRE_DB_DATALINK_PHYS }
