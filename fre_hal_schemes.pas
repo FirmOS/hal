@@ -109,6 +109,7 @@ type
      class function  OnlyOneServicePerZone : boolean; virtual;
    public
      class function  GetMachineUIDForService(const conn : IFRE_DB_CONNECTION ; service_uid : TFRE_DB_GUID):TFRE_DB_GUID;
+     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
    published
      procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
    end;
@@ -245,8 +246,9 @@ type
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
      class function getAllDataLinkClasses   : TFRE_DB_StringArray;
+     procedure      Embed                   (const conn: IFRE_DB_CONNECTION); override;
    published
-     function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function       IMI_Menu                (const input:IFRE_DB_Object): IFRE_DB_Object;
    end;
 
    { TFRE_DB_DATALINK_PHYS }
@@ -438,6 +440,8 @@ type
    protected
      class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure Embed(const conn: IFRE_DB_CONNECTION);
    published
      procedure       CALC_GetDisplayName   (const setter: IFRE_DB_CALCFIELD_SETTER);
      class function  WBC_NewOperation      (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
@@ -4198,6 +4202,57 @@ end;
    end;
  end;
 
+  procedure TFRE_DB_ZONE.Embed(const conn: IFRE_DB_CONNECTION);
+ var refs      : TFRE_DB_ObjectReferences;
+     obj       : IFRE_DB_Object;
+     i         : integer;
+     svc       : TFRE_DB_SERVICE;
+     ds        : TFRE_DB_ZFS_DATASET;
+     tmpl      : TFRE_DB_FBZ_TEMPLATE;
+
+ begin
+   field('domainname').asstring               := conn.sys.FetchDomainNameById(DomainID);
+
+   if FieldExists('serviceparent') then
+     begin
+       CheckDbResult(conn.Fetch(Field('serviceparent').AsGUID,obj),'could not fetch serviceparent '+Field('serviceparent').AsGUID.AsHexString);
+       if obj.IsA(TFRE_DB_ZFS_DATASET,ds) then
+         begin
+           Field('masterdataset').AsString :=ds.Field('dataset').asstring;
+           if ds.FieldExists('mountpoint') then
+             Field('masterdatasetpath').AsString := ds.Field('mountpoint').asstring
+           else
+             Field('masterdatasetpath').Asstring := '/'+ds.Field('dataset').asstring;
+           Field('zonepath').asstring            := Field('masterdatasetpath').asstring+'/domains/'+DomainID.AsHexString+'/'+UID.AsHexString;
+           Field('zonedataset').asstring         := Field('masterdataset').asstring+'/domains/'+DomainID.AsHexString+'/'+UID.AsHexString;
+           Field('zonedbodataset').asstring      := Field('masterdataset').asstring+'/zones/'+UID.AsHexstring;
+         end;
+       obj.finalize;
+     end;
+   if FieldExists('templateid') then
+     begin
+       CheckDbResult(conn.Fetch(Field('templateid').AsGUID,obj),'could not fetch template '+Field('templateid').AsGUID.AsHexString);
+       if obj.IsA(TFRE_DB_FBZ_TEMPLATE,tmpl) then
+         begin
+           Field('templatedataset').asstring   := Field('masterdataset').AsString+'/template/'+Lowercase(StringReplace(tmpl.ObjectName,'_','',[rfReplaceAll]));
+         end;
+       obj.Finalize;
+     end;
+
+   refs := conn.GetReferencesDetailed(UID,false);
+   for i:=0 to high(refs) do
+     begin
+       CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+refs[i].linked_uid.AsHexString);
+       if obj.IsA(TFRE_DB_SERVICE,svc) then
+         begin
+           svc.Embed(conn);
+           self.Field(obj.UID.AsHexString).AsObject:=svc;
+         end
+       else
+         obj.Finalize;
+     end;
+ end;
+
  procedure TFRE_DB_ZONE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
    setter.SetAsString('Zone: '+Field('objname').AsString);
@@ -4671,6 +4726,35 @@ end;
    Result:=TFRE_DB_StringArray.create(TFRE_DB_DATALINK_PHYS.ClassName,TFRE_DB_DATALINK_AGGR.ClassName,TFRE_DB_DATALINK_IPMP.ClassName,TFRE_DB_DATALINK_IPTUN.ClassName,TFRE_DB_DATALINK_STUB.ClassName,TFRE_DB_DATALINK_VNIC.ClassName);
  end;
 
+  procedure TFRE_DB_DATALINK.Embed(const conn: IFRE_DB_CONNECTION);
+ var refs      : TFRE_DB_ObjectReferences;
+    obj       : IFRE_DB_Object;
+    i         : integer;
+    ip        : TFRE_DB_IP_HOSTNET;
+    dl        : TFRE_DB_DATALINK;
+ begin
+   inherited;
+   refs := conn.GetReferencesDetailed(UID,false);
+   for i:=0 to high(refs) do
+     begin
+       CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+refs[i].linked_uid.AsHexString);
+//         writeln(obj.DumpToString());
+       if obj.IsA(TFRE_DB_IP_HOSTNET,ip) then
+         self.Field(obj.UID.AsHexString).AsObject:=ip
+       else
+         obj.Finalize;
+     end;
+   // embed parent (datalink)
+   if FieldExists('parentid') then
+     begin
+       CheckDbResult(conn.Fetch(field('parentid').AsGUID,obj),' could not fetch parent object '+field('parentid').AsGUID.AsHexString);
+       if obj.IsA(TFRE_DB_DATALINK,dl) then
+         self.Field('PARENT').AsObject:=dl
+       else
+         obj.Finalize;
+     end;
+ end;
+
  function TFRE_DB_DATALINK.IMI_Menu(const input: IFRE_DB_Object): IFRE_DB_Object;
  begin
    writeln('DATALINK MENU');
@@ -5126,6 +5210,11 @@ end;
    finally
      parentObj.Finalize;
    end;
+ end;
+
+ procedure TFRE_DB_SERVICE.Embed(const conn: IFRE_DB_CONNECTION);
+ begin
+   // no generic service embedding right now
  end;
 
  procedure TFRE_DB_SERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
