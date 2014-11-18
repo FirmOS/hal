@@ -244,10 +244,8 @@ Type
 
 
   Pscf_version_t = ^scf_version_t;
-  scf_version_t  = record end;
+  scf_version_t  = dword;
 
-{ was #define dname def_expr }
-//function SCF_VERSION : scf_version_t;
 
 {
  * Opaque structures
@@ -420,9 +418,12 @@ const
   SMF_TEMPORARY = $2;  
   SMF_AT_NEXT_BOOT = $4;  
 
+
+function SCF_VERSION : scf_version_t;
+
 function scf_error : scf_error_t;cdecl;external External_library name 'scf_error';
 
-function scf_strerror(_para1:scf_error_t):pcchar;cdecl;external External_library name 'scf_strerror';
+function scf_strerror(_para1:scf_error_t):pchar;cdecl;external External_library name 'scf_strerror';
 function scf_limit(code:uint32_t):ssize_t;cdecl;external External_library name 'scf_limit';
 const
   SCF_LIMIT_MAX_NAME_LENGTH = -(2000);  
@@ -430,7 +431,7 @@ const
   SCF_LIMIT_MAX_PG_TYPE_LENGTH = -(2002);  
   SCF_LIMIT_MAX_FMRI_LENGTH = -(2003);  
 
-function scf_handle_create(_para1 : Pscf_version_t):Pscf_handle_t;cdecl;external External_library name 'scf_handle_create';
+function scf_handle_create(_para1 : scf_version_t):Pscf_handle_t;cdecl;external External_library name 'scf_handle_create';
 
 function scf_handle_decorate(_para1:Pscf_handle_t; _para2:pcchar; _para3:Pscf_value_t):cint;cdecl;external External_library name 'scf_handle_decorate';
 { was #define dname def_expr }
@@ -485,7 +486,7 @@ function scf_value_get_as_string(_para1:Pscf_value_t; _para2:pcchar; _para3:size
 
 function scf_value_get_as_string_typed(_para1:Pscf_value_t; _para2:scf_type_t; _para3:pcchar; _para4:size_t):ssize_t;cdecl;external External_library name 'scf_value_get_as_string_typed';
 
-function scf_value_set_from_string(_para1:Pscf_value_t; _para2:scf_type_t; _para3:pcchar):cint;cdecl;external External_library name 'scf_value_set_from_string';
+function scf_value_set_from_string(_para1:Pscf_value_t; _para2:scf_type_t; _para3:pchar):cint;cdecl;external External_library name 'scf_value_set_from_string';
 function scf_iter_create(_para1:Pscf_handle_t):Pscf_iter_t;cdecl;external External_library name 'scf_iter_create';
 
 function scf_iter_handle(_para1:Pscf_iter_t):Pscf_handle_t;cdecl;external External_library name 'scf_iter_handle';
@@ -541,7 +542,7 @@ function scf_scope_handle(_para1:Pscf_scope_t):Pscf_handle_t;cdecl;external Exte
 //	scf_handle_get_scope((h), SCF_SCOPE_LOCAL, (s))
 
 
-function scf_handle_get_scope(_para1:Pscf_handle_t; _para2:pcchar; _para3:Pscf_scope_t):cint;cdecl;external External_library name 'scf_handle_get_scope';
+function scf_handle_get_scope(_para1:Pscf_handle_t; _para2:pchar; _para3:Pscf_scope_t):cint;cdecl;external External_library name 'scf_handle_get_scope';
 procedure scf_scope_destroy(_para1:Pscf_scope_t);cdecl;external External_library name 'scf_scope_destroy';
 
 function scf_scope_get_name(_para1:Pscf_scope_t; _para2:pcchar; _para3:size_t):ssize_t;cdecl;external External_library name 'scf_scope_get_name';
@@ -561,10 +562,10 @@ function scf_service_to_fmri(_para1:Pscf_service_t; _para2:pcchar; _para3:size_t
 function scf_service_get_parent(_para1:Pscf_service_t; _para2:Pscf_scope_t):cint;cdecl;external External_library name 'scf_service_get_parent';
 
 
-function scf_scope_get_service(_para1:Pscf_scope_t; _para2:pcchar; _para3:Pscf_service_t):cint;cdecl;external External_library name 'scf_scope_get_service';
+function scf_scope_get_service(_para1:Pscf_scope_t; _para2:pchar; _para3:Pscf_service_t):cint;cdecl;external External_library name 'scf_scope_get_service';
 
 
-function scf_scope_add_service(_para1:Pscf_scope_t; _para2:pcchar; _para3:Pscf_service_t):cint;cdecl;external External_library name 'scf_scope_add_service';
+function scf_scope_add_service(_para1:Pscf_scope_t; _para2:pchar; _para3:Pscf_service_t):cint;cdecl;external External_library name 'scf_scope_add_service';
 function scf_service_delete(_para1:Pscf_service_t):cint;cdecl;external External_library name 'scf_service_delete';
 function scf_instance_create(_para1:Pscf_handle_t):Pscf_instance_t;cdecl;external External_library name 'scf_instance_create';
 
@@ -579,7 +580,7 @@ function scf_instance_to_fmri(_para1:Pscf_instance_t; _para2:pcchar; _para3:size
 function scf_service_get_instance(_para1:Pscf_service_t; _para2:pcchar; _para3:Pscf_instance_t):cint;cdecl;external External_library name 'scf_service_get_instance';
 
 
-function scf_service_add_instance(_para1:Pscf_service_t; _para2:pcchar; _para3:Pscf_instance_t):cint;cdecl;external External_library name 'scf_service_add_instance';
+function scf_service_add_instance(_para1:Pscf_service_t; _para2:pchar; _para3:Pscf_instance_t):cint;cdecl;external External_library name 'scf_service_add_instance';
 function scf_instance_delete(_para1:Pscf_instance_t):cint;cdecl;external External_library name 'scf_instance_delete';
 function scf_snapshot_create(_para1:Pscf_handle_t):Pscf_snapshot_t;cdecl;external External_library name 'scf_snapshot_create';
 
@@ -643,11 +644,11 @@ function scf_instance_get_pg_composed(_para1:Pscf_instance_t; _para2:Pscf_snapsh
 
 
 
-function scf_service_add_pg(_para1:Pscf_service_t; _para2:pcchar; _para3:pcchar; _para4:uint32_t; _para5:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_service_add_pg';
+function scf_service_add_pg(_para1:Pscf_service_t; _para2:pchar; _para3:pchar; _para4:uint32_t; _para5:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_service_add_pg';
 
 
 
-function scf_instance_add_pg(_para1:Pscf_instance_t; _para2:pcchar; _para3:pcchar; _para4:uint32_t; _para5:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_instance_add_pg';
+function scf_instance_add_pg(_para1:Pscf_instance_t; _para2:pchar; _para3:pchar; _para4:uint32_t; _para5:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_instance_add_pg';
 function scf_pg_delete(_para1:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_pg_delete';
 
 function scf_pg_get_underlying_pg(_para1:Pscf_propertygroup_t; _para2:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_pg_get_underlying_pg';
@@ -691,7 +692,7 @@ function scf_transaction_property_change(_para1:Pscf_transaction_t; _para2:Pscf_
 
 function scf_transaction_property_delete(_para1:Pscf_transaction_t; _para2:Pscf_transaction_entry_t; _para3:pcchar):cint;cdecl;external External_library name 'scf_transaction_property_delete';
 
-function scf_transaction_property_new(_para1:Pscf_transaction_t; _para2:Pscf_transaction_entry_t; _para3:pcchar; _para4:scf_type_t):cint;cdecl;external External_library name 'scf_transaction_property_new';
+function scf_transaction_property_new(_para1:Pscf_transaction_t; _para2:Pscf_transaction_entry_t; _para3:pchar; _para4:scf_type_t):cint;cdecl;external External_library name 'scf_transaction_property_new';
 
 function scf_transaction_property_change_type(_para1:Pscf_transaction_t; _para2:Pscf_transaction_entry_t; _para3:pcchar; _para4:scf_type_t):cint;cdecl;external External_library name 'scf_transaction_property_change_type';
 function scf_entry_add_value(_para1:Pscf_transaction_entry_t; _para2:Pscf_value_t):cint;cdecl;external External_library name 'scf_entry_add_value';
@@ -1502,6 +1503,11 @@ function _scf_notify_get_params(_para1:Pscf_propertygroup_t; _para2:Pnvlist_t):c
 
 
 implementation
+
+function SCF_VERSION : scf_version_t;
+begin
+  result :=1;
+end;
 
 function SCF_TRANS_SHIFT_INITIAL_STATE(s : longint) : longint;
 begin
