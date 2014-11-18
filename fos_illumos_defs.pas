@@ -54,6 +54,10 @@ const
   BOOTARGS_MAX      = 256;
   UUID_PRINTABLE_STRING_LENGTH = 37;
   MS_FORCE          = $400; { forced unmount }
+  MAXLINKNAMELEN    = 32;
+  ETHERADDRLEN      =  6;
+  MAXCLIENTNAMELEN  = 1024;
+  VRRP_VRID_NONE    = 0;
 
 type
   {FOS Alias}
@@ -71,7 +75,6 @@ type
   UInt32_t    = cuint32;
   uint_t      = cuint;
   cuintptr_t  = PtrUInt;
-
 
   Pboolean_t       = ^boolean_t;
   PPboolean_t      = ^Pboolean_t;
@@ -117,8 +120,10 @@ type
   uid_t            = id_t;
   git_t            = uid_t;
 
+  datalink_id_t    = uint32_t;
+  Pdatalink_id_t   = ^datalink_id_t;
+  vrid_t           = uint32_t;
 
-type
   lifreq = record end; { currently defined opaque, usesd in illumos for ioctls}
 
   //libc interfaces
