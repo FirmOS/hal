@@ -641,7 +641,6 @@ begin
     StoreTranslateableText(conn,'scheme_drive_slots','Drive Slots');
     StoreTranslateableText(conn,'enclosure_content_header','Enclosure Information');
   end;
-  StoreTranslateableText(conn,'enclosure_content_header','Enclosure Information');
 end;
 
 class procedure TFRE_DB_ENCLOSURE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
