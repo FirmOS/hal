@@ -4294,12 +4294,12 @@ end;
 
  function TFRE_DB_ZONE.hasNAS(const conn: IFRE_DB_CONNECTION): Boolean;
  begin
-   Result:=conn.IsReferenced(UID,false,TFRE_DB_NAS.ClassName,'serviceParent');
+   Result:=conn.IsReferenced(UID,TFRE_DB_NAS.ClassName,'serviceParent');
  end;
 
  function TFRE_DB_ZONE.hasDNS(const conn: IFRE_DB_CONNECTION): Boolean;
  begin
-   Result:=conn.IsReferenced(UID,false,TFRE_DB_DNS.ClassName,'serviceParent');
+   Result:=conn.IsReferenced(UID,TFRE_DB_DNS.ClassName,'serviceParent');
  end;
 
  function TFRE_DB_ZONE.RIF_ZoneCreate: IFRE_DB_Object;
