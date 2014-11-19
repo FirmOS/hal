@@ -4650,6 +4650,7 @@ end;
      zonename   : string;
      err        : string;
  begin
+  {$IFDEF SOLARIS}
    parent_if := Field('parent').AsObject.Field('objname').AsString;
    if FieldExists('zonename') then
      zonename  := Field('zonename').asstring
@@ -4673,6 +4674,7 @@ end;
       begin
         writeln('CREATE VNIC ',mac.GetAsString,' ',create_vnic(ObjectName,parent_if,mac,err,'',vlan),' ',err);
       end;
+   {$ENDIF}
  end;
 
  { TFRE_DB_DATALINK_PHYS }
