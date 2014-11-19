@@ -59,6 +59,7 @@ uses
   fre_monitoring,
   {$IFDEF SOLARIS}
   fos_firmbox_zonectrl,
+  fosillu_dladm,
   {$ENDIF}
   fre_process;
 
@@ -4644,22 +4645,21 @@ end;
 
  function TFRE_DB_DATALINK_VNIC.RIF_CreateVNIC: IFRE_DB_Object;
  var parent_if  : string;
-     mac        : string;
-     tmpvnic    : string;
+     mac        : TFOS_MAC_ADDR;
      vlan       : Uint16;
-     cmd        : string;
      zonename   : string;
+     err        : string;
  begin
-   tmpvnic   := 'v'+Copy(UID.AsHexString,1,8)+'0';
    parent_if := Field('parent').AsObject.Field('objname').AsString;
    if FieldExists('zonename') then
      zonename  := Field('zonename').asstring
    else
      zonename  := '';
    if FieldExists('UNIQUEPHYSICALID') then
-     mac       := Field('UNIQUEPHYSICALID').asstring
+     mac.SetFromString(Field('UNIQUEPHYSICALID').asstring)
    else
-     mac       := '';
+     mac.GenerateRandom;
+
    if FieldExists('vlan') then
      vlan := Field('vlan').AsUInt16
    else
@@ -4667,29 +4667,11 @@ end;
 
    if zonename<>'' then
      begin
-       cmd := 'dladm create-vnic -t -p zone='+zonename+' -l '+parent_if;
-       if vlan<>0 then
-         cmd := cmd+' -v '+inttostr(vlan);
-       if mac<>'' then
-         cmd := cmd+' --mac-address='+mac;
-       cmd := cmd +' '+tmpvnic;
-       writeln('SWL create vnic:',cmd);
-       FRE_ProcessCMD(cmd);
-       cmd := 'dladm rename-link -z '+zonename+' '+tmpvnic+' '+ObjectName;
-       writeln('SWL rename vnic:',cmd);
-       FRE_ProcessCMD(cmd);
+       writeln('CREATE VNIC ZONED ',mac.GetAsString,' ',create_vnic(ObjectName,parent_if,mac,err,zonename,vlan),' ',err);
       end
     else
       begin
-        abort;  //untested
-        cmd := 'dladm create-vnic -t -l '+parent_if;
-        if vlan<>0 then
-          cmd := cmd+' -v '+inttostr(vlan);
-        if mac<>'' then
-          cmd := cmd+' --mac-address='+mac;
-        cmd := cmd +' '+ObjectName;
-        writeln(cmd);
-        FRE_ProcessCMD(cmd);
+        writeln('CREATE VNIC ',mac.GetAsString,' ',create_vnic(ObjectName,parent_if,mac,err,'',vlan),' ',err);
       end;
  end;
 
