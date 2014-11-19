@@ -110,6 +110,11 @@ type
    public
      class function  GetMachineUIDForService(const conn : IFRE_DB_CONNECTION ; service_uid : TFRE_DB_GUID):TFRE_DB_GUID;
      procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
+     procedure       SetSvcNameandType      (const service_name:string; const common_name : string; const duration:string; const ignore_error:string);
+     procedure       SetSvcEnvironment      (const working_directory:string; const user,group:string; const environment:string);
+     procedure       SetSvcStart            (const execname:string; const timeout: Uint64);
+     procedure       SetSvcStop             (const execname:string; const timeout: Uint64);
+     procedure       AddSvcDependency       (const name:string; const fmri:string; const grouping:string; const restart_on:string);
    published
      procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
    end;
@@ -5286,6 +5291,46 @@ end;
  begin
    // no generic service embedding right now
  end;
+
+ procedure TFRE_DB_SERVICE.SetSvcNameandType(const service_name: string;const common_name: string; const duration: string; const ignore_error: string);
+ begin
+   Field('svc_name').asstring             :=service_name;
+   Field('svc_duration').asstring         :=duration;
+   Field('svc_ignore_error').asstring     :=ignore_error;
+   Field('svc_common_name').asstring      :=common_name;
+ end;
+
+ procedure TFRE_DB_SERVICE.SetSvcEnvironment(const working_directory: string;const user, group: string; const environment: string);
+ begin
+   Field('svc_environment').asstring      := environment;
+   Field('svc_working_directory').asstring:= working_directory;
+   Field('svc_user').asstring             := user;
+   Field('svc_group').asstring            := group;
+ end;
+
+ procedure TFRE_DB_SERVICE.SetSvcStart(const execname: string; const timeout: Uint64);
+ begin
+   Field('svc_start_exec').asstring    := execname;
+   Field('svc_start_timeout').AsUInt64 := timeout;
+ end;
+
+ procedure TFRE_DB_SERVICE.SetSvcStop(const execname: string; const timeout: Uint64);
+ begin
+   Field('svc_stop_exec').asstring    := execname;
+   Field('svc_stop_timeout').AsUInt64 := timeout;
+ end;
+
+procedure TFRE_DB_SERVICE.AddSvcDependency(const name: string;const fmri: string; const grouping: string; const restart_on: string);
+var
+  deb           : IFRE_DB_Object;
+begin
+  deb := GFRE_DBI.NewObject;
+  deb.Field('fmri').asstring      := fmri;
+  deb.Field('grouping').asstring  := grouping;
+  deb.Field('restart_on').asstring:= restart_on;
+  deb.Field('name').asstring      := name;
+  Field('svc_dependency').addObject(deb);
+end;
 
  procedure TFRE_DB_SERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin

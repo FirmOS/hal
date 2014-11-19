@@ -577,7 +577,7 @@ function scf_instance_get_name(_para1:Pscf_instance_t; _para2:pcchar; _para3:siz
 function scf_instance_to_fmri(_para1:Pscf_instance_t; _para2:pcchar; _para3:size_t):ssize_t;cdecl;external External_library name 'scf_instance_to_fmri';
 
 
-function scf_service_get_instance(_para1:Pscf_service_t; _para2:pcchar; _para3:Pscf_instance_t):cint;cdecl;external External_library name 'scf_service_get_instance';
+function scf_service_get_instance(_para1:Pscf_service_t; _para2:pchar; _para3:Pscf_instance_t):cint;cdecl;external External_library name 'scf_service_get_instance';
 
 
 function scf_service_add_instance(_para1:Pscf_service_t; _para2:pchar; _para3:Pscf_instance_t):cint;cdecl;external External_library name 'scf_service_add_instance';
