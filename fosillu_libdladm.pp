@@ -40,6 +40,7 @@ uses ctypes,unixtype,fos_illumos_defs,fosillu_nvpair,fosillu_sysnet_common;
 {$IFDEF FPC}
 {$PACKRECORDS C}
 {$ENDIF}
+{$LINKLIB libdladm}
 
 const
   External_library=''; {Setup as you need}

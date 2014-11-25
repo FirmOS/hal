@@ -58,7 +58,7 @@ uses
   fre_openssl_interface,
   fre_monitoring,
   {$IFDEF SOLARIS}
-  fos_firmbox_zonectrl,
+  fosillu_hal_zonectrl,
   fosillu_dladm,
   {$ENDIF}
   fre_process;

@@ -21,6 +21,24 @@ program fpmake_packages;
        Dependencies.Add('FRE_BLKCOM');
        Dependencies.Add('fcl-process');
        with Targets do begin
+    {$IFDEF SOLARIS}
+         AddUnit('fos_illumos_defs.pas');
+         AddUnit('fosillu_zfs.pp');
+         AddUnit('fosillu_priv_names.pp');
+         AddUnit('fosillu_priv.pp');
+         AddUnit('fosillu_nvpair.pp');
+         AddUnit('fosillu_mnttab.pp');
+         AddUnit('fosillu_libzonecfg.pp');
+         AddUnit('fosillu_libzfs.pp');
+         AddUnit('fosillu_libscf.pp');
+         AddUnit('fosillu_hal_dbo_common.pp');
+         AddUnit('fosillu_hal_dbo_zfs_dataset.pas');
+         AddUnit('fosillu_hal_dbo_zfs_pool.pp');
+         AddUnit('fosillu_libdladm.pp');
+         AddUnit('fosillu_sysnet_common.pp');
+         AddUnit('fosillu_dladm.pas');
+         AddUnit('fosillu_hal_zonectrl.pas');
+    {$ENDIF}
          AddUnit('fre_hal_schemes.pas');
          AddUnit('fre_hal_utils.pas');
          AddUnit('fre_hal_redirect.pas');
@@ -44,36 +62,6 @@ program fpmake_packages;
          AddUnit('fre_certificate_app.pas');
        end;
     end;
-    {$IFDEF SOLARIS}
-    P := AddPackage('FRE_HAL_ILLU');
-    with p do begin
-       OSes      := cFOS_BUILD_OSes;
-       Directory := cFOS_BUILD_PREFIX;
-       Dependencies.Add('FRE_CORE');
-       Dependencies.Add('FRE_DB');
-       Dependencies.Add('FRE_INTF');
-       Dependencies.Add('FRE_BLKCOM');
-       Dependencies.Add('fcl-process');
-       Dependencies.Add('FRE_HAL');
-       with Targets do begin
-         AddUnit('fos_illumos_defs.pas');
-         AddUnit('fosillu_zfs.pp');
-         AddUnit('fosillu_priv_names.pp');
-         AddUnit('fosillu_priv.pp');
-         AddUnit('fosillu_nvpair.pp');
-         AddUnit('fosillu_mnttab.pp');
-         AddUnit('fosillu_libzonecfg.pp');
-         AddUnit('fosillu_libzfs.pp');
-         AddUnit('fosillu_libscf.pp');
-         AddUnit('fosillu_hal_dbo_common.pp');
-         AddUnit('fosillu_hal_dbo_zfs_dataset.pas');
-         AddUnit('fosillu_hal_dbo_zfs_pool.pp');
-         AddUnit('fosillu_libdladm.pp');
-         AddUnit('fosillu_sysnet_common.pp');
-         AddUnit('fosillu_dladm.pas');
-       end;
-    end;
-    {$ENDIF}
     Run;
    end;
  end.

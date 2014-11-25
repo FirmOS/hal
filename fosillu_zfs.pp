@@ -12,7 +12,7 @@ Puint64_t  = ^uint64_t;
 {$IFDEF FPC}
 {$PACKRECORDS C}
 {$ENDIF}
-
+{$mode objfpc}{$H+}
 
 {
  * CDDL HEADER START
