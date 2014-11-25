@@ -68,6 +68,9 @@ program fpmake_packages;
          AddUnit('fosillu_hal_dbo_common.pp');
          AddUnit('fosillu_hal_dbo_zfs_dataset.pas');
          AddUnit('fosillu_hal_dbo_zfs_pool.pp');
+         AddUnit('fosillu_libdladm.pp');
+         AddUnit('fosillu_sysnet_common.pp');
+         AddUnit('fosillu_dladm.pas');
        end;
     end;
     {$ENDIF}
