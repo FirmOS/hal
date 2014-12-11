@@ -5495,7 +5495,7 @@ end;
  function TFRE_DB_DATALINK.RIF_CreateorUpdateServices: IFRE_DB_Object;
  var
    oldsvclist : IFRE_DB_Object;
-
+   {$IFDEF SOLARIS}
    procedure _CreateorUpdateIPHOSTNET(const obj:IFRE_DB_Object);
    var iphostnet   : TFRE_DB_IP_HOSTNET;
        resdbo      : IFRE_DB_Object;
@@ -5530,7 +5530,7 @@ end;
      writeln('SWL: REMOVE SERVICE ',fmri);
      fre_destroy_service(obj);
    end;
-
+   {$ENDIF}
  begin
    {$IFDEF SOLARIS}
    result := GFRE_DBI.NewObject;
