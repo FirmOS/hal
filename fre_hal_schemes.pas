@@ -59,7 +59,9 @@ uses
   fre_monitoring,
   {$IFDEF SOLARIS}
   fosillu_hal_zonectrl,
+  fos_firmbox_svcctrl,
   fosillu_dladm,
+  fosillu_ipadm,
   {$ENDIF}
   fre_process;
 
@@ -111,13 +113,19 @@ type
    public
      class function  GetMachineUIDForService(const conn : IFRE_DB_CONNECTION ; service_uid : TFRE_DB_GUID):TFRE_DB_GUID;
      procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
-     procedure       SetSvcNameandType      (const service_name:string; const common_name : string; const duration:string; const ignore_error:string);
-     procedure       SetSvcEnvironment      (const working_directory:string; const user,group:string; const environment:string);
+     procedure       SetSvcNameandType      (const service_name:string; const common_name : string; const duration:string; const ignore_error:string; const enabled:boolean=false);
+     procedure       SetSvcEnvironment      (const working_directory:string; const user,group:string; const environment:string; const privileges:string='');
      procedure       SetSvcStart            (const execname:string; const timeout: Uint64);
      procedure       SetSvcStop             (const execname:string; const timeout: Uint64);
+     procedure       SetSvcRestart          (const execname:string; const timeout: Uint64);
      procedure       AddSvcDependency       (const name:string; const fmri:string; const grouping:string; const restart_on:string);
+     procedure       AddSvcDependent        (const name:string; const fmri:string; const grouping:string; const restart_on:string);
+     function        GetFMRI                : TFRE_DB_STRING; virtual;
    published
      procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
+     function        RIF_CreateOrUpdateService : IFRE_DB_Object; virtual;
+     function        RIF_StartService          : IFRE_DB_Object; virtual; abstract;
+     function        RIF_StopService           : IFRE_DB_Object; virtual; abstract;
    end;
 
    { TFRE_DB_SERVICE_INSTANCE }
@@ -255,6 +263,7 @@ type
      procedure      Embed                   (const conn: IFRE_DB_CONNECTION); override;
    published
      function       IMI_Menu                (const input:IFRE_DB_Object): IFRE_DB_Object;
+     function       RIF_CreateOrUpdateServices                          : IFRE_DB_Object;
    end;
 
    { TFRE_DB_DATALINK_PHYS }
@@ -291,14 +300,18 @@ type
 
    { TFRE_DB_IP_HOSTNET }
 
-   TFRE_DB_IP_HOSTNET=class(TFRE_DB_ObjectEx)
+   TFRE_DB_IP_HOSTNET=class(TFRE_DB_SERVICE)
    protected
      procedure       InternalSetIPCIDR      (const value:TFRE_DB_String); virtual; abstract;
+     function        GetAddrObjAlias        : string; virtual;
 
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
-     procedure SetIPCIDR                    (const value:TFRE_DB_String);
+     function        GetFMRI                : TFRE_DB_String; override;
+     procedure       SetIPCIDR              (const value:TFRE_DB_String);
+   published
+     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
    end;
 
 
@@ -311,6 +324,11 @@ type
 
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       SetGatewayIP           (const value:TFRE_DB_String);
+   published
+     function        RIF_StartService       : IFRE_DB_Object; override;
+     function        RIF_StopService        : IFRE_DB_Object; override;
    end;
 
 
@@ -322,26 +340,10 @@ type
 
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   end;
-
-   { TFRE_DB_IPV4_NETROUTE }
-
-   TFRE_DB_IPV4_NETROUTE=class(TFRE_DB_IPV4_HOSTNET)
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
      procedure       SetGatewayIP           (const value:TFRE_DB_String);
-   end;
-
-   { TFRE_DB_IPV6_NETROUTE }
-
-   TFRE_DB_IPV6_NETROUTE=class(TFRE_DB_IPV4_HOSTNET)
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   public
-     procedure       SetGatewayIP           (const value:TFRE_DB_String);
+     function        RIF_StartService       : IFRE_DB_Object; override;
+     function        RIF_StopService        : IFRE_DB_Object; override;
    end;
 
 
@@ -413,7 +415,10 @@ type
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
      procedure       CALC_GetDisplayName    (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
    public
+     function        GetFMRI                : TFRE_DB_STRING; override;
+
      property  key      : TFRE_DB_String read getKey     write setKey;
      property  state    : TFRE_DB_String read getState   write setState;
      property  mtype    : TFRE_DB_String read getMType   write setMType;
@@ -427,8 +432,23 @@ type
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     function        GetFMRI                : TFRE_DB_STRING; override;
    published
      procedure       CALC_GetDisplayName    (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
+   end;
+
+   { TFRE_DB_LDAP_SERVICE }
+
+   TFRE_DB_LDAP_SERVICE=class(TFRE_DB_SERVICE)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     function        GetFMRI                : TFRE_DB_STRING; override;
+   published
+     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
    end;
 
    { TFRE_DB_NAS }
@@ -741,12 +761,15 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI              : TFRE_DB_STRING; override;
   published
     function IMI_Content                 (const input:IFRE_DB_Object) : IFRE_DB_Object;
     function IMI_Menu                    (const input:IFRE_DB_Object) : IFRE_DB_Object;
     function WEB_ChildrenData            (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
     function IMI_addSubnet               (const input:IFRE_DB_Object) : IFRE_DB_Object;
     function IMI_addFixedHost            (const input:IFRE_DB_Object) : IFRE_DB_Object;
+    function RIF_CreateOrUpdateService   : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_DHCP_Subnet }
@@ -777,7 +800,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI                : TFRE_DB_STRING; override;
   published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_Radius }
@@ -846,6 +872,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI                : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_CRYPTO_FILESERVER }
@@ -854,6 +884,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI                : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_SSH_SERVICE }
@@ -862,6 +896,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI                : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_IMAP_SERVICE }
@@ -870,6 +908,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI                : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_MTA_SERVICE }
@@ -878,6 +920,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI                : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_POSTGRES_SERVICE }
@@ -886,6 +932,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI                : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_MYSQL_SERVICE }
@@ -894,6 +944,10 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI              : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
   { TFRE_DB_HTTP_SERVICE }
@@ -902,7 +956,24 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI              : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
+
+  { TFRE_DB_PHPFPM_SERVICE }
+
+  TFRE_DB_PHPFPM_SERVICE=class(TFRE_DB_SERVICE)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI              : TFRE_DB_STRING; override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
+  end;
+
 
   { TFRE_DB_CPE_NETWORK_SERVICE }
 
@@ -1164,6 +1235,89 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_PHPFPM_SERVICE }
+
+class procedure TFRE_DB_PHPFPM_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+  inherited RegisterSystemScheme(scheme);
+end;
+
+class procedure TFRE_DB_PHPFPM_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+function TFRE_DB_PHPFPM_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_phpfpm';
+end;
+
+function TFRE_DB_PHPFPM_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS PHPFPM Service ','contract','core,signal',true);
+    SetSvcEnvironment('/','root','root','LANG=C');
+    SetSvcStart('/opt/local/sbin/php-fpm -y /opt/local/etc/php-fpm.conf',60);
+    SetSvcStop(':kill',60);
+
+    AddSvcDependency('network','svc:/milestone/network:default','require_all','error');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local:default','require_all','none');
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
+end;
+
+{ TFRE_DB_LDAP }
+
+class procedure TFRE_DB_LDAP_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+end;
+
+class procedure TFRE_DB_LDAP_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+function TFRE_DB_LDAP_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_ldap';
+end;
+
+function TFRE_DB_LDAP_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename :string;
+begin
+ {$IFDEF SOLARIS}
+   result := GFRE_DBI.NewObject;
+   servicename := Copy(GetFMRI,6,maxint);
+   SetSvcNameandType(servicename,'FirmOS LDAP Service ','contract','core,signal',true);
+   SetSvcEnvironment('/var/openldap','root','root','PATH=/opt/local/bin:/opt/local/sbin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin');
+   SetSvcStart('/opt/local/libexec/slapd -u slapd -g ldap -h &quot;ldap://0.0.0.0:44005 ldaps://0.0.0.0:44006&quot; -F /opt/local/etc/openldap/slapd.d',60);
+   SetSvcStop(':kill',60);
+   AddSvcDependency('network','svc:/milestone/network','require_all','none');
+   AddSvcDependency('filesystem-local','svc:/system/filesystem/local:default','require_all','none');
+   AddSvcDependency('autofs','svc:/system/filesystem/autofs:default','optional_all','error');
+   AddSvcDependency('milestone','svc:/milestone/sysconfig','require_all','none');
+
+   fre_create_service(self);
+   result.Field('fmri').asstring:=servicename;
+
+ {$ENDIF}
+end;
+
 { TFRE_DB_CRYPTO_FILESERVER }
 
 class procedure TFRE_DB_CRYPTO_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1193,61 +1347,18 @@ begin
   end;
 end;
 
-{ TFRE_DB_IPV6_NETROUTE }
-
-class procedure TFRE_DB_IPV6_NETROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+function TFRE_DB_CRYPTO_FILESERVER.GetFMRI: TFRE_DB_STRING;
 begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_IPV6_HOSTNET.ClassName);
-  scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
-  scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv6 validator
+  Result:='no fmri';
 end;
 
-class procedure TFRE_DB_IPV6_NETROUTE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+function TFRE_DB_CRYPTO_FILESERVER.RIF_CreateOrUpdateService: IFRE_DB_Object;
 begin
-  newVersionId:='1.0';
-  if currentVersionId='' then begin
-    currentVersionId := '1.0';
-  end;
+ {$IFDEF SOLARIS}
+   result := GFRE_DBI.NewObject;
+ {$ENDIF}
 end;
 
-procedure TFRE_DB_IPV6_NETROUTE.SetGatewayIP(const value: TFRE_DB_String);
-begin
-  Field('gateway').asstring:=value;
-end;
-
-{ TFRE_DB_IPV4_NETROUTE }
-
-class procedure TFRE_DB_IPV4_NETROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-var
-  group: IFRE_DB_InputGroupSchemeDefinition;
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_IPV4_HOSTNET.ClassName);
-  scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
-  scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ip');
-
-  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
-  group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
-end;
-
-class procedure TFRE_DB_IPV4_NETROUTE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionId:='1.0';
-  if currentVersionId='' then begin
-    currentVersionId := '1.0';
-
-    StoreTranslateableText(conn,'scheme_main_group','General Information');
-    StoreTranslateableText(conn,'scheme_objname','Name');
-    StoreTranslateableText(conn,'scheme_gateway','Gateway');
-  end;
-end;
-
-procedure TFRE_DB_IPV4_NETROUTE.SetGatewayIP(const value: TFRE_DB_String);
-begin
-  Field('gateway').asstring:=value;
-end;
 
 { TFRE_DB_DATALINK_IPMP }
 
@@ -1286,6 +1397,60 @@ begin
   end;
 end;
 
+function TFRE_DB_SSH_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_ssh';
+end;
+
+function TFRE_DB_SSH_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename :string;
+begin
+ {$IFDEF SOLARIS}
+   result := GFRE_DBI.NewObject;
+   servicename := Copy(GetFMRI,6,maxint);
+   SetSvcNameandType(servicename,'FirmOS SSH Service ','contract','core,signal',true);
+   SetSvcEnvironment('/','root','root','LANG=C');
+   SetSvcStart('/lib/svc/method/sshd start',60);
+   SetSvcStop(':kill',60);
+   SetSvcRestart('/lib/svc/method/sshd restart',60);
+   AddSvcDependency('network','svc:/milestone/network','require_all','none');
+   AddSvcDependency('fs-local','svc:/system/filesystem/local','require_all','none');
+   AddSvcDependency('fs-autofs','svc:/system/filesystem/autofs','optional_all','error');
+   AddSvcDependency('net-loopback','svc:/network/loopback','require_all','none');
+   AddSvcDependency('net-physical','svc:/network/physical','require_all','none');
+   AddSvcDependency('cryptosvc','svc:/system/cryptosvc','require_all','none');
+   AddSvcDependency('utmp','svc:/system/utmp','require_all','none');
+   AddSvcDependency('network_ipfilter','svc:/network/ipfilter:default','optional_all','error');
+
+   AddSvcDependent ('fos_ssh_multi-user-server','svc:/milestone/multi-user-server','optional_all','none');
+
+//   <dependency name='config_data' grouping='require_all' restart_on='restart' type='path'>
+//     <service_fmri value='file://localhost/etc/ssh/sshd_config'/>
+//   </dependency>
+
+   //<property_group name='firewall_config' type='com.sun,fw_configuration'>
+   //  <propval name='apply_to' type='astring' value=''/>
+   //  <propval name='exceptions' type='astring' value=''/>
+   //  <propval name='policy' type='astring' value='use_global'/>
+   //  <propval name='value_authorization' type='astring' value='solaris.smf.value.firewall.config'/>
+   //</property_group>
+   //<property_group name='firewall_context' type='com.sun,fw_definition'>
+   //  <propval name='ipf_method' type='astring' value='/lib/svc/method/sshd ipfilter'/>
+   //  <propval name='name' type='astring' value='ssh'/>
+   //</property_group>
+   //<property_group name='general' type='framework'>
+   //  <propval name='action_authorization' type='astring' value='solaris.smf.manage.ssh'/>
+   //</property_group>
+   //<property_group name='startd' type='framework'>
+   //  <propval name='ignore_error' type='astring' value='core,signal'/>
+   //</property_group>
+
+   fre_create_service(self);
+   result.Field('fmri').asstring:=servicename;
+
+ {$ENDIF}
+end;
+
 { TFRE_DB_HTTP_SERVICE }
 
 class procedure TFRE_DB_HTTP_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1300,6 +1465,37 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
   end;
+end;
+
+function TFRE_DB_HTTP_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_httpd';
+end;
+
+function TFRE_DB_HTTP_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS HTTPD Service ','contract','core,signal',true);
+    SetSvcEnvironment('/','root','root','LD_PRELOAD_32=/usr/lib/extendedFILE.so.1');
+    SetSvcStart('/opt/local/sbin/httpd -k start',300);
+    SetSvcStop('/opt/local/sbin/httpd -k stop',300);
+    SetSvcRestart('/opt/local/sbin/httpd -k graceful',300);
+
+    AddSvcDependency('network','svc:/milestone/network:default','require_all','error');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local:default','require_all','none');
+    AddSvcDependency('php-fpm','svc:/fos/fos_phpfpm','require_all','none');
+
+//        <dependency name='config-file' grouping='require_all' restart_on='refresh' type='path'>
+//          <service_fmri value='file://localhost/opt/local/etc/httpd/httpd.conf'/>
+//        </dependency>
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
 end;
 
 { TFRE_DB_MYSQL_SERVICE }
@@ -1318,6 +1514,37 @@ begin
   end;
 end;
 
+function TFRE_DB_MYSQL_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_mysql';
+end;
+
+function TFRE_DB_MYSQL_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS MySQL Service ','contract','core,signal',true);
+    SetSvcEnvironment('/var/mysql','mysql','mysql','LD_PRELOAD_32=/usr/lib/extendedFILE.so.1');
+    SetSvcStart('/opt/local/lib/svc/method/mysqld start',18446744073709551615);
+    SetSvcStop('/opt/local/lib/svc/method/mysqld stop',18446744073709551615);
+
+    AddSvcDependency('network','svc:/milestone/network:default','require_all','none');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','none');
+    AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
+
+
+//        <dependency name='net' grouping='require_all' restart_on='none' type='service'>
+//          <service_fmri value='svc:/network/loopback'/>
+//        </dependency>
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
+end;
+
 { TFRE_DB_POSTGRES_SERVICE }
 
 class procedure TFRE_DB_POSTGRES_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1332,6 +1559,38 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
   end;
+end;
+
+function TFRE_DB_POSTGRES_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_postgresql';
+end;
+
+function TFRE_DB_POSTGRES_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS PostgreSQL Service ','child','core,signal',true);
+    SetSvcEnvironment('/','postgres','postgres','LD_PRELOAD_32=/usr/lib/extendedFILE.so.1');
+    SetSvcStart('/opt/local/lib/svc/method/postgresql start',300);
+    SetSvcStop('/opt/local/lib/svc/method/postgresql stop',300);
+    SetSvcRestart('/opt/local/lib/svc/method/postgresql refresh',60);
+
+    AddSvcDependency('network','svc:/milestone/network:default','require_all','none');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','error');
+    AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
+
+        //<property_group name='config' type='application'>
+        //  <propval name='data' type='astring' value='/var/pgsql/data'/>
+        //  <propval name='log' type='astring' value='/var/log/postgresql.log'/>
+        //</property_group>
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
 end;
 
 { TFRE_DB_MTA_SERVICE }
@@ -1350,6 +1609,31 @@ begin
   end;
 end;
 
+function TFRE_DB_MTA_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_mta';
+end;
+
+function TFRE_DB_MTA_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS MTA Service ','child','core,signal',true);
+    SetSvcEnvironment('/','mail','mail','LANG=C');
+    SetSvcStart('/opt/local/sbin/exim -C /opt/local/etc/exim/configure -bdf',60);
+    SetSvcStop(':kill',60);
+    AddSvcDependency('network','svc:/milestone/network:default','require_all','none');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','error');
+    AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
+end;
+
 { TFRE_DB_IMAP_SERVICE }
 
 class procedure TFRE_DB_IMAP_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1364,6 +1648,36 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
   end;
+end;
+
+function TFRE_DB_IMAP_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_imap';
+end;
+
+function TFRE_DB_IMAP_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS IMAP Service ','contract','core,signal',true);
+    SetSvcEnvironment('/','root','root','MASTER_IS_PARENT_ENV=1');
+    SetSvcStart('/opt/local/sbin/dovecot',60);
+    SetSvcStop(':kill',60);
+    AddSvcDependency('network','svc:/milestone/network:default','require_all','none');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','error');
+    AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
+
+
+    //<property_group name='application' type='application'>
+    //    <propval name='config_file' type='astring' value='/opt/local/etc/dovecot/dovecot.conf'/>
+    //</property_group>
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
 end;
 
 { TFRE_DB_FBZ_TEMPLATE }
@@ -1457,12 +1771,16 @@ end;
 
 { TFRE_DB_IP_ADDRESS }
 
+function TFRE_DB_IP_HOSTNET.GetAddrObjAlias: string;
+begin
+  result :='v'+Copy(UID.AsHexString,1,24); // 30 works for ipv4, 28 for ipv6
+end;
+
 class procedure TFRE_DB_IP_HOSTNET.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.Classname);
   scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
-  scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
 end;
 
 class procedure TFRE_DB_IP_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1473,10 +1791,53 @@ begin
   end;
 end;
 
+function TFRE_DB_IP_HOSTNET.GetFMRI: TFRE_DB_String;
+begin
+  if FieldExists('gateway') then
+    result := 'svc:/fos/fos_routing_'+UID.AsHexString
+  else
+    result := 'svc:/fos/fosip_'+Field('datalinkname').asstring+'_'+UID.AsHexString;
+end;
+
 procedure TFRE_DB_IP_HOSTNET.SetIPCIDR(const value: TFRE_DB_String);
 begin
   InternalSetIPCIDR(value);
 end;
+
+function TFRE_DB_IP_HOSTNET.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+  result := GFRE_DBI.NewObject;
+  if FieldExists('gateway') then
+    begin
+      servicename := Copy(GetFMRI,6,maxint);
+      writeln('SWL: CREATE SVC ROUTING ',ObjectName,' ',servicename);
+      SetSvcNameandType(servicename,'FirmOS Routing Service '+Field('IP_NET').asstring+' '+Field('gateway').asstring,'transient','core,signal',true);
+      SetSvcEnvironment('/opt/local/fre','root','root','LANG=C');
+      SetSvcStart('/opt/local/fre/bin/fossvc --enable --routing='+UID.AsHexString,60);
+      SetSvcStop('/opt/local/fre/bin/fossvc --disable --routing='+UID.AsHexString,60);
+      AddSvcDependency('fosip','svc:/fos/fosip','require_all','none');
+      AddSvcDependent (StringReplace(servicename,'/','',[rfReplaceAll]),'svc:/milestone/network','require_all','none');
+    end
+  else
+    begin
+      servicename := Copy(GetFMRI,6,maxint);
+      writeln('SWL: CREATE SVC IP HOSTNET ',ObjectName,' ',servicename);
+
+      SetSvcNameandType(servicename,'FirmOS IP Service '+Field('IP_NET').asstring,'transient','core,signal',true);
+      SetSvcEnvironment('/opt/local/fre','root','root','LANG=C');
+      SetSvcStart('/opt/local/fre/bin/fossvc --enable --ip='+UID.AsHexString,60);
+      SetSvcStop('/opt/local/fre/bin/fossvc --disable --ip='+UID.AsHexString,60);
+      AddSvcDependency('foscfg','svc:/fos/foscfg','require_all','none');
+      AddSvcDependent (StringReplace(servicename,'/','',[rfReplaceAll]),'svc:/fos/fosip','require_all','none');
+    end;
+  fre_create_service(self);
+
+  result.Field('fmri').asstring:=servicename;
+  {$ENDIF}
+end;
+
 
 { TFRE_DB_IPV6_ADDRESS }
 
@@ -1492,6 +1853,8 @@ begin
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
     scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv6 validator
     scheme.AddSchemeField('slaac',fdbft_Boolean).required:=true;
+    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv6 validator
+    scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
     group:=scheme.AddInputGroup('ip').Setup(GetTranslateableTextKey('scheme_ipv6_group'));
     group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
@@ -1508,6 +1871,93 @@ begin
   end;
 end;
 
+procedure TFRE_DB_IPV6_HOSTNET.SetGatewayIP(const value: TFRE_DB_String);
+begin
+  Field('gateway').asstring:=value;
+end;
+
+function TFRE_DB_IPV6_HOSTNET.RIF_StartService: IFRE_DB_Object;
+var linkname    : string;
+    aliasname   : string;
+    ip_hostnet  : string;
+    errorstring : string;
+begin
+  {$IFDEF SOLARIS}
+  result := GFRE_DBI.NewObject;
+  writeln('SWL: IPV6 START');
+  if FieldExists('gateway') then
+    begin
+      raise Exception.Create('ROUTING FOR IPV6 HOSTNET NOT IMPLEMENTED YET!');
+//      route add -inet6 3ffe::/16 somegateway
+    end
+  else
+    begin
+      linkname   := Field('datalinkname').asstring;
+      aliasname  := GetAddrObjAlias;
+      if FieldExists('slaac') and Field('slaac').AsBoolean=true then
+        begin
+         if create_ipv6slaac(linkname,'addrconf',errorstring) then
+           begin
+             result.Field('STARTED').asboolean:=true;
+           end
+         else
+           begin
+             result.Field('STARTED').asboolean:= false;
+             result.Field('ERROR').asstring   := errorstring;
+           end
+        end
+      else
+        begin
+          create_ipv6slaac(linkname,'addrconf',errorstring);  // ignore result
+          ip_hostnet := Field('ip_net').asstring;
+          if create_ipv6address(linkname,aliasname,ip_hostnet,errorstring) then
+            begin
+              result.Field('STARTED').asboolean:=true;
+            end
+          else
+            begin
+              result.Field('STARTED').asboolean:= false;
+              result.Field('ERROR').asstring   := errorstring;
+            end
+        end;
+     end;
+  {$ENDIF}
+end;
+
+function TFRE_DB_IPV6_HOSTNET.RIF_StopService: IFRE_DB_Object;
+var linkname    : string;
+    aliasname   : string;
+    errorstring : string;
+begin
+  {$IFDEF SOLARIS}
+  result := GFRE_DBI.NewObject;
+  writeln('SWL: IPV6 STOP');
+  if FieldExists('gateway') then
+    begin
+      raise Exception.Create('ROUTING FOR IPV4 HOSTNET NOT IMPLEMENTED YET!');
+    end
+  else
+    begin
+      linkname   := Field('datalinkname').asstring;
+      aliasname  := GetAddrObjAlias;
+      if FieldExists('slaac') and Field('slaac').AsBoolean=true then
+        begin
+          result.Field('STOPPED').asboolean:=true;  // dont remove addrconf on link, no further add or remove of ipv6 possible after that
+          exit;
+        end;
+      if delete_ipaddress(linkname,aliasname,errorstring) then
+        begin
+          result.Field('STOPPED').asboolean:=true;
+        end
+      else
+        begin
+          result.Field('STOPPED').asboolean:= false;
+          result.Field('ERROR').asstring   := errorstring;
+        end;
+    end;
+  {$ENDIF}
+end;
+
 { TFRE_DB_IPV4 }
 
 procedure TFRE_DB_IPV4_HOSTNET.InternalSetIPCIDR(const value: TFRE_DB_String);
@@ -1522,7 +1972,9 @@ begin
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
     scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ip');
     scheme.AddSchemeField('dhcp',fdbft_Boolean).required:=true;
-    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv4 validator
+    scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
+    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
 end;
@@ -1536,6 +1988,110 @@ begin
     StoreTranslateableText(conn,'scheme_ip_net','IP/Subnet');
     StoreTranslateableText(conn,'scheme_dhcp','DHCP');
   end;
+end;
+
+procedure TFRE_DB_IPV4_HOSTNET.SetGatewayIP(const value: TFRE_DB_String);
+begin
+  Field('gateway').asstring:=value;
+end;
+
+function TFRE_DB_IPV4_HOSTNET.RIF_StartService: IFRE_DB_Object;
+var linkname    : string;
+    aliasname   : string;
+    ip_hostnet  : string;
+    errorstring : string;
+    gateway     : string;
+begin
+  {$IFDEF SOLARIS}
+  result := GFRE_DBI.NewObject;
+  if FieldExists('gateway') then
+    begin
+      ip_hostnet := Field('ip_net').asstring;
+      gateway    := Field('gateway').asstring;
+      writeln('SWL: ADD ROUTING ',ip_hostnet,' GW ',gateway);
+      if add_ipv4routing(gateway,ip_hostnet,errorstring) then
+        begin
+          result.Field('STARTED').asboolean:=true;
+        end
+      else
+        begin
+          result.Field('STARTED').asboolean:= false;
+          result.Field('ERROR').asstring   := errorstring;
+        end;
+    end
+  else
+    begin
+      if FieldExists('dhcp') and Field('dhcp').AsBoolean=true then
+        begin
+          raise Exception.Create('DHCP CLIENT FOR IPV4 HOSTNET NOT IMPLEMENTED YET!');
+        end
+      else
+        begin
+          writeln('SWL: IPV4 START');
+          linkname   := Field('datalinkname').asstring;
+          aliasname  := GetAddrObjAlias;
+          ip_hostnet := Field('ip_net').asstring;
+          if create_ipv4address(linkname,aliasname,ip_hostnet,errorstring) then
+            begin
+              result.Field('STARTED').asboolean:=true;
+            end
+          else
+            begin
+              result.Field('STARTED').asboolean:= false;
+              result.Field('ERROR').asstring   := errorstring;
+            end
+        end;
+     end;
+  {$ENDIF}
+end;
+
+function TFRE_DB_IPV4_HOSTNET.RIF_StopService: IFRE_DB_Object;
+var linkname    : string;
+    aliasname   : string;
+    ip_hostnet  : string;
+    errorstring : string;
+    gateway     : string;
+begin
+  {$IFDEF SOLARIS}
+  result := GFRE_DBI.NewObject;
+  if FieldExists('gateway') then
+    begin
+      ip_hostnet := Field('ip_net').asstring;
+      gateway    := Field('gateway').asstring;
+      writeln('SWL: DELETE ROUTING ',ip_hostnet,' GW ',gateway);
+      if delete_ipv4routing(gateway,ip_hostnet,errorstring) then
+        begin
+          result.Field('STOPPED').asboolean:=true;
+        end
+      else
+        begin
+          result.Field('STOPPED').asboolean:= false;
+          result.Field('ERROR').asstring   := errorstring;
+        end;
+    end
+  else
+    begin
+      if FieldExists('dhcp') and Field('dhcp').AsBoolean=true then
+        begin
+          raise Exception.Create('STOP DHCP CLIENT FOR IPV4 HOSTNET NOT IMPLEMENTED YET!');
+        end
+      else
+        begin
+          writeln('SWL: IPV4 STOP');
+          linkname   := Field('datalinkname').asstring;
+          aliasname  := GetAddrObjAlias;
+          if delete_ipaddress(linkname,aliasname,errorstring) then
+            begin
+              result.Field('STOPPED').asboolean:=true;
+            end
+          else
+            begin
+              result.Field('STOPPED').asboolean:= false;
+              result.Field('ERROR').asstring   := errorstring;
+            end
+        end;
+     end;
+  {$ENDIF}
 end;
 
 { TFRE_DB_CPE_NETWORK_SERVICE }
@@ -1565,8 +2121,6 @@ var icount     : integer;
       iptun      : TFRE_DB_DATALINK_IPTUN;
       ipv4       : TFRE_DB_IPV4_HOSTNET;
       ipv6       : TFRE_DB_IPV6_HOSTNET;
-      r6         : TFRE_DB_IPV6_NETROUTE;
-      r4         : TFRE_DB_IPV4_NETROUTE;
       resultcode : integer;
       param      : string;
 
@@ -1647,15 +2201,21 @@ var icount     : integer;
         device.ForAllObjects(@_IPTunIterator);
         ExecuteCMD('ip link set '+iptun.Objectname+' up',outstring,true);
       end;
-    if device.IsA(TFRE_DB_IPV6_NETROUTE,r6) then
+    if device.IsA(TFRE_DB_IPV6_HOSTNET,ipv6) then
       begin
-        writeln('ROUTE6:',r6.ObjectName);
-        ExecuteCMD('ip -6 route add '+ r6.Field('ip_net').asstring+' via '+r6.Field('gateway').asstring,outstring,false);
+        if ipv6.FieldExists('gateway') then
+          begin
+            writeln('ROUTE6:',ipv6.ObjectName);
+            ExecuteCMD('ip -6 route add '+ ipv6.Field('ip_net').asstring+' via '+ipv6.Field('gateway').asstring,outstring,false);
+          end;
       end;
-    if device.IsA(TFRE_DB_IPV4_NETROUTE,r4) then
+    if device.IsA(TFRE_DB_IPV4_HOSTNET,ipv4) then
       begin
-        writeln('ROUTE4:',r4.ObjectName);
-        ExecuteCMD('ip route add '+ r4.Field('ip_net').asstring+' via '+r4.Field('gateway').asstring,outstring,false);
+        if ipv4.FieldExists('gateway') then
+          begin
+            writeln('ROUTE4:',ipv4.ObjectName);
+            ExecuteCMD('ip route add '+ ipv4.Field('ip_net').asstring+' via '+ipv4.Field('gateway').asstring,outstring,false);
+          end;
       end;
 
   end;
@@ -2018,9 +2578,56 @@ begin
   end;
 end;
 
+function TFRE_DB_DNS.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_dns';
+end;
+
 procedure TFRE_DB_DNS.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
   setter.SetAsString('DNS: '+Field('objname').AsString);
+end;
+
+function TFRE_DB_DNS.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS DNS Service ','contract','core,signal',true);
+    SetSvcEnvironment('/','root','root','LANG=C','basic,!proc_session,!proc_info,!file_link_any,net_privaddr,file_dac_read,file_dac_search,sys_resource,proc_chroot');
+    SetSvcStart('/opt/local/lib/svc/method/named',60);
+    SetSvcStop(':kill',60);
+    SetSvcRestart(':kill -HUP',60);
+
+    AddSvcDependency('loopback','svc:/milestone/loopback','require_any','error');
+    AddSvcDependency('network','svc:/milestone/network','optional_all','error');
+    AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
+
+        //<dependency name='config-files' grouping='require_any' restart_on='refresh' type='path'>
+        //  <service_fmri value='file://localhost/opt/local/etc/named.conf'/>
+        //</dependency>
+
+        //  <exec_method name='start' type='method' exec='/opt/local/lib/svc/method/named %m %i' timeout_seconds='60'>
+//
+        //<property_group name='options' type='application'>
+          //  <propval name='chroot_dir' type='astring' value=''/>
+          //  <propval name='configuration_file' type='astring' value=''/>
+          //  <propval name='debug_level' type='integer' value='0'/>
+          //  <propval name='ip_interfaces' type='astring' value='all'/>
+          //  <propval name='listen_on_port' type='integer' value='0'/>
+          //  <propval name='server' type='astring' value=''/>
+          //  <propval name='threads' type='integer' value='0'/>
+          //</property_group>
+          //<property_group name='general' type='framework'>
+          //  <propval name='action_authorization' type='astring' value='solaris.smf.manage.bind'/>
+          //  <propval name='value_authorization' type='astring' value='solaris.smf.manage.bind'/>
+          //</property_group>
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
 end;
 
 { TFRE_DB_SERVICE_INSTANCE }
@@ -2897,6 +3504,30 @@ begin
   end;
 end;
 
+function TFRE_DB_VPN.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_vpn_'+UID.AsHexString;
+end;
+
+function TFRE_DB_VPN.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS OpenVPN Service ','contract','core,signal',true);
+    SetSvcEnvironment('/var/log','root','root','PATH=/usr/sbin:/usr/bin:/bin:/opt/local/sbin');
+    SetSvcStart('/opt/local/sbin/openvpn --config --/opt/local/etc/openvpn/'+UID.AsHexString+'.conf --daemon',60);
+    SetSvcStop(':kill',60);
+    AddSvcDependency('net-physical','svc:/network/physical','require_all','none');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','error');
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
+end;
+
 { TFRE_DB_DHCP_Fixed }
 
 class procedure TFRE_DB_DHCP_Fixed.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -3045,6 +3676,11 @@ begin
   end;
 end;
 
+function TFRE_DB_DHCP.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_dhcpd';
+end;
+
 function TFRE_DB_DHCP.IMI_Content(const input: IFRE_DB_Object): IFRE_DB_Object;
 var
   res   : TFRE_DB_FORM_PANEL_DESC;
@@ -3134,6 +3770,28 @@ begin
   serverFunc.AddParam.Describe('collection','dhcp_fixed');
   res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
   Result:=res;
+end;
+
+function TFRE_DB_DHCP.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS DHCPD Service ','contract','core,signal',true);
+    SetSvcEnvironment('/','root','root','LANG=C','');
+    SetSvcStart('/opt/local/lib/svc/method/isc-dhcpd start',30);
+    SetSvcStop('/opt/local/lib/svc/method/isc-dhcpd stop',30);
+    SetSvcRestart('/opt/local/lib/svc/method/isc-dhcpd refresh',30);
+
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local:default','require_all','none');
+    AddSvcDependency('network','svc:/milestone/network','require_all','error');
+//    AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
 end;
 
 
@@ -4217,12 +4875,12 @@ end;
      svc       : TFRE_DB_SERVICE;
      ds        : TFRE_DB_ZFS_DATASET;
      tmpl      : TFRE_DB_FBZ_TEMPLATE;
-
+     svcobj    : IFRE_DB_OBject;
  begin
-   field('domainname').asstring               := conn.sys.FetchDomainNameById(DomainID);
-
+//   field('domainname').asstring               := conn.sys.FetchDomainNameById(DomainID);
    if FieldExists('serviceparent') then
      begin
+       writeln('SWL: SERVICEPARENT');
        CheckDbResult(conn.Fetch(Field('serviceparent').AsGUID,obj),'could not fetch serviceparent '+Field('serviceparent').AsGUID.AsHexString);
        if obj.IsA(TFRE_DB_ZFS_DATASET,ds) then
          begin
@@ -4236,15 +4894,29 @@ end;
            Field('zonedbodataset').asstring      := Field('masterdataset').asstring+'/zones/'+UID.AsHexstring;
          end;
        obj.finalize;
+       writeln('SWL: SERVICEPARENT DONE');
      end;
    if FieldExists('templateid') then
      begin
+       writeln('SWL: TEMPLATE');
        CheckDbResult(conn.Fetch(Field('templateid').AsGUID,obj),'could not fetch template '+Field('templateid').AsGUID.AsHexString);
        if obj.IsA(TFRE_DB_FBZ_TEMPLATE,tmpl) then
          begin
            Field('templatedataset').asstring   := Field('masterdataset').AsString+'/template/'+Lowercase(StringReplace(tmpl.ObjectName,'_','',[rfReplaceAll]));
+           if tmpl.FieldExists('serviceclasses') then  //TODO : GET CONFIGURED SERVICES, NOT FAKE FROM TEMPLATE
+             begin
+               for i:=0 to tmpl.Field('serviceclasses').valuecount-1 do
+                 begin
+                   if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_VIRTUAL_FILESERVER.ClassName then
+                     continue;
+                   writeln('SWL : SERVICECLASSES ',tmpl.Field('serviceclasses').AsStringItem[i]);
+                   svcobj := GFRE_DBI.NewObjectSchemeByName(tmpl.Field('serviceclasses').AsStringItem[i]);
+                   self.Field(svcobj.UID.AsHexString).AsObject:=svcobj;
+                 end;
+             end;
          end;
        obj.Finalize;
+       writeln('SWL: TEMPLATEDONE');
      end;
 
    refs := conn.GetReferencesDetailed(UID,false);
@@ -4820,6 +5492,62 @@ end;
    result := GFRE_DB_NIL_DESC;
  end;
 
+ function TFRE_DB_DATALINK.RIF_CreateorUpdateServices: IFRE_DB_Object;
+ var
+   oldsvclist : IFRE_DB_Object;
+
+   procedure _CreateorUpdateIPHOSTNET(const obj:IFRE_DB_Object);
+   var iphostnet   : TFRE_DB_IP_HOSTNET;
+       resdbo      : IFRE_DB_Object;
+       foundobj    : IFRE_DB_Object;
+       servicename : string;
+       fmri        : string;
+   begin
+     if obj.IsA(TFRE_DB_IP_HOSTNET,iphostnet) then
+       begin
+         iphostnet.Field('datalinkname').asstring := ObjectName;
+         fmri        := iphostnet.GetFMRI;
+         writeln('SWL:',fmri);
+         if oldsvclist.FetchObjWithStringFieldValue('fmri',fmri,foundobj,'') then
+           begin
+             writeln('SWL: SVC ALREADY CREATED');
+             oldsvclist.DeleteField(foundobj.UID.AsHexString);
+           end
+         else
+           begin
+             resdbo := iphostnet.RIF_CreateOrUpdateService;
+             resdbo.Field('UID').AsGUID:=iphostnet.UID;
+             writeln('SWL:',resdbo.DumpToString);
+           end;
+       end;
+   end;
+
+   procedure _DeleteIPHOSTNET(const obj:IFRE_DB_Object);
+   var fmri        : string;
+   begin
+     fmri := obj.Field('fmri').asstring;
+     obj.Field('svc_name').asstring:=Copy(fmri,6,maxint);
+     writeln('SWL: REMOVE SERVICE ',fmri);
+     fre_destroy_service(obj);
+   end;
+
+ begin
+   {$IFDEF SOLARIS}
+   result := GFRE_DBI.NewObject;
+   if ObjectName='' then exit;  // TODO FS: REMOVE AFTER ALL SERVICES ARE SET IN ZONE
+
+   oldsvclist := fre_get_servicelist('fosip_'+Objectname);
+//   writeln('SWL NEW LIST:',oldsvclist.DumpToString);
+   try
+     ForAllObjects(@_CreateorUpdateIPHOSTNET);
+//     writeln('SWL LIST AFTER:',oldsvclist.DumpToString);
+     oldsvclist.ForAllObjects(@_DeleteIPHOSTNET);
+   finally
+     oldsvclist.Finalize;
+   end;
+   {$ENDIF}
+ end;
+
  { TFRE_DB_TESTER }
 
  class procedure TFRE_DB_TESTER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -4932,6 +5660,31 @@ end;
  procedure TFRE_DB_VMACHINE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
    setter.SetAsString('VM: '+Field('objname').AsString);
+ end;
+
+ function TFRE_DB_VMACHINE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+ var servicename : string;
+ begin
+   {$IFDEF SOLARIS}
+     result := GFRE_DBI.NewObject;
+     servicename := Copy(GetFMRI,6,maxint);
+     SetSvcNameandType(servicename,'FirmOS VM Service ','transient','core,signal',true);
+     SetSvcEnvironment('/','root','root','LANG=C');
+     SetSvcStart('sh /opt/local/etc/kvm/start_qemu_'+UID.AsHexString,60);
+     SetSvcStop('sh /opt/local/etc/kvm/stop_qemu_'+UID.AsHexString,180);
+
+     AddSvcDependency('network','svc:/milestone/network:default','require_all','none');
+     AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','error');
+
+     fre_create_service(self);
+     result.Field('fmri').asstring:=servicename;
+
+   {$ENDIF}
+ end;
+
+ function TFRE_DB_VMACHINE.GetFMRI: TFRE_DB_STRING;
+ begin
+   result := 'svc:/fos/fos_vm_'+UID.AsHexString;
  end;
 
  class procedure TFRE_DB_MACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -5276,20 +6029,22 @@ end;
    // no generic service embedding right now
  end;
 
- procedure TFRE_DB_SERVICE.SetSvcNameandType(const service_name: string;const common_name: string; const duration: string; const ignore_error: string);
+  procedure TFRE_DB_SERVICE.SetSvcNameandType(const service_name: string; const common_name: string; const duration: string; const ignore_error: string; const enabled: boolean);
  begin
    Field('svc_name').asstring             :=service_name;
    Field('svc_duration').asstring         :=duration;
    Field('svc_ignore_error').asstring     :=ignore_error;
    Field('svc_common_name').asstring      :=common_name;
+   Field('svc_enabled').asboolean          :=enabled;
  end;
 
- procedure TFRE_DB_SERVICE.SetSvcEnvironment(const working_directory: string;const user, group: string; const environment: string);
+  procedure TFRE_DB_SERVICE.SetSvcEnvironment(const working_directory: string; const user, group: string; const environment: string; const privileges: string);
  begin
    Field('svc_environment').asstring      := environment;
    Field('svc_working_directory').asstring:= working_directory;
    Field('svc_user').asstring             := user;
    Field('svc_group').asstring            := group;
+   Field('svc_privileges').asstring       := privileges;
  end;
 
  procedure TFRE_DB_SERVICE.SetSvcStart(const execname: string; const timeout: Uint64);
@@ -5304,6 +6059,12 @@ end;
    Field('svc_stop_timeout').AsUInt64 := timeout;
  end;
 
+ procedure TFRE_DB_SERVICE.SetSvcRestart(const execname: string; const timeout: Uint64);
+ begin
+   Field('svc_restart_exec').asstring    := execname;
+   Field('svc_restart_timeout').AsUInt64 := timeout;
+ end;
+
 procedure TFRE_DB_SERVICE.AddSvcDependency(const name: string;const fmri: string; const grouping: string; const restart_on: string);
 var
   deb           : IFRE_DB_Object;
@@ -5316,9 +6077,47 @@ begin
   Field('svc_dependency').addObject(deb);
 end;
 
+procedure TFRE_DB_SERVICE.AddSvcDependent(const name: string;const fmri: string; const grouping: string; const restart_on: string);
+var
+  deb           : IFRE_DB_Object;
+begin
+  deb := GFRE_DBI.NewObject;
+  deb.Field('fmri').asstring      := fmri;
+  deb.Field('grouping').asstring  := grouping;
+  deb.Field('restart_on').asstring:= restart_on;
+  deb.Field('name').asstring      := name;
+  Field('svc_dependent').addObject(deb);
+end;
+
+function TFRE_DB_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_'+ClassName;
+end;
+
  procedure TFRE_DB_SERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
  begin
    setter.SetAsString(Field('objname').AsString);
+ end;
+
+ function TFRE_DB_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+ var servicename :string;
+ begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    writeln('SWL: SERVICE CREATE',ClassName);
+
+    servicename := Copy(GetFMRI,6,maxint);
+    writeln('SWL: CREATE SVC GENERIC ',ObjectName,' ',servicename);
+    SetSvcNameandType(servicename,'FirmOS GENERIC Service ','transient','core,signal',true);
+    SetSvcEnvironment('/opt/local/fre','root','root','LANG=C');
+    SetSvcStart('/opt/local/fre/bin/fossvc --enable  --generic='+UID.AsHexString,60);
+    SetSvcStop('/opt/local/fre/bin/fossvc --disable --generic='+UID.AsHexString,60);
+    AddSvcDependency('network','svc:/milestone/network','require_all','none');
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
  end;
 
 
@@ -5349,6 +6148,31 @@ begin
     //StoreTranslateableText(conn,'scheme_interface','Interface');
     //StoreTranslateableText(conn,'scheme_vlan','Vlan');
   end;
+end;
+
+function TFRE_DB_VIRTUAL_FILESERVER.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_samba';
+end;
+
+function TFRE_DB_VIRTUAL_FILESERVER.RIF_CreateOrUpdateService: IFRE_DB_Object;
+var servicename : string;
+begin
+  {$IFDEF SOLARIS}
+    result := GFRE_DBI.NewObject;
+    servicename := Copy(GetFMRI,6,maxint);
+    SetSvcNameandType(servicename,'FirmOS Samba Service ','child','core,signal',true);
+    SetSvcEnvironment('/','root','root','LANG=C');
+    SetSvcStart('/opt/local/samba4/sbin/samba --daemon',180);
+    SetSvcStop(':kill',60);
+    AddSvcDependency('network','svc:/milestone/network:default','require_all','none');
+    AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','error');
+//    AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
+
+    fre_create_service(self);
+    result.Field('fmri').asstring:=servicename;
+
+  {$ENDIF}
 end;
 
 
@@ -5569,6 +6393,8 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_POSTGRES_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MYSQL_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_HTTP_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_LDAP_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_PHPFPM_SERVICE);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CRYPTOCPE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_NETWORK_SERVICE);
@@ -5578,8 +6404,6 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IP_HOSTNET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV4_HOSTNET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_HOSTNET);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV4_NETROUTE);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_NETROUTE);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FS_ENTRY);
    //GFRE_DBI.Initialize_Extension_Objects;

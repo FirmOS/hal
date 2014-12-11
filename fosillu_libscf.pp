@@ -557,7 +557,7 @@ function scf_scope_get_parent(_para1:Pscf_scope_t; _para2:Pscf_scope_t):cint;cde
 
 function scf_service_get_name(_para1:Pscf_service_t; _para2:pcchar; _para3:size_t):ssize_t;cdecl;external External_library name 'scf_service_get_name';
 
-function scf_service_to_fmri(_para1:Pscf_service_t; _para2:pcchar; _para3:size_t):ssize_t;cdecl;external External_library name 'scf_service_to_fmri';
+function scf_service_to_fmri(_para1:Pscf_service_t; _para2:pchar; _para3:size_t):ssize_t;cdecl;external External_library name 'scf_service_to_fmri';
 
 function scf_service_get_parent(_para1:Pscf_service_t; _para2:Pscf_scope_t):cint;cdecl;external External_library name 'scf_service_get_parent';
 
