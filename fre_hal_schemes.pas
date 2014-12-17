@@ -1305,7 +1305,7 @@ begin
    servicename := Copy(GetFMRI,6,maxint);
    SetSvcNameandType(servicename,'FirmOS LDAP Service ','contract','core,signal',true);
    SetSvcEnvironment('/var/openldap','root','root','PATH=/opt/local/bin:/opt/local/sbin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin');
-   SetSvcStart('/opt/local/libexec/slapd -u slapd -g ldap -h &quot;ldap://0.0.0.0:44005 ldaps://0.0.0.0:44006&quot; -F /opt/local/etc/openldap/slapd.d',60);
+   SetSvcStart('/opt/local/libexec/slapd -u slapd -g ldap -h ''ldap://0.0.0.0:44005 ldaps://0.0.0.0:44006'' -F /opt/local/etc/openldap/slapd.d',60);
    SetSvcStop(':kill',60);
    AddSvcDependency('network','svc:/milestone/network','require_all','none');
    AddSvcDependency('filesystem-local','svc:/system/filesystem/local:default','require_all','none');
@@ -1572,7 +1572,7 @@ begin
   {$IFDEF SOLARIS}
     result := GFRE_DBI.NewObject;
     servicename := Copy(GetFMRI,6,maxint);
-    SetSvcNameandType(servicename,'FirmOS PostgreSQL Service ','child','core,signal',true);
+    SetSvcNameandType(servicename,'FirmOS PostgreSQL Service ','contract','core,signal',true);
     SetSvcEnvironment('/','postgres','postgres','LD_PRELOAD_32=/usr/lib/extendedFILE.so.1');
     SetSvcStart('/opt/local/lib/svc/method/postgresql start',300);
     SetSvcStop('/opt/local/lib/svc/method/postgresql stop',300);
@@ -1581,11 +1581,6 @@ begin
     AddSvcDependency('network','svc:/milestone/network:default','require_all','none');
     AddSvcDependency('filesystem-local','svc:/system/filesystem/local','require_all','error');
     AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
-
-        //<property_group name='config' type='application'>
-        //  <propval name='data' type='astring' value='/var/pgsql/data'/>
-        //  <propval name='log' type='astring' value='/var/log/postgresql.log'/>
-        //</property_group>
 
     fre_create_service(self);
     result.Field('fmri').asstring:=servicename;
@@ -1881,14 +1876,25 @@ var linkname    : string;
     aliasname   : string;
     ip_hostnet  : string;
     errorstring : string;
+    gateway     : string;
 begin
   {$IFDEF SOLARIS}
   result := GFRE_DBI.NewObject;
   writeln('SWL: IPV6 START');
   if FieldExists('gateway') then
     begin
-      raise Exception.Create('ROUTING FOR IPV6 HOSTNET NOT IMPLEMENTED YET!');
-//      route add -inet6 3ffe::/16 somegateway
+      ip_hostnet := Field('ip_net').asstring;
+      gateway    := Field('gateway').asstring;
+      writeln('SWL: ADD ROUTING ',ip_hostnet,' GW ',gateway);
+      if add_ipv6routing(gateway,ip_hostnet,errorstring) then
+        begin
+          result.Field('STARTED').asboolean:=true;
+        end
+      else
+        begin
+          result.Field('STARTED').asboolean:= false;
+          result.Field('ERROR').asstring   := errorstring;
+        end;
     end
   else
     begin
@@ -1908,7 +1914,7 @@ begin
         end
       else
         begin
-          create_ipv6slaac(linkname,'addrconf',errorstring);  // ignore result
+          create_ipv6slaac(linkname,'addrconf',errorstring);  // ignore result, has to be activated before fixed ipv6 addressess
           ip_hostnet := Field('ip_net').asstring;
           if create_ipv6address(linkname,aliasname,ip_hostnet,errorstring) then
             begin
@@ -1928,13 +1934,26 @@ function TFRE_DB_IPV6_HOSTNET.RIF_StopService: IFRE_DB_Object;
 var linkname    : string;
     aliasname   : string;
     errorstring : string;
+    ip_hostnet  : string;
+    gateway     : string;
 begin
   {$IFDEF SOLARIS}
   result := GFRE_DBI.NewObject;
   writeln('SWL: IPV6 STOP');
   if FieldExists('gateway') then
     begin
-      raise Exception.Create('ROUTING FOR IPV4 HOSTNET NOT IMPLEMENTED YET!');
+      ip_hostnet := Field('ip_net').asstring;
+      gateway    := Field('gateway').asstring;
+      writeln('SWL: DELETE ROUTING ',ip_hostnet,' GW ',gateway);
+      if delete_ipv6routing(gateway,ip_hostnet,errorstring) then
+        begin
+          result.Field('STOPPED').asboolean:=true;
+        end
+      else
+        begin
+          result.Field('STOPPED').asboolean:= false;
+          result.Field('ERROR').asstring   := errorstring;
+        end;
     end
   else
     begin
@@ -2001,6 +2020,7 @@ var linkname    : string;
     ip_hostnet  : string;
     errorstring : string;
     gateway     : string;
+    res         : boolean;
 begin
   {$IFDEF SOLARIS}
   result := GFRE_DBI.NewObject;
@@ -2021,25 +2041,22 @@ begin
     end
   else
     begin
+      writeln('SWL: IPV4 START');
+      linkname   := Field('datalinkname').asstring;
+      aliasname  := GetAddrObjAlias;
+      ip_hostnet := Field('ip_net').asstring;
       if FieldExists('dhcp') and Field('dhcp').AsBoolean=true then
+        res := create_ipv4dhcp(linkname,aliasname,errorstring)
+      else
+        res := create_ipv4address(linkname,aliasname,ip_hostnet,errorstring);
+      if res then
         begin
-          raise Exception.Create('DHCP CLIENT FOR IPV4 HOSTNET NOT IMPLEMENTED YET!');
+          result.Field('STARTED').asboolean:=true;
         end
       else
         begin
-          writeln('SWL: IPV4 START');
-          linkname   := Field('datalinkname').asstring;
-          aliasname  := GetAddrObjAlias;
-          ip_hostnet := Field('ip_net').asstring;
-          if create_ipv4address(linkname,aliasname,ip_hostnet,errorstring) then
-            begin
-              result.Field('STARTED').asboolean:=true;
-            end
-          else
-            begin
-              result.Field('STARTED').asboolean:= false;
-              result.Field('ERROR').asstring   := errorstring;
-            end
+          result.Field('STARTED').asboolean:= false;
+          result.Field('ERROR').asstring   := errorstring;
         end;
      end;
   {$ENDIF}
@@ -2071,25 +2088,18 @@ begin
     end
   else
     begin
-      if FieldExists('dhcp') and Field('dhcp').AsBoolean=true then
+      writeln('SWL: IPV4 STOP');
+      linkname   := Field('datalinkname').asstring;
+      aliasname  := GetAddrObjAlias;
+      if delete_ipaddress(linkname,aliasname,errorstring) then
         begin
-          raise Exception.Create('STOP DHCP CLIENT FOR IPV4 HOSTNET NOT IMPLEMENTED YET!');
+          result.Field('STOPPED').asboolean:=true;
         end
       else
         begin
-          writeln('SWL: IPV4 STOP');
-          linkname   := Field('datalinkname').asstring;
-          aliasname  := GetAddrObjAlias;
-          if delete_ipaddress(linkname,aliasname,errorstring) then
-            begin
-              result.Field('STOPPED').asboolean:=true;
-            end
-          else
-            begin
-              result.Field('STOPPED').asboolean:= false;
-              result.Field('ERROR').asstring   := errorstring;
-            end
-        end;
+          result.Field('STOPPED').asboolean:= false;
+          result.Field('ERROR').asstring   := errorstring;
+        end
      end;
   {$ENDIF}
 end;
@@ -2600,7 +2610,7 @@ begin
     SetSvcStop(':kill',60);
     SetSvcRestart(':kill -HUP',60);
 
-    AddSvcDependency('loopback','svc:/milestone/loopback','require_any','error');
+    AddSvcDependency('loopback','svc:/network/loopback','require_any','error');
     AddSvcDependency('network','svc:/milestone/network','optional_all','error');
     AddSvcDependency('ldap','svc:/fos/fos_ldap','require_all','none');
 
@@ -4909,6 +4919,8 @@ end;
                  begin
                    if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_VIRTUAL_FILESERVER.ClassName then
                      continue;
+                   if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_DATALINK_VNIC.ClassName then
+                     continue;
                    writeln('SWL : SERVICECLASSES ',tmpl.Field('serviceclasses').AsStringItem[i]);
                    svcobj := GFRE_DBI.NewObjectSchemeByName(tmpl.Field('serviceclasses').AsStringItem[i]);
                    self.Field(svcobj.UID.AsHexString).AsObject:=svcobj;
@@ -5323,6 +5335,8 @@ end;
      err        : string;
  begin
   {$IFDEF SOLARIS}
+   writeln('CREATE VNIC START');
+  //writeln('SWL DUMP:',self.DumpToString());
    parent_if := Field('parent').AsObject.Field('objname').AsString;
    if FieldExists('zonename') then
      zonename  := Field('zonename').asstring
@@ -5346,6 +5360,7 @@ end;
       begin
         writeln('CREATE VNIC ',mac.GetAsString,' ',create_vnic(ObjectName,parent_if,mac,err,'',vlan),' ',err);
       end;
+   writeln('CREATE VNIC DONE');
    {$ENDIF}
  end;
 
@@ -5507,26 +5522,30 @@ end;
        begin
          iphostnet.Field('datalinkname').asstring := ObjectName;
          fmri        := iphostnet.GetFMRI;
-         writeln('SWL:',fmri);
+//         writeln('SWL:',fmri);
          if oldsvclist.FetchObjWithStringFieldValue('fmri',fmri,foundobj,'') then
            begin
-             writeln('SWL: SVC ALREADY CREATED');
+//             writeln('SWL: SVC ALREADY CREATED');
              oldsvclist.DeleteField(foundobj.UID.AsHexString);
            end
          else
            begin
              resdbo := iphostnet.RIF_CreateOrUpdateService;
              resdbo.Field('UID').AsGUID:=iphostnet.UID;
-             writeln('SWL:',resdbo.DumpToString);
+//             writeln('SWL:',resdbo.DumpToString);
            end;
        end;
    end;
 
    procedure _DeleteIPHOSTNET(const obj:IFRE_DB_Object);
-   var fmri        : string;
+   var fmri         : string;
+       service_name : string;
    begin
      fmri := obj.Field('fmri').asstring;
-     obj.Field('svc_name').asstring:=Copy(fmri,6,maxint);
+     writeln('SWL: REMOVE DEPENDENCY ',fmri);
+     service_name := Copy(fmri,6,maxint);
+     fre_remove_dependency('fos/fosip',StringReplace(service_name,'/','',[rfReplaceAll]));
+     obj.Field('svc_name').asstring:=service_name;
      writeln('SWL: REMOVE SERVICE ',fmri);
      fre_destroy_service(obj);
    end;

@@ -12,10 +12,13 @@ uses
 
 function  create_ipv4address(const linkname : string ; const addr_alias: string; const ip_hostsubnet:string; out error : string):boolean;
 function  create_ipv6address(const linkname : string ; const addr_alias: string; const ip_hostsubnet:string; out error : string):boolean;
+function  create_ipv4dhcp   (const linkname : string ; const addr_alias: string; out error : string): boolean;
 function  create_ipv6slaac  (const linkname : string ; const addr_alias: string; out error : string): boolean;
 function  delete_ipaddress  (const linkname : string ; const addr_alias: string; out error : string): boolean;
 function  add_ipv4routing   (const gateway  : string ; const ip_hostsubnet: string; out error : string):boolean;
+function  add_ipv6routing   (const gateway  : string ; const ip_hostsubnet: string; out error : string):boolean;
 function  delete_ipv4routing(const gateway  : string ; const ip_hostsubnet: string; out error : string):boolean;
+function  delete_ipv6routing(const gateway  : string ; const ip_hostsubnet: string; out error : string):boolean;
 
 implementation
 
@@ -79,12 +82,53 @@ begin
    end;
 end;
 
+function add_ipv6routing(const gateway: string; const ip_hostsubnet: string; out error: string): boolean;
+var cmd : string;
+    outstring, errorstring: string;
+    res : integer;
+begin
+ cmd :='route add -inet6 '+ip_hostsubnet+' '+gateway;
+
+ writeln('SWL: ADD IPV6ROUTING ',cmd);
+ res := FRE_ProcessCMD(cmd,outstring,errorstring);
+ if res=0 then
+   begin
+     result := true;
+   end
+ else
+   begin
+     result := false;
+     error  := 'RES:'+inttostr(res)+' '+outstring +' '+ errorstring;
+     writeln('SWL: ERROR ',error);
+   end;
+end;
+
 function delete_ipv4routing(const gateway: string; const ip_hostsubnet: string; out error: string): boolean;
 var cmd : string;
     outstring, errorstring: string;
     res : integer;
 begin
  cmd :='route delete '+ip_hostsubnet+' '+gateway;
+ writeln('SWL: DELETE IPV4ROUTING ',cmd);
+ res := FRE_ProcessCMD(cmd,outstring,errorstring);
+ if res=0 then
+   begin
+     result := true;
+   end
+ else
+   begin
+     result := false;
+     error  := 'RES:'+inttostr(res)+' '+outstring +' '+ errorstring;
+     writeln('SWL: ERROR ',error);
+   end;
+end;
+
+function delete_ipv6routing(const gateway: string; const ip_hostsubnet: string; out error: string): boolean;
+var cmd : string;
+    outstring, errorstring: string;
+    res : integer;
+begin
+ cmd :='route delete -inet6 '+ip_hostsubnet+' '+gateway;
  writeln('SWL: DELETE IPV4ROUTING ',cmd);
  res := FRE_ProcessCMD(cmd,outstring,errorstring);
  if res=0 then
@@ -106,6 +150,26 @@ var cmd : string;
 begin
  cmd :='ipadm create-addr -t -T static -a '+ip_hostsubnet+' '+linkname+'/'+addr_alias;
  writeln('SWL: CREATE IPV6ADDRESS ',cmd);
+ res := FRE_ProcessCMD(cmd,outstring,errorstring);
+ if res=0 then
+   begin
+     result := true;
+   end
+ else
+   begin
+     result := false;
+     error  := 'RES:'+inttostr(res)+' '+outstring +' '+ errorstring;
+     writeln('SWL: ERROR ',error);
+   end;
+end;
+
+function create_ipv4dhcp(const linkname: string; const addr_alias: string; out error: string): boolean;
+var cmd : string;
+    outstring, errorstring: string;
+    res : integer;
+begin
+ cmd :='ipadm create-addr -t -T dhcp '+linkname+'/'+addr_alias;
+ writeln('SWL: CREATE IPV4DHCP ',cmd);
  res := FRE_ProcessCMD(cmd,outstring,errorstring);
  if res=0 then
    begin

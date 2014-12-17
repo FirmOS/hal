@@ -633,7 +633,7 @@ function scf_pg_get_parent_instance(_para1:Pscf_propertygroup_t; _para2:Pscf_ins
 function scf_pg_get_parent_snaplevel(_para1:Pscf_propertygroup_t; _para2:Pscf_snaplevel_t):cint;cdecl;external External_library name 'scf_pg_get_parent_snaplevel';
 
 
-function scf_service_get_pg(_para1:Pscf_service_t; _para2:pcchar; _para3:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_service_get_pg';
+function scf_service_get_pg(_para1:Pscf_service_t; _para2:pchar; _para3:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_service_get_pg';
 
 
 function scf_instance_get_pg(_para1:Pscf_instance_t; _para2:pcchar; _para3:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_instance_get_pg';
