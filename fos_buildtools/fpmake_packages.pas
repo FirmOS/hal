@@ -37,7 +37,9 @@ program fpmake_packages;
          AddUnit('fosillu_libdladm.pp');
          AddUnit('fosillu_sysnet_common.pp');
          AddUnit('fosillu_dladm.pas');
+         AddUnit('fosillu_ipadm.pas');
          AddUnit('fosillu_hal_zonectrl.pas');
+         AddUnit('fosillu_hal_svcctrl.pas');  
     {$ENDIF}
          AddUnit('fre_hal_schemes.pas');
          AddUnit('fre_hal_utils.pas');
