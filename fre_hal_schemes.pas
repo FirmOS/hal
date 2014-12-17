@@ -59,7 +59,7 @@ uses
   fre_monitoring,
   {$IFDEF SOLARIS}
   fosillu_hal_zonectrl,
-  fos_firmbox_svcctrl,
+  fosillu_hal_svcctrl,
   fosillu_dladm,
   fosillu_ipadm,
   {$ENDIF}
