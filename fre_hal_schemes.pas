@@ -128,6 +128,16 @@ type
      function        RIF_StopService           : IFRE_DB_Object; virtual; abstract;
    end;
 
+   { TFRE_DB_SUBSERVICE }
+
+   TFRE_DB_SUBSERVICE=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER);
+   end;
+
    { TFRE_DB_SERVICE_INSTANCE }
 
    TFRE_DB_SERVICE_INSTANCE=class(TFRE_DB_ObjectEx)
@@ -1234,6 +1244,38 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_SUBSERVICE }
+
+class procedure TFRE_DB_SUBSERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
+  scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
+
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
+end;
+
+class procedure TFRE_DB_SUBSERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  inherited InstallDBObjects(conn, currentVersionId, newVersionId);
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Servicename');
+  end;
+end;
+
+procedure TFRE_DB_SUBSERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  setter.SetAsString(Field('objname').AsString);
+end;
 
 { TFRE_DB_PHPFPM_SERVICE }
 
@@ -6347,6 +6389,7 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_HOSTNAME);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FC_PORT);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SUBSERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_PHYS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_VNIC);
