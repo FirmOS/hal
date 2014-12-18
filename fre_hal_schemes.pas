@@ -1888,11 +1888,11 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
     inherited RegisterSystemScheme(scheme);
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
-    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv6 validator
+    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ipv6');
     scheme.AddSchemeField('slaac',fdbft_Boolean).required:=true;
-    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv6 validator
+    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ipv6');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
-    group:=scheme.AddInputGroup('ip').Setup(GetTranslateableTextKey('scheme_ipv6_group'));
+    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_ipv6_group'));
     group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
 end;
@@ -5417,9 +5417,12 @@ end;
 
  class procedure TFRE_DB_DATALINK_PHYS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
 
      StoreTranslateableText(conn,'scheme_main_group','Link Properties');
      StoreTranslateableText(conn,'scheme_name','Link Name');
