@@ -538,6 +538,14 @@ type
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   end;
 
+  { TFRE_DB_ZFS_DATASET_PARENT }
+
+  TFRE_DB_ZFS_DATASET_PARENT=class(TFRE_DB_ZFS_DATASET_FILE) { Dataset with defined substructure for domains and zone definition  }
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
   { TFRE_DB_NFS_FILESHARE }
 
   TFRE_DB_NFS_FILESHARE=class(TFRE_DB_ZFS_DATASET_FILE)
@@ -588,6 +596,23 @@ type
   procedure CreateDiskDataCollections(const conn: IFRE_DB_COnnection);
 
 implementation
+
+{ TFRE_DB_ZFS_DATASET_PARENT }
+
+class procedure TFRE_DB_ZFS_DATASET_PARENT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ZFS_DATASET_FILE.Classname);
+end;
+
+
+class procedure TFRE_DB_ZFS_DATASET_PARENT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
 
 { TFRE_DB_ZFS_DS_BASE }
 
@@ -4113,6 +4138,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DISKSPARECONTAINER);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DATASET);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DATASET_FILE);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DATASET_PARENT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_DATASET_ZVOL);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_SNAPSHOT);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZFS_BOOKMARK);
