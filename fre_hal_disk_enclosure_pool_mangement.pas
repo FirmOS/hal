@@ -203,8 +203,10 @@ var
       slot_obj         : IFRE_DB_Object;
       slot             : TFRE_DB_DRIVESLOT;
       i                : NativeInt;
+      j                : NativeInt;
       ua               : TFRE_DB_ZFS_UNASSIGNED;
       sglog            : TFRE_DB_SG_LOGS;
+      sl               : TStringList;
 
   begin
     feed_disk := obj.Implementor_HC as TFRE_DB_OS_BLOCKDEVICE;
@@ -268,6 +270,7 @@ var
     newdisks.Field(feed_disk.Field('DEVICEIDENTIFIER').asstring).asobject:=new_obj;
 
     //assign disks to diskslots
+    writeln('SWL: ASSIGNING DISKS TO DISK SLOTS');
     if new_obj.IsA(TFRE_DB_PHYS_DISK,phys_new_disk) then
       begin
         if phys_new_disk.hasParentinEnclosure then
@@ -276,27 +279,29 @@ var
         slotguid        := CFRE_DB_NullGUID;
 //        writeln('SWL: CLEAR SLOTGUID');
         for i:=low(targetports) to high(targetports) do
-          begin
-//            writeln ('SWL: SEARCHING FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
-            if mdata.Field('enclosures').AsObject.FetchObjWithStringFieldValue('TARGETPORT_'+inttostr(i+1),targetports[i],slot_obj,TFRE_DB_DRIVESLOT.ClassName) then
-              begin
-                if slotguid=CFRE_DB_NullGUID then
-                  begin
-//                    writeln ('SWL: FOUND FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
-                    slotguid :=slot_obj.UID;
-//                    writeln('SWL: SET SLOTGUID '+FREDB_G2H(slotguid));
-                  end
-                else
-                  begin
-//                    writeln ('SWL: FOUND AGAIN FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
-                    if slot_obj.UID<>slotguid then
-                      begin
-//                        writeln ('SWL: FOUND DIFFERENT SLOT FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
-                        raise EFRE_DB_Exception.Create(edb_ERROR,'FetchObjWithStringFieldValue for driveslot delivered different driveslots for targetport '+targetports[i]+'slot uids:'+FREDB_G2H(slotguid)+' '+FREDB_G2H(slot_obj.UID));
-                      end;
-                  end;
-              end;
-          end;
+          for j:= 1 to 2 do
+            begin
+              writeln ('SWL: SEARCHING FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]+' FIELD TARGETPORT_'+inttostr(j));
+              if mdata.Field('enclosures').AsObject.FetchObjWithStringFieldValue('TARGETPORT_'+inttostr(j),targetports[i],slot_obj,TFRE_DB_DRIVESLOT.Classname) then
+                begin
+                  writeln('SWL: TP FOUND ',i);
+                  if slotguid=CFRE_DB_NullGUID then
+                    begin
+  //                    writeln ('SWL: FOUND FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
+                      slotguid :=slot_obj.UID;
+  //                    writeln('SWL: SET SLOTGUID '+FREDB_G2H(slotguid));
+                    end
+                  else
+                    begin
+  //                    writeln ('SWL: FOUND AGAIN FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
+                      if slot_obj.UID<>slotguid then
+                        begin
+  //                        writeln ('SWL: FOUND DIFFERENT SLOT FOR TARGETPORT_'+inttostr(i+1)+ ' '+targetports[i]);
+                          raise EFRE_DB_Exception.Create(edb_ERROR,'FetchObjWithStringFieldValue for driveslot delivered different driveslots for targetport '+targetports[i]+'slot uids:'+FREDB_G2H(slotguid)+' '+FREDB_G2H(slot_obj.UID));
+                        end;
+                    end;
+                end;
+            end;
         if slotguid <> CFRE_DB_NullGUID then
           begin
             if mdata.Field('enclosures').AsObject.FetchObjByUID(slotguid,slot_obj)=false then
@@ -305,7 +310,7 @@ var
               raise EFRE_DB_Exception.Create(edb_ERROR,'Slot_obj must be assigned here !'+FREDB_G2H(slotguid));
             if slot_obj.IsA(TFRE_DB_DRIVESLOT,slot) then
               begin
-//                writeln ('SWL: ASSIGNING SLOT ',slot.slotnr,' ',FREDB_G2H(slotguid),' TO DISK ',phys_new_disk.UID_String);
+                writeln ('SWL: ASSIGNING SLOT ',slot.slotnr,' ',FREDB_G2H(slotguid),' TO DISK ',phys_new_disk.UID_String);
                 phys_new_disk.ParentInEnclosureUID:= slotguid;
                 phys_new_disk.EnclosureUID        := slot.ParentInEnclosureUID;
                 phys_new_disk.EnclosureNr         := slot.EnclosureNr;
@@ -382,6 +387,7 @@ var
     feed_enclosure.Field('expanders').AsObject.ForAllObjects(@_updateexpanders);
     (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).ObjectName := 'Enclosure '+inttostr((new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).EnclosureNr);
     newenclosures.Field(feed_enclosure.Field('DEVICEIDENTIFIER').asstring).asobject:= new_enclosure;
+    //writeln('ENC:',new_enclosure.DumpToString());
   end;
 
 begin
@@ -435,6 +441,7 @@ begin
 
 
 //    writeln('SWL TOTAL STRUCTURE', mdata.DumpToString());
+//    writeln('MDATA:',mdata.DumpToString());
     last_fdata.Finalize;
   finally
     ReleaseLockedData;
