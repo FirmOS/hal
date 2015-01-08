@@ -1833,7 +1833,7 @@ begin
   if FieldExists('gateway') then
     result := 'svc:/fos/fos_routing_'+UID.AsHexString
   else
-    result := 'svc:/fos/fosip_'+Field('datalinkname').asstring+'_'+UID.AsHexString;
+    result := 'svc:/fos/fos_ip_'+Field('datalinkname').asstring+'_'+UID.AsHexString;
 end;
 
 procedure TFRE_DB_IP_HOSTNET.SetIPCIDR(const value: TFRE_DB_String);
@@ -1852,8 +1852,8 @@ begin
       writeln('SWL: CREATE SVC ROUTING ',ObjectName,' ',servicename);
       SetSvcNameandType(servicename,'FirmOS Routing Service '+Field('IP_NET').asstring+' '+Field('gateway').asstring,'transient','core,signal',true);
       SetSvcEnvironment('/opt/local/fre','root','root','LANG=C');
-      SetSvcStart('/opt/local/fre/bin/fossvc --enable --routing='+UID.AsHexString,60);
-      SetSvcStop('/opt/local/fre/bin/fossvc --disable --routing='+UID.AsHexString,60);
+      SetSvcStart('/opt/local/fre/bin/fossvc --start --routing='+UID.AsHexString,60);
+      SetSvcStop('/opt/local/fre/bin/fossvc --stop --routing='+UID.AsHexString,60);
       AddSvcDependency('fosip','svc:/fos/fosip','require_all','none');
       AddSvcDependent (StringReplace(servicename,'/','',[rfReplaceAll]),'svc:/milestone/network','require_all','none');
     end
@@ -1864,8 +1864,8 @@ begin
 
       SetSvcNameandType(servicename,'FirmOS IP Service '+Field('IP_NET').asstring,'transient','core,signal',true);
       SetSvcEnvironment('/opt/local/fre','root','root','LANG=C');
-      SetSvcStart('/opt/local/fre/bin/fossvc --enable --ip='+UID.AsHexString,60);
-      SetSvcStop('/opt/local/fre/bin/fossvc --disable --ip='+UID.AsHexString,60);
+      SetSvcStart('/opt/local/fre/bin/fossvc --start --ip='+UID.AsHexString,60);
+      SetSvcStop('/opt/local/fre/bin/fossvc --stop --ip='+UID.AsHexString,60);
       AddSvcDependency('foscfg','svc:/fos/foscfg','require_all','none');
       AddSvcDependent (StringReplace(servicename,'/','',[rfReplaceAll]),'svc:/fos/fosip','require_all','none');
     end;
@@ -5555,6 +5555,8 @@ end;
  function TFRE_DB_DATALINK.RIF_CreateorUpdateServices: IFRE_DB_Object;
  var
    oldsvclist : IFRE_DB_Object;
+   resultdatalink : IFRE_DB_Object;
+
    {$IFDEF SOLARIS}
    procedure _CreateorUpdateIPHOSTNET(const obj:IFRE_DB_Object);
    var iphostnet   : TFRE_DB_IP_HOSTNET;
@@ -5571,7 +5573,6 @@ end;
          if oldsvclist.FetchObjWithStringFieldValue('fmri',fmri,foundobj,'') then
            begin
 //             writeln('SWL: SVC ALREADY CREATED');
-             oldsvclist.DeleteField(foundobj.UID.AsHexString);
            end
          else
            begin
@@ -5579,33 +5580,22 @@ end;
              resdbo.Field('UID').AsGUID:=iphostnet.UID;
 //             writeln('SWL:',resdbo.DumpToString);
            end;
+         resultdatalink.Field(iphostnet.UID_String).AsString := fmri;
        end;
    end;
 
-   procedure _DeleteIPHOSTNET(const obj:IFRE_DB_Object);
-   var fmri         : string;
-       service_name : string;
-   begin
-     fmri := obj.Field('fmri').asstring;
-     writeln('SWL: REMOVE DEPENDENCY ',fmri);
-     service_name := Copy(fmri,6,maxint);
-     fre_remove_dependency('fos/fosip',StringReplace(service_name,'/','',[rfReplaceAll]));
-     obj.Field('svc_name').asstring:=service_name;
-     writeln('SWL: REMOVE SERVICE ',fmri);
-     fre_destroy_service(obj);
-   end;
    {$ENDIF}
  begin
    {$IFDEF SOLARIS}
-   result := GFRE_DBI.NewObject;
+   resultdatalink := GFRE_DBI.NewObject;
+   result         := resultdatalink;
    if ObjectName='' then exit;  // TODO FS: REMOVE AFTER ALL SERVICES ARE SET IN ZONE
 
-   oldsvclist := fre_get_servicelist('fosip_'+Objectname);
+   oldsvclist := fre_get_servicelist('fos_ip_'+Objectname);
 //   writeln('SWL NEW LIST:',oldsvclist.DumpToString);
    try
      ForAllObjects(@_CreateorUpdateIPHOSTNET);
 //     writeln('SWL LIST AFTER:',oldsvclist.DumpToString);
-     oldsvclist.ForAllObjects(@_DeleteIPHOSTNET);
    finally
      oldsvclist.Finalize;
    end;

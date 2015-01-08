@@ -636,7 +636,7 @@ function scf_pg_get_parent_snaplevel(_para1:Pscf_propertygroup_t; _para2:Pscf_sn
 function scf_service_get_pg(_para1:Pscf_service_t; _para2:pchar; _para3:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_service_get_pg';
 
 
-function scf_instance_get_pg(_para1:Pscf_instance_t; _para2:pcchar; _para3:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_instance_get_pg';
+function scf_instance_get_pg(_para1:Pscf_instance_t; _para2:pchar; _para3:Pscf_propertygroup_t):cint;cdecl;external External_library name 'scf_instance_get_pg';
 
 
 
@@ -671,7 +671,7 @@ function scf_property_get_value(_para1:Pscf_property_t; _para2:Pscf_value_t):cin
 function scf_property_to_fmri(_para1:Pscf_property_t; _para2:pcchar; _para3:size_t):ssize_t;cdecl;external External_library name 'scf_property_to_fmri';
 
 
-function scf_pg_get_property(_para1:Pscf_propertygroup_t; _para2:pcchar; _para3:Pscf_property_t):cint;cdecl;external External_library name 'scf_pg_get_property';
+function scf_pg_get_property(_para1:Pscf_propertygroup_t; _para2:pchar; _para3:Pscf_property_t):cint;cdecl;external External_library name 'scf_pg_get_property';
 function scf_transaction_create(_para1:Pscf_handle_t):Pscf_transaction_t;cdecl;external External_library name 'scf_transaction_create';
 
 function scf_transaction_handle(_para1:Pscf_transaction_t):Pscf_handle_t;cdecl;external External_library name 'scf_transaction_handle';
@@ -694,7 +694,7 @@ function scf_transaction_property_delete(_para1:Pscf_transaction_t; _para2:Pscf_
 
 function scf_transaction_property_new(_para1:Pscf_transaction_t; _para2:Pscf_transaction_entry_t; _para3:pchar; _para4:scf_type_t):cint;cdecl;external External_library name 'scf_transaction_property_new';
 
-function scf_transaction_property_change_type(_para1:Pscf_transaction_t; _para2:Pscf_transaction_entry_t; _para3:pcchar; _para4:scf_type_t):cint;cdecl;external External_library name 'scf_transaction_property_change_type';
+function scf_transaction_property_change_type(_para1:Pscf_transaction_t; _para2:Pscf_transaction_entry_t; _para3:pchar; _para4:scf_type_t):cint;cdecl;external External_library name 'scf_transaction_property_change_type';
 function scf_entry_add_value(_para1:Pscf_transaction_entry_t; _para2:Pscf_value_t):cint;cdecl;external External_library name 'scf_entry_add_value';
 
 function scf_handle_decode_fmri(_para1:Pscf_handle_t; _para2:pcchar; _para3:Pscf_scope_t; _para4:Pscf_service_t; _para5:Pscf_instance_t; 
