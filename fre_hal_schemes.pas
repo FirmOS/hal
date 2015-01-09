@@ -1756,7 +1756,7 @@ begin
     currentVersionId := '1.0';
 
     StoreTranslateableText(conn,'scheme_main_group','General Information');
-    StoreTranslateableText(conn,'scheme_objname','Name');
+    StoreTranslateableText(conn,'scheme_objname','Datacenter Name');
   end;
 end;
 
@@ -4906,17 +4906,22 @@ end;
 
    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
    group.AddInput('objname',GetTranslateableTextKey('scheme_name'));
-   group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
 end;
 
  class procedure TFRE_DB_ZONE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
      StoreTranslateableText(conn,'scheme_main','General Information');
      StoreTranslateableText(conn,'scheme_name','Name');
      StoreTranslateableText(conn,'scheme_description','Description');
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
+     DeleteTranslateableText(conn,'scheme_name');
+     StoreTranslateableText(conn,'scheme_name','Zone Name');
+     DeleteTranslateableText(conn,'scheme_description');
    end;
  end;
 
@@ -5746,7 +5751,7 @@ end;
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName(TFRE_DB_ASSET.ClassName);
-   scheme.AddSchemeField('ip',fdbft_String);
+   scheme.AddSchemeField('provisioningmac',fdbft_String).SetupFieldDef(true,false,'','mac');
    scheme.AddSchemeFieldSubscheme('position','TFRE_DB_GEOPOSITION').required:=false;
    scheme.AddSchemeFieldSubscheme('address','TFRE_DB_ADDRESS').required:=false;
    scheme.AddCalcSchemeField('displayaddress',fdbft_String,@CALC_GetDisplayAddress);
@@ -5760,9 +5765,9 @@ end;
    group.UseInputGroup('TFRE_DB_ADDRESS','main','address');
    group.UseInputGroup('TFRE_DB_GEOPOSITION','main','position');
 
-   group:=scheme.AddInputGroup('machine').Setup(GetTranslateableTextKey('scheme_main'));
-   group.AddInput('objname',GetTranslateableTextKey('scheme_name'),true);
-
+   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
+   group.AddInput('objname',GetTranslateableTextKey('scheme_name'));
+   group.AddInput('provisioningmac',GetTranslateableTextKey('scheme_provisioningmac'));
 end;
 
  class procedure TFRE_DB_MACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -5779,6 +5784,9 @@ end;
      currentVersionId := '1.1';
      DeleteTranslateableText(conn,'machine_content_header_short');
      StoreTranslateableText(conn,'machine_content_header','Machine Information');
+     DeleteTranslateableText(conn,'scheme_main');
+     StoreTranslateableText(conn,'scheme_main','General Information');
+     StoreTranslateableText(conn,'scheme_provisioningmac','Mac');
    end;
  end;
 
@@ -5874,7 +5882,7 @@ var
 begin
   GFRE_DBI.GetSystemSchemeByName(SchemeClass,scheme);
   panel :=TFRE_DB_FORM_PANEL_DESC.Create.Describe(GetTranslateableTextShort(conn,'machine_content_header'),true,false);
-  panel.AddSchemeFormGroup(scheme.GetInputGroup('machine'),GetSession(input));
+  panel.AddSchemeFormGroup(scheme.GetInputGroup('main'),GetSession(input));
   panel.FillWithObjectValues(self,GetSession(input));
   Result:=panel;
 end;

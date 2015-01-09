@@ -611,6 +611,9 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Dataset Name');
   end;
 end;
 
@@ -1202,6 +1205,7 @@ begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
 
+  scheme.GetSchemeField('objname').required:=true;
   scheme.AddCalcSchemeField('dndclass',fdbft_String,@_getDnDClass);
   scheme.AddCalcSchemeField('icon',fdbft_String,@_getIcon);
   scheme.AddCalcSchemeField('caption',fdbft_String,@_getCaption);
@@ -1215,7 +1219,7 @@ begin
   scheme.AddSchemeField('state',fdbft_String);
 
   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
-  group.AddInput('state',GetTranslateableTextKey('scheme_state'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
 end;
 
 class procedure TFRE_DB_ZFS_OBJ.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1224,7 +1228,7 @@ begin
   if (currentVersionId='') or (currentVersionId='UNUSED') then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_main','General Information');
-    StoreTranslateableText(conn,'scheme_state','State');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1954,7 +1958,6 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ZFS_OBJ.ClassName);
-
   scheme.AddSchemeField('scan',fdbft_String);
   scheme.AddSchemeField('errors',fdbft_String);
 
@@ -1972,6 +1975,8 @@ begin
  newVersionId:='1.0';
  if (currentVersionId='') then begin
    currentVersionId := '1.0';
+   StoreTranslateableText(conn,'scheme_main','General Information');
+   StoreTranslateableText(conn,'scheme_objname','Pool name');
 
    StoreTranslateableText(conn,'scheme_zpool','General Information');
    StoreTranslateableText(conn,'scheme_pool','Pool name');
@@ -4050,7 +4055,7 @@ begin
   scheme.AddCalcSchemeField ('displayname',fdbft_String,@CALC_GetDisplayName);
 
   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-  group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
   group:=scheme.AddInputGroup('advanced').Setup(GetTranslateableTextKey('scheme_advanced_group'));
   group.AddInput('reservation_mb',GetTranslateableTextKey('scheme_reservation'));
   group.AddInput('refres_mb',GetTranslateableTextKey('scheme_refres'));
