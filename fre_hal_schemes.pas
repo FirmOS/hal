@@ -175,9 +175,17 @@ type
    { TFRE_DB_FBZ_TEMPLATE }
 
    TFRE_DB_FBZ_TEMPLATE = class (TFRE_DB_ObjectEx)
+   private
+     function  getDeprecated : Boolean;
+     function  getGlobal     : Boolean;
+     procedure setDeprecated (AValue: Boolean);
+     procedure setGlobal     (AValue: Boolean);
    protected
      class procedure RegisterSystemScheme       (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects           (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     property deprecated : Boolean read getDeprecated write setDeprecated;
+     property global     : Boolean read getGlobal write setGlobal;
    end;
 
    { TFRE_DB_ASSET }
@@ -1719,12 +1727,44 @@ end;
 
 { TFRE_DB_FBZ_TEMPLATE }
 
+function TFRE_DB_FBZ_TEMPLATE.getDeprecated: Boolean;
+var
+  f : IFRE_DB_Field;
+begin
+  if FieldOnlyExisting('deprecated',f) then
+    Result:=f.AsBoolean
+  else
+    Result:=false;
+end;
+
+function TFRE_DB_FBZ_TEMPLATE.getGlobal: Boolean;
+var
+  f : IFRE_DB_Field;
+begin
+  if FieldOnlyExisting('global',f) then
+    Result:=f.AsBoolean
+  else
+    Result:=false;
+end;
+
+procedure TFRE_DB_FBZ_TEMPLATE.setDeprecated(AValue: Boolean);
+begin
+  Field('deprecated').AsBoolean:=AValue;
+end;
+
+procedure TFRE_DB_FBZ_TEMPLATE.setGlobal(AValue: Boolean);
+begin
+  Field('global').AsBoolean:=AValue;
+end;
+
 class procedure TFRE_DB_FBZ_TEMPLATE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
   scheme.GetSchemeField('objname').required:=true;
   scheme.AddSchemeField('serviceclasses',fdbft_String).SetupFieldDef(true,true);
+  scheme.AddSchemeField('deprecated',fdbft_Boolean);
+  scheme.AddSchemeField('global',fdbft_Boolean);
 end;
 
 class procedure TFRE_DB_FBZ_TEMPLATE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
