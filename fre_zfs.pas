@@ -4352,13 +4352,16 @@ var
   collection      : IFRE_DB_COLLECTION;
 
 begin
-
-
    if not conn.CollectionExists(CFRE_DB_ZFS_POOL_COLLECTION) then
      begin
        collection  := conn.CreateCollection(CFRE_DB_ZFS_POOL_COLLECTION);
        collection.DefineIndexOnField('zfs_guid',fdbft_String,true,true);
+     end else begin
+       collection  := conn.GetCollection(CFRE_DB_ZFS_POOL_COLLECTION);
      end;
+   if not collection.IndexExists('upid') then begin
+     collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'upid',false);
+   end;
 
    if not conn.CollectionExists(CFRE_DB_ZFS_VDEV_COLLECTION) then
      begin
