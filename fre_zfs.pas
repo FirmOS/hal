@@ -3796,6 +3796,7 @@ begin
   scheme.AddSchemeField('aclmode',fdbft_String).SetupFieldDef(true,false,'aclmode');
   scheme.AddSchemeField('canmount',fdbft_String).SetupFieldDef(true,false,'canmount');
   scheme.AddSchemeField('extendedattr',fdbft_Boolean);
+  scheme.AddSchemeField('mountpoint',fdbft_String);
 
   group:=scheme.AddInputGroup('file').Setup(GetTranslateableTextKey('scheme_file_group'));
   group.AddInput('quota_mb',GetTranslateableTextKey('scheme_quota'));
@@ -4038,7 +4039,6 @@ begin
 
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.Classname);
   scheme.GetSchemeField('objname').required:=true;
-  scheme.AddSchemeField('dataset',fdbft_String);
   scheme.AddSchemeField('poolid',fdbft_ObjLink);
   scheme.AddSchemeField('reservation_mb',fdbft_UInt32);
   scheme.AddSchemeField('refres_mb',fdbft_UInt32);

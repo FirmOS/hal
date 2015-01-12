@@ -211,6 +211,7 @@ end;
 function fosillu_zfs_create_ds(const ds_name: string; out error: string): integer;  {}
 var zhp   : pzfs_handle_t;
 begin
+  writeln('SWL: CREATE DATASET:',ds_name);
   error  :='';
   Result := zfs_create(GILLUMOS_LIBZFS_HANDLE,pchar(ds_name),ZFS_TYPE_FILESYSTEM,nil);
   if result<>0 then
@@ -246,6 +247,7 @@ function fosillu_zfs_clone_ds(const source_snap : string ; const destination : s
 var zhp   : pzfs_handle_t;
     clone : pzfs_handle_t;
 begin
+  writeln('SWL: CLONE DATASET:',source_snap,'->',destination);
   error  :='';
   zhp := zfs_open(GILLUMOS_LIBZFS_HANDLE,pchar(source_snap),ZFS_TYPE_SNAPSHOT);
   if not assigned(zhp) then

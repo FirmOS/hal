@@ -4944,6 +4944,13 @@ end;
    scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
    scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
 
+   //embedding
+   scheme.AddSchemeField('masterdataset',fdbft_String);
+   scheme.AddSchemeField('masterdatasetpath',fdbft_String);
+   scheme.AddSchemeField('zonedataset',fdbft_String);
+   scheme.AddSchemeField('zonedbodataset',fdbft_String);
+   scheme.AddSchemeField('templatedataset',fdbft_String);
+
    group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
    group.AddInput('objname',GetTranslateableTextKey('scheme_name'));
 end;
@@ -4971,27 +4978,55 @@ end;
      i         : integer;
      svc       : TFRE_DB_SERVICE;
      ds        : TFRE_DB_ZFS_DATASET;
+     pds       : TFRE_DB_ZFS_DATASET_PARENT;
      tmpl      : TFRE_DB_FBZ_TEMPLATE;
      svcobj    : IFRE_DB_OBject;
+     sp_id     : TFRE_DB_GUID;
+     whole_dsname : string;
+     master_dsname: string;
  begin
-//   field('domainname').asstring               := conn.sys.FetchDomainNameById(DomainID);
+   whole_dsname := '';
+   master_dsname:= '';
    if FieldExists('serviceparent') then
      begin
        writeln('SWL: SERVICEPARENT');
-       CheckDbResult(conn.Fetch(Field('serviceparent').AsGUID,obj),'could not fetch serviceparent '+Field('serviceparent').AsGUID.AsHexString);
-       if obj.IsA(TFRE_DB_ZFS_DATASET,ds) then
-         begin
-           Field('masterdataset').AsString :=ds.Field('dataset').asstring;
-           if ds.FieldExists('mountpoint') then
-             Field('masterdatasetpath').AsString := ds.Field('mountpoint').asstring
-           else
-             Field('masterdatasetpath').Asstring := '/'+ds.Field('dataset').asstring;
-           Field('zonepath').asstring            := Field('masterdatasetpath').asstring+'/domains/'+DomainID.AsHexString+'/'+UID.AsHexString;
-           Field('zonedataset').asstring         := Field('masterdataset').asstring+'/domains/'+DomainID.AsHexString+'/'+UID.AsHexString;
-           Field('zonedbodataset').asstring      := Field('masterdataset').asstring+'/zones/'+UID.AsHexstring;
-         end;
-       obj.finalize;
+       sp_id := Field('serviceparent').AsGUID;
+       repeat
+         CheckDbResult(conn.Fetch(sp_id,obj),'could not fetch serviceparent '+Field('serviceparent').AsGUID.AsHexString);
+         if obj.FieldExists('serviceparent') then
+           sp_id := obj.Field('serviceparent').AsGUID
+         else
+           break;
+         if obj.IsA(TFRE_DB_ZFS_DATASET,ds) then
+           begin
+             if whole_dsname='' then   // first, zonedataset
+               begin
+                 Field('zonepath').asstring := ds.Field('mountpoint').asstring;
+                 whole_dsname := ds.ObjectName;
+               end
+             else
+               begin
+                 whole_dsname := ds.ObjectName+'/'+whole_dsname;
+               end;
+             if master_dsname<>'' then
+               begin
+                 master_dsname := ds.ObjectName+'/'+master_dsname;
+               end;
+             if obj.isA(TFRE_DB_ZFS_DATASET_PARENT,pds) then
+               begin
+                 master_dsname := ds.ObjectName;
+                 Field('masterdatasetpath').AsString := pds.Field('mountpoint').asstring;
+               end;
+           end;
+         obj.finalize;
+       until false;
+       Field('masterdataset').AsString       := master_dsname;
+       Field('zonedataset').asstring         := whole_dsname;
+       Field('zonedbodataset').asstring      := Field('masterdataset').asstring+'/zones/'+UID.AsHexstring;
+
        writeln('SWL: SERVICEPARENT DONE');
+//       writeln('SWL: ZONEDBO: ',DumpToString());
+//       abort;
      end;
    if FieldExists('templateid') then
      begin
@@ -4999,7 +5034,7 @@ end;
        CheckDbResult(conn.Fetch(Field('templateid').AsGUID,obj),'could not fetch template '+Field('templateid').AsGUID.AsHexString);
        if obj.IsA(TFRE_DB_FBZ_TEMPLATE,tmpl) then
          begin
-           Field('templatedataset').asstring   := Field('masterdataset').AsString+'/template/'+Lowercase(StringReplace(tmpl.ObjectName,'_','',[rfReplaceAll]));
+           Field('templatedataset').asstring   := Field('masterdataset').AsString+'/template/'+Lowercase(tmpl.ObjectName);
            if tmpl.FieldExists('serviceclasses') then  //TODO : GET CONFIGURED SERVICES, NOT FAKE FROM TEMPLATE
              begin
                for i:=0 to tmpl.Field('serviceclasses').valuecount-1 do
@@ -5016,6 +5051,8 @@ end;
          end;
        obj.Finalize;
        writeln('SWL: TEMPLATEDONE');
+//       writeln('SWL: ZONEDBO: ',DumpToString());
+//       abort;
      end;
 
    refs := conn.GetReferencesDetailed(UID,false);
@@ -5030,6 +5067,9 @@ end;
        else
          obj.Finalize;
      end;
+
+   writeln('SWL: ZONEDBO: ',DumpToString());
+ //  abort;
  end;
 
 
@@ -5077,7 +5117,7 @@ end;
  function TFRE_DB_ZONE.RIF_ZoneCreate: IFRE_DB_Object;
  begin
    {$IFDEF SOLARIS}
-   result := fre_create_zone(self);
+   result := fre_create_zonecfg(self);
    {$ENDIF SOLARIS}
  end;
 

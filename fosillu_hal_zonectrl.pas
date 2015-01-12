@@ -54,11 +54,14 @@ var zents  : array of zone_entry_t;
 procedure sanity_check(zone : string; cmd_num : integer; running, unsafe_when_running, force : boolean);
 
 procedure list_zones;
-function  fre_create_zone  (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_boot_zone    (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_halt_zone    (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_shutdown_zone(const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_destroy_zone (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+function  fre_install_zone  (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+function  fre_create_zonecfg(const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+function  fre_boot_zone     (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+function  fre_halt_zone     (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+function  fre_shutdown_zone (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+function  fre_destroy_zone  (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+
+function  fre_set_zonestate (const zonename:string; const state:uint_t): boolean;
 
 implementation
 
@@ -427,29 +430,16 @@ begin
    //writeln;
 end;
 
-function fre_create_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+function fre_install_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
 var
-  handle          : zone_dochandle_t;
-  zone_template   : string;
-  zone_name       : string;
-  zone_path       : string;
-  zone_dataset    : string;
-  zone_brand      : string;
-  zone_dbodataset :string;
+  zone_caption    : string;
+  domainname      : string;
+  errs            : string;
   master_dataset  : string;
   master_dspath   : string;
   template_dataset: string;
-  err             : integer;
-  errs            : string;
-  msg             : string;
-  czonename       : Array[0..ZONENAME_MAX] of char;
-  czonepath       : Array[0..MAXPATHLEN] of char;
-  privs           : Ppriv_set_t;
-  privname        : PChar;
-  lockfd          : NativeInt;
-  czone_lock_env  : PChar;
-  zone_caption    : string;
-  domainname      : string;
+  zone_dataset    : string;
+
 
   procedure       setzfsproperties(const dsname:string;const key,val:string);
   var
@@ -487,6 +477,62 @@ var
     setzfsproperties(dsname,'fre:zonename',zone_caption);
     setzfsproperties(dsname,'fre:domainname',domainname);
   end;
+
+begin
+  zone_caption     := zone_dbo.Field('objname').asstring;
+  domainname       := zone_dbo.Field('domainname').asstring;
+  master_dataset   := zone_dbo.Field('masterdataset').asstring;
+  master_dspath    := zone_dbo.Field('masterdatasetpath').asstring;
+  template_dataset := zone_dbo.Field('templatedataset').asstring;
+  zone_dataset     := zone_dbo.Field('zonedataset').asstring;
+
+  writeln('SWL: DOMAINDATASET');
+  fosillu_zfs_create_ds(master_dataset+'/domains',errs);
+  // ignore errors here
+  fosillu_zfs_create_ds(master_dataset+'/domains/'+zone_dbo.DomainID.AsHexString,errs);
+  // ignore errors here
+  fosillu_zfs_create_ds(master_dataset+'/zones',errs);
+  // ignore errors here
+  fosillu_zfs_create_ds(master_dataset+'/zones/'+zone_dbo.UID.AsHexString,errs);
+  // ignore errors here
+
+  writeln('SWL: ZONEDATASET');
+  clone_dataset (template_dataset+'@final',zone_dataset);
+  create_dataset(zone_dataset+'/vmdisk');
+
+
+  create_dataset(zone_dataset+'/zonedata');
+  create_dataset(zone_dataset+'/zonedata/vfiler');
+  clone_dataset (template_dataset+'/etc@final',zone_dataset+'/zonedata/etc');
+  clone_dataset (template_dataset+'/var@final',zone_dataset+'/zonedata/var');
+  clone_dataset (template_dataset+'/optetc@final',zone_dataset+'/zonedata/optetc');
+  clone_dataset (template_dataset+'/optfre@final',zone_dataset+'/zonedata/optfre');
+
+  fre_set_zonestate(zone_dbo.UID_String,ZONE_STATE_INSTALLED);
+
+end;
+
+function fre_create_zonecfg(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+var
+  handle          : zone_dochandle_t;
+  zone_template   : string;
+  zone_name       : string;
+  zone_path       : string;
+  zone_dataset    : string;
+  zone_brand      : string;
+  zone_dbodataset :string;
+  master_dataset  : string;
+  master_dspath   : string;
+  template_dataset: string;
+  err             : integer;
+  errs            : string;
+  msg             : string;
+  czonename       : Array[0..ZONENAME_MAX] of char;
+  czonepath       : Array[0..MAXPATHLEN] of char;
+  privs           : Ppriv_set_t;
+  privname        : PChar;
+  zone_caption    : string;
+  domainname      : string;
 
 begin
  writeln('SWL ZONE:',zone_dbo.DumpToString());
@@ -552,80 +598,6 @@ begin
    end;
  writeln('assigned zonename ',czonename);
 
- //err :=zonecfg_verify_save(handle,Pchar('/syspool/zonefile'#0));
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on verify save zone :'+inttostr(err)+' '+msg);
- //  end;
-
- //err := zonecfg_update_userauths(handle,PChar(zone_name));
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on update userauth zone :'+inttostr(err)+' '+msg);
- //  end;
-
- //err := zonecfg_check_handle(handle);
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on check handle zone :'+inttostr(err)+' '+msg);
- //  end;
- //writeln('check handle ok!');
- //
- //err := zonecfg_get_zonepath(handle,czonepath,MAXPATHLEN);
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on get zonepath :'+inttostr(err)+' '+msg);
- //  end;
- //writeln(czonepath);
-
- //err := brand_verify(handle);
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on get zonepath :'+inttostr(err)+' '+msg);
- //  end;
-
- //privs := priv_allocset();
- //if privs=nil then
- //  begin
- //    raise Exception.Create('priv allocset failed');
- //  end;
- //
- //err := zonecfg_get_privset(handle,privs,@privname);
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on get_privset :'+inttostr(err)+' '+msg);
- //  end;
- //writeln('privname ',privname);
- //priv_freeset(privs);
- //
- //err := zonecfg_setadminent(handle);
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on setadminent :'+inttostr(err)+' '+msg);
- //  end;
- //err := zonecfg_endadminent(handle);
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on endadminent :'+inttostr(err)+' '+msg);
- //  end;
- //
- //err := zonecfg_authorize_users(handle,Pchar(zone_name));
- //if err<>Z_OK then
- //  begin
- //    msg := StrPas(zonecfg_strerror(err));
- //    raise Exception.Create('error on authorize users :'+inttostr(err)+' '+msg);
- //  end;
- //
- //
-
  add_dataset(handle,'/etc','lofs',zone_path+'/zonedata/etc');
  add_dataset(handle,'/var','lofs',zone_path+'/zonedata/var');
  add_dataset(handle,'/opt/local/etc','lofs',zone_path+'/zonedata/optetc');
@@ -643,65 +615,11 @@ begin
      raise Exception.Create('error on saving zone :'+inttostr(err)+' '+msg);
    end;
 
-
- writeln('SWL: DOMAINDATASET');
- fosillu_zfs_create_ds(master_dataset+'/domains',errs);
- // ignore errors here
- fosillu_zfs_create_ds(master_dataset+'/domains/'+zone_dbo.DomainID.AsHexString,errs);
- // ignore errors here
- fosillu_zfs_create_ds(master_dataset+'/zones',errs);
- // ignore errors here
- fosillu_zfs_create_ds(master_dataset+'/zones/'+zone_dbo.UID.AsHexString,errs);
- // ignore errors here
-
- writeln('SWL: ZONEDATASET');
- clone_dataset (template_dataset+'@final',zone_dataset);
- create_dataset(zone_dataset+'/vmdisk');
-
-
- create_dataset(zone_dataset+'/zonedata');
- create_dataset(zone_dataset+'/zonedata/vfiler');
- clone_dataset (template_dataset+'/etc@final',zone_dataset+'/zonedata/etc');
- clone_dataset (template_dataset+'/var@final',zone_dataset+'/zonedata/var');
- clone_dataset (template_dataset+'/optetc@final',zone_dataset+'/zonedata/optetc');
- clone_dataset (template_dataset+'/optfre@final',zone_dataset+'/zonedata/optfre');
-
  // copying zone dbo dataset
  writeln('SWL: Saving zones file ',master_dspath+'/zones/'+zone_dbo.UID.asHexstring+'/zone.dbo');
  zone_dbo.SaveToFile(master_dspath+'/zones/'+zone_dbo.UID.asHexstring+'/zone.dbo');
 
- //setting state to installed
-
- writeln('init lock file');
- zonecfg_init_lock_file(PChar(zone_name),@czone_lock_env);
-
- writeln('grab lock file');
- err := zonecfg_grab_lock_file(PChar(zone_name),@lockfd);
- if err<>Z_OK then
-   begin
-     msg := StrPas(zonecfg_strerror(err));
-     raise Exception.Create('error on grabbing lock file :'+inttostr(err)+' '+msg);
-   end;
- try
-   err := zone_set_state(Pchar(zone_name),ZONE_STATE_INCOMPLETE);
-   if err<>Z_OK then
-     begin
-       msg := StrPas(zonecfg_strerror(err));
-       raise Exception.Create('error on setting state INCOMPLETE:'+inttostr(err)+' '+msg);
-     end;
-
-   err := zone_set_state(Pchar(zone_name),ZONE_STATE_INSTALLED);
-   if err<>Z_OK then
-     begin
-       msg := StrPas(zonecfg_strerror(err));
-       raise Exception.Create('error on setting state INSTALLED:'+inttostr(err)+' '+msg);
-     end;
-
- finally
-   writeln('release lock file');
-   zonecfg_release_lock_file(PChar(zone_name),lockfd);
- end;
-
+ fre_set_zonestate(zone_name,ZONE_STATE_CONFIGURED);
 end;
 
 function fre_boot_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
@@ -781,6 +699,48 @@ begin
     begin
       raise Exception.Create('error on destroy zone dataset for zone :'+errs);
     end;
+end;
+
+function fre_set_zonestate(const zonename: string; const state: uint_t): boolean;
+var
+  lockfd          : NativeInt;
+  czone_lock_env  : PChar;
+  err             : integer;
+  msg             : string;
+
+begin
+ result := false;
+
+ writeln('init lock file');
+ zonecfg_init_lock_file(PChar(zonename),@czone_lock_env);
+
+ writeln('grab lock file');
+ err := zonecfg_grab_lock_file(PChar(zonename),@lockfd);
+ if err<>Z_OK then
+   begin
+     msg := StrPas(zonecfg_strerror(err));
+     raise Exception.Create('error on grabbing lock file :'+inttostr(err)+' '+msg);
+   end;
+ try
+   //err := zone_set_state(Pchar(zonename),ZONE_STATE_INCOMPLETE);
+   //if err<>Z_OK then
+   //  begin
+   //    msg := StrPas(zonecfg_strerror(err));
+   //    raise Exception.Create('error on setting state INCOMPLETE:'+inttostr(err)+' '+msg);
+   //  end;
+   //
+   err := zone_set_state(Pchar(zonename), state);
+   if err<>Z_OK then
+     begin
+       msg := StrPas(zonecfg_strerror(err));
+       raise Exception.Create('error on setting state INSTALLED:'+inttostr(err)+' '+msg);
+     end;
+
+ finally
+   writeln('release lock file');
+   zonecfg_release_lock_file(PChar(zonename),lockfd);
+ end;
+ result :=true;
 end;
 
 

@@ -140,6 +140,7 @@ type
   Procedure illu_Free (P : pointer); cdecl; external name 'free';
   function  illu_ReAlloc (P : Pointer; Size : ptruint) : pointer; cdecl; external name 'realloc';
   Function  illu_CAlloc (unitSize,UnitCount : ptruint) : pointer; cdecl; external name 'calloc';
+  function  illu_gethrtime : Hrtime_t; cdecl; external name 'gethrtime';
 
   //libc nonpublic interfaces
 
