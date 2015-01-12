@@ -6572,6 +6572,11 @@ begin
   end;
   if not conn.CollectionExists(CFOS_DB_ZONES_COLLECTION) then begin
     collection  := conn.CreateCollection(CFOS_DB_ZONES_COLLECTION);
+  end else begin
+    collection  := conn.GetCollection(CFOS_DB_ZONES_COLLECTION);
+  end;
+  if not collection.IndexExists('upid') then begin
+    collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'upid',false);
   end;
 end;
 
