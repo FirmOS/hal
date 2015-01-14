@@ -48,15 +48,10 @@ uses
 
 type
 
-  TFRE_SignalStatus = (statusUnknown, statusOK, statusWarning, statusFailure);
-  TFRE_JobState     = (jobStateUnknown,jobStateToRun,jobStateImmediateStart,jobStateRunning,jobStateDone,jobStateFailed);
   TFRE_TestPeriodic = (everyDay, everyHour, everyMinute);
 
 const
-
-  CFRE_SignalStatus  : Array[TFRE_SignalStatus]         of string  = ('UNKNOWN', 'OK', 'WARNING', 'FAILURE');
   CFRE_TestPeriodic  : Array[TFRE_TestPeriodic]         of string  = ('EVERYDAY', 'EVERYHOUR', 'EVERYMINUTE');
-  CFRE_JobState      : Array[TFRE_JobState]             of string  = ('unknown','torun','immediatestart','running','done','failed');
 
   cWinRMDiskKey      = 'FOS_RMI_WIN_DISKS';
   cWinRMServiceKey   = 'FOS_RMI_WIN_SERVICES';
@@ -82,66 +77,6 @@ type
     procedure       SetErrorbytes               (const value : int64);
     procedure       SetTotalOutbytes            (const value : int64);
     procedure       SetJobID                    (const value : TFRE_DB_String);
-  end;
-
-  { TFRE_DB_JOB }
-
-  TFRE_DB_JOB = class (TFRE_DB_ObjectEx)
-  private
-    procedure       InternalSetup               ; override;
-    function        GetConfig                   : IFRE_DB_Object;
-    procedure       SetConfig                   (AValue: IFRE_DB_Object);
-    function        GetReport                   : IFRE_DB_Object;
-    procedure       SetReport                   (AValue: IFRE_DB_Object);
-    function        GetJobFilename              : string;
-  protected
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    procedure       SetStatus                   (const status : TFRE_SignalStatus; const statussummary : string);
-    procedure       SetDetailStatus             (const detail : IFRE_DB_Object; const status : TFRE_SignalStatus; const statussummary : string);
-  public
-    procedure       SetRemoteSSH                (const user   : string; const host  : string; const keyfilename : string);
-    procedure       ExecuteJob                  ; virtual; abstract;
-    property        Config                      : IFRE_DB_Object read GetConfig write SetConfig;
-    property        Report                      : IFRE_DB_Object read GetReport write SetReport;
-    function        JobKey                      : string;
-    procedure       SetJobkeyDescription        (const newjobkey : string; const description_: string);
-    procedure       SetPeriodic                 (const periodic  : TFRE_TestPeriodic);
-    function        GetPeriodic                 : TFRE_TestPeriodic;
-    procedure       SaveJobToFile               ;
-    procedure       SetJobState                 (const value:TFRE_JobState);
-    procedure       SetJobStateandSave          (const value:TFRE_JobState);
-    function        GetJobState                 :TFRE_JobState;
-    procedure       SetPid                      (const value  : QWord);
-    procedure       ClearPid                    ;
-    procedure       SetProgress                 (const percent:integer);
-    procedure       AddProgressLog              (const msg: string;const percent:integer=-1);
-    class function  GetJobBaseFilename          (const state  : TFRE_JobState; const vjobkey:string):string;
-  published
-    function        IMI_Do_the_Job              (const input:IFRE_DB_Object):IFRE_DB_Object; virtual;
-    procedure       CALC_GetDisplayName         (const setter : IFRE_DB_CALCFIELD_SETTER);
-
-  end;
-
-  { TFRE_DB_JobReport }
-
-  TFRE_DB_JobReport = class (TFRE_DB_ObjectEx)
-  public
-    procedure       SetProgress                 (const percent:integer);
-    procedure       AddProgressLog              (const msg:string);
-  protected
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-    class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-  end;
-
-  { TFRE_DB_TIMERTEST_JOB }
-
-  TFRE_DB_TIMERTEST_JOB=class(TFRE_DB_JOB)
-  protected
-    procedure  InternalSetup ; override;
-    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
-  public
-    procedure  SetTimeout    (const value:integer);
-    procedure  ExecuteJob    ; override;
   end;
 
   { TFRE_DB_TestcaseStatus }
@@ -178,8 +113,8 @@ type
     procedure       AnalyzeDisks                (const resultdbo: IFRE_DB_Object);
     procedure       AnalyzeServices             (const resultdbo: IFRE_DB_Object);
     procedure       AnalyzeCPUUsage             (const resultdbo: IFRE_DB_Object);
-    procedure       SetStatus                   (const status : TFRE_SignalStatus; const statussummary : string);
-    procedure       SetDetailStatus             (const detail : IFRE_DB_Object; const status : TFRE_SignalStatus; const statussummary : string);
+    //procedure       SetStatus                   (const status : TFRE_SignalStatus; const statussummary : string);
+    //procedure       SetDetailStatus             (const detail : IFRE_DB_Object; const status : TFRE_SignalStatus; const statussummary : string);
   public
     procedure       AddTestDiskSpace            (const diskserial: string; const warnlevel_percent: byte; const errorlevel_percent: byte);
     procedure       AddTestServiceRunning       (const servicename: string);
@@ -296,44 +231,6 @@ function  GetStatusIconURI(const status:string) : string;
 function  GetSignalStatus(const status:string): TFRE_SignalStatus;
 
 implementation
-
-{ TFRE_DB_TIMERTEST_JOB }
-
-procedure TFRE_DB_TIMERTEST_JOB.InternalSetup;
-begin
- inherited InternalSetup;
- Field('MAX_ALLOWED_TIME').AsInt32 := 86400;
-end;
-
-class procedure TFRE_DB_TIMERTEST_JOB.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
- inherited RegisterSystemScheme(scheme);
- scheme.SetParentSchemeByName(TFRE_DB_JOB.ClassName);
-end;
-
-procedure TFRE_DB_TIMERTEST_JOB.SetTimeout(const value: integer);
-begin
-  Field('testtimeout').asInt64 := value;
-end;
-
-procedure TFRE_DB_TIMERTEST_JOB.ExecuteJob;
-var timeout: int64;
-    total  : int64;
-begin
-  timeout := Field('testtimeout').asint64;
-  total   := timeout;
-  while timeout>0 do
-    begin
-      sleep(1000);
-      Field('timetogo').AsInt64 := timeout;
-      AddProgressLog('NOW WE HAVE '+inttostr(timeout)+' to go!',trunc((total-timeout)*100/total));
-      writeln('SWL JOBFILE:',DumpToString());
-      dec(timeout);
-    end;
-  AddProgressLog('Now we are done!',100);
-  writeln('SWL JOBFILE:',DumpToString());
-end;
-
 
 { TFRE_DB_JobProgress }
 
@@ -838,69 +735,6 @@ begin
   setter.SetAsString(GetStatusIconURI(Field('status').asstring));
 end;
 
-{ TFRE_DB_JobReport }
-
-procedure TFRE_DB_JobReport.SetProgress(const percent: integer);
-begin
-  Field('progress').AsInt32:=percent;
-end;
-
-procedure TFRE_DB_JobReport.AddProgressLog(const msg: string);
-var ts:TFRE_DB_DateTime64;
-    l :IFRE_DB_Object;
-    lo:IFRE_DB_Object;
-begin
-  if not FieldExists('L') then
-   Field('L').AsObject:=GFRE_DBI.NewObject;
-
-  ts:=GFRE_DT.Now_UTC;
-  lo:=GFRE_DBI.NewObject;
-  lo.Field('TS').AsDateTimeUTC:=ts;
-  lo.Field('M').asstring      :=msg;
-  lo.Field('P').asint32       :=Field('progress').AsInt32;
-  Field('L').asObject.Field(inttostr(ts)).AsObject:=lo;
-end;
-
-class procedure TFRE_DB_JobReport.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-var
-  enum: IFRE_DB_Enum;
-begin
-  inherited RegisterSystemScheme(scheme);
-
-  enum:=GFRE_DBI.NewEnum('tcr_signal_status').Setup(GFRE_DBI.CreateText('$enum_tcr_signal_status','signal status Enum'));
-  enum.addEntry('ok',GetTranslateableTextKey('enum_tcr_signal_status_ok'));
-  enum.addEntry('warning',GetTranslateableTextKey('enum_tcr_signal_status_warning'));
-  enum.addEntry('failure',GetTranslateableTextKey('enum_tcr_signal_status_failure'));
-  enum.addEntry('unknown',GetTranslateableTextKey('enum_tcr_signal_status_unknown'));
-  GFRE_DBI.RegisterSysEnum(enum);
-
-  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
-  scheme.AddSchemeField('status',fdbft_String).SetupFieldDef(true,false,'tcr_signal_status');
-  scheme.AddSchemeField('statussummary',fdbft_String);
-  scheme.AddSchemeField('starttime',fdbft_DateTimeUTC);
-  scheme.AddSchemeField('endtime',fdbft_DateTimeUTC);
-end;
-
-class procedure TFRE_DB_JobReport.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
- newVersionId:='1.0';
-
- if (currentVersionId='') then begin
-   currentVersionId:='1.0';
-
-   StoreTranslateableText(conn,'enum_tcr_signal_status_ok','Ok');
-   StoreTranslateableText(conn,'enum_tcr_signal_status_warning','Warning');
-   StoreTranslateableText(conn,'enum_tcr_signal_status_failure','Failure');
-   StoreTranslateableText(conn,'enum_tcr_signal_status_unknown','Unknown');
- end;
- if (currentVersionId='1.0') then begin
- //next update code
- end;
-
-  
-end;
-
-
 { TFRE_DB_MailCheckTestcase }
 
 class procedure TFRE_DB_MailCheckTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1099,7 +933,7 @@ begin
         break;
       end;
     end;
-    SetDetailStatus(disk,status,statussummary);
+    //SetDetailStatus(disk,status,statussummary);
   end;
 end;
 
@@ -1140,7 +974,7 @@ begin
         end;
       end;
     end;
-    SetDetailStatus(service,status,statussummary);
+    //SetDetailStatus(service,status,statussummary);
   end;
 end;
 
@@ -1175,34 +1009,34 @@ begin
       statussummary := 'NO PROCESSOR TIME INFORMATION';
     end;
   end;
-  SetDetailStatus(cpu,status,statussummary);
+  //SetDetailStatus(cpu,status,statussummary);
 end;
 
-procedure TFRE_DB_WinRMTarget.SetStatus(const status: TFRE_SignalStatus; const statussummary: string);
-begin
-  if FieldExists('status_ord') then begin
-   if Ord(status) > Field('status_ord').AsInt16 then begin
-    Field('status_ord').AsInt16     := Ord(status);
-    Field('status').AsString        := CFRE_SignalStatus [status];
-    Field('statussummary').AsString := statussummary;
-   end;
-  end else begin
-    Field('status_ord').AsInt16     := Ord(status);
-    Field('status').AsString        := CFRE_SignalStatus [status];
-    Field('statussummary').AsString := statussummary;
-  end;
-  if Assigned(parent.Parent) then begin
-    TFRE_DB_JOB(parent.parent.Implementor_HC).SetStatus(status,statussummary);
-  end;
-end;
+//procedure TFRE_DB_WinRMTarget.SetStatus(const status: TFRE_SignalStatus; const statussummary: string);
+//begin
+//  if FieldExists('status_ord') then begin
+//   if Ord(status) > Field('status_ord').AsInt16 then begin
+//    Field('status_ord').AsInt16     := Ord(status);
+//    Field('status').AsString        := CFRE_SignalStatus [status];
+//    Field('statussummary').AsString := statussummary;
+//   end;
+//  end else begin
+//    Field('status_ord').AsInt16     := Ord(status);
+//    Field('status').AsString        := CFRE_SignalStatus [status];
+//    Field('statussummary').AsString := statussummary;
+//  end;
+//  if Assigned(parent.Parent) then begin
+//    TFRE_DB_JOB(parent.parent.Implementor_HC).SetStatus(status,statussummary);
+//  end;
+//end;
 
-procedure TFRE_DB_WinRMTarget.SetDetailStatus(const detail: IFRE_DB_Object; const status: TFRE_SignalStatus; const statussummary: string);
-begin
-  detail.Field('status_ord').AsInt16     := Ord(status);
-  detail.Field('status').AsString        := CFRE_SignalStatus [status];
-  detail.Field('statussummary').AsString := statussummary;
-  SetStatus(status,statussummary);
-end;
+//procedure TFRE_DB_WinRMTarget.SetDetailStatus(const detail: IFRE_DB_Object; const status: TFRE_SignalStatus; const statussummary: string);
+//begin
+//  detail.Field('status_ord').AsInt16     := Ord(status);
+//  detail.Field('status').AsString        := CFRE_SignalStatus [status];
+//  detail.Field('statussummary').AsString := statussummary;
+//  SetStatus(status,statussummary);
+//end;
 
 
 procedure TFRE_DB_WinRMTarget.AddTestDiskSpace(const diskserial: string; const warnlevel_percent: byte; const errorlevel_percent: byte);
@@ -1428,207 +1262,6 @@ begin
   end; end;
 end;
 
-{ TFRE_DB_JOB }
-
-procedure TFRE_DB_JOB.InternalSetup;
-begin
-  inherited InternalSetup;
-  Field('MAX_ALLOWED_TIME').AsInt32 := 10;
-end;
-
-function TFRE_DB_JOB.GetConfig: IFRE_DB_Object;
-begin
- result := Field('c').AsObject;
-end;
-
-procedure TFRE_DB_JOB.SetConfig(AValue: IFRE_DB_Object);
-begin
- Field('c').AsObject := AValue;
-end;
-
-
-function TFRE_DB_JOB.GetReport: IFRE_DB_Object;
-begin
- result :=Field('r').AsObject;
-end;
-
-procedure TFRE_DB_JOB.SetReport(AValue: IFRE_DB_Object);
-begin
-  Field('r').AsObject := AValue;
-end;
-
-function TFRE_DB_JOB.GetJobFilename: string;
-var jobstate     : TFRE_JobState;
-begin
- jobstate     := GetJobState;
- result       := GetJobBaseFilename(jobstate,jobkey);
- if not ((jobstate=jobStateUnknown) or (jobstate=jobStateToRun) or (jobstate=jobStateImmediateStart)) then
-   result := result + '_'+inttostr(report.Field('starttime').AsDateTimeUTC);
- result := result +'.dbo';
-end;
-
-class procedure TFRE_DB_JOB.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
-  scheme.AddSchemeField('machine',fdbft_ObjLink);
-  scheme.AddSchemeField('troubleshooting',fdbft_String);
-  scheme.AddSchemeField('jobstate',fdbft_String);  // enum
-  scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
-end;
-
-procedure TFRE_DB_JOB.SetStatus(const status: TFRE_SignalStatus; const statussummary: string);
-begin
- if report.FieldExists('status_ord') then begin
-  if Ord(status) > report.Field('status_ord').AsInt16 then begin
-   report.Field('status_ord').AsInt16     := Ord(status);
-   report.Field('status').AsString        := CFRE_SignalStatus [status];
-   report.Field('statussummary').AsString := statussummary;
-  end;
- end else begin
-   report.Field('status_ord').AsInt16     := Ord(status);
-   report.Field('status').AsString        := CFRE_SignalStatus [status];
-   report.Field('statussummary').AsString := statussummary;
- end;
-end;
-
-procedure TFRE_DB_JOB.SetDetailStatus(const detail: IFRE_DB_Object; const status: TFRE_SignalStatus; const statussummary: string);
-begin
- detail.Field('status_ord').AsInt16     := Ord(status);
- detail.Field('status').AsString        := CFRE_SignalStatus [status];
- detail.Field('statussummary').AsString := statussummary;
- SetStatus(status,statussummary);
-end;
-
-procedure TFRE_DB_JOB.SetJobkeyDescription(const newjobkey: string; const description_: string);
-begin
- FNamedObject.ObjectName  := newjobkey;
- FNamedObject.Description.SetupText(newjobkey,description_);
-end;
-
-procedure TFRE_DB_JOB.SetPeriodic(const periodic: TFRE_TestPeriodic);
-begin
-  config.Field('periodic_ord').AsInt16     := Ord(periodic);
-  config.Field('periodic').AsString        := CFRE_TestPeriodic [periodic];
-end;
-
-function TFRE_DB_JOB.GetPeriodic: TFRE_TestPeriodic;
-begin
- if config.FieldExists('periodic_ord') then begin
-   result :=TFRE_TestPeriodic(config.Field('periodic_ord').AsInt16);
- end else begin
-   result :=everyMinute;
- end;
-end;
-
-procedure TFRE_DB_JOB.SaveJobToFile;
-var
-  jobfilename  : string;
-begin
-  jobfilename := GetJobFilename;
-  if not DirectoryExists(ExtractFileDir(jobfilename)) then
-    ForceDirectories(ExtractFileDir(jobfilename));
-  SaveToFile(jobfilename);
-end;
-
-procedure TFRE_DB_JOB.SetJobState(const value: TFRE_JobState);
-begin
-  if (GetJobState<>value) and (GetJobstate<>jobStateToRun) then
-    DeleteFile(GetJobFilename);
-  Field('jobstate').asstring := CFRE_JobState[value];
-end;
-
-procedure TFRE_DB_JOB.SetJobStateandSave(const value: TFRE_JobState);
-begin
- SetJobState(value);
- SaveJobToFile;
-end;
-
-function TFRE_DB_JOB.GetJobState: TFRE_JobState;
-var i : TFRE_JobState;
-begin
- for i:=low(TFRE_JobState) to high(TFRE_JobState) do
-  if CFRE_JobState[i]=Field('jobstate').asstring then
-    begin
-      result := i;
-      exit;
-    end;
- result := jobStateUnknown;
-end;
-
-procedure TFRE_DB_JOB.SetPid(const value: QWord);
-begin
-  field('pid').AsUInt64:=value;
-end;
-
-procedure TFRE_DB_JOB.ClearPid;
-begin
-  DeleteField('pid');
-end;
-
-procedure TFRE_DB_JOB.SetProgress(const percent: integer);
-var jr:TFRE_DB_JobReport;
-begin
-  jr:=(report.Implementor_HC) as TFRE_DB_JobReport;
-  jr.SetProgress(percent);
-end;
-
-procedure TFRE_DB_JOB.AddProgressLog(const msg: string; const percent: integer);
-var jr:TFRE_DB_JobReport;
-begin
-  jr:=(report.Implementor_HC) as TFRE_DB_JobReport;
-  jr.AddProgressLog(msg);
-  if percent<>-1 then
-    jr.SetProgress(percent);
-  SaveJobToFile;
-end;
-
-class function TFRE_DB_JOB.GetJobBaseFilename(const state: TFRE_JobState; const vjobkey: string): string;
-begin
-  result       :=cFRE_JOB_RESULT_DIR+CFRE_JobState[State]+DirectorySeparator+GFRE_BT.Str2HexStr(vJobKey);
-end;
-
-procedure TFRE_DB_JOB.SetRemoteSSH(const user: string; const host: string; const keyfilename: string);
-begin
-  Field('remoteuser').AsString        := user;
-  Field('remotehost').AsString        := host;
-  Field('remotekeyfilename').AsString := keyfilename;
-end;
-
-function TFRE_DB_JOB.JobKey: string;
-begin
- result := FNamedObject.ObjectName;
-end;
-
-function TFRE_DB_JOB.IMI_Do_the_Job(const input: IFRE_DB_Object): IFRE_DB_Object;
-begin
-  try
-    report := TFRE_DB_JobReport.Create;
-    report.Field('starttime').AsDateTimeUTC := GFRE_DT.Now_UTC;
-    report.Field('progress').asint32        := 0;
-    SetJobStateandSave(jobStateRunning);
-    ExecuteJob;
-    report.Field('endtime').AsDateTimeUTC:=GFRE_DT.Now_UTC;
-    ClearPid;
-    SetJobStateandSave(jobStateDone);
-    writeln('SWL: DONE ',Report.DumpToString());
-  except on E:Exception do
-    begin
-      AddProgressLog('EXCEPTION:'+E.Message);
-      SetJobStateandSave(jobStateFailed);
-      writeln('SWL: DONE FAILED',Report.DumpToString());
-      raise;
-    end;
-  end;
-end;
-
-procedure TFRE_DB_JOB.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
-begin
-  setter.SetAsString(FNamedObject.Description.Getshort);
-  //result := GFRE_DBI.NewObject;
-  //result.Field(CalcFieldResultKey(fdbft_String)).AsString:=FNamedObject.Description.Getshort;
-//  writeln(result.DumpToString());
-end;
 
 
 procedure Register_DB_Extensions;

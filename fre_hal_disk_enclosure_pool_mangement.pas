@@ -93,12 +93,8 @@ function  Common_Disk_DataFeed          (const input: IFRE_DB_Object; const ses:
 implementation
 
 function Common_Disk_DataFeed(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-
-
-
 begin
   FREDIFF_ApplyTransportObjectToDB(input,conn);
-
   result := GFRE_DB_NIL_DESC;
 end;
 

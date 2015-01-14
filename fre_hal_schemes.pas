@@ -6057,7 +6057,7 @@ end;
 function TFRE_DB_MACHINE.WEB_GetDefaultCollection(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
 begin
   result:=GFRE_DBI.NewObject;
-  result.Field('collection').asstring:=CFRE_DB_MACHINE_COLLECTION;
+  result.Field('collection').asstring:=conn.GetMachinesCollection.CollectionName()
 end;
 
 function TFRE_DB_MACHINE.WEB_REQUEST_DISK_ENC_POOL_DATA(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
