@@ -1327,12 +1327,12 @@ end;
 procedure TFRE_DB_ZFS_OBJ._getIcon(const calcfieldsetter: IFRE_DB_CALCFIELD_SETTER);
 begin
    if getIsNew then begin
-     calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'_new.png');
+     calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_new.png'));
    end else begin
      if getIsModified then begin
-       calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'_mod.png');
+       calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'_mod.png'));
      end else begin
-       calcfieldsetter.SetAsString('images_apps/firmbox_storage/'+ClassName+'.png');
+       calcfieldsetter.SetAsString(FREDB_getThemedResource('images_apps/firmbox_storage/'+ClassName+'.png'));
      end;
    end;
 end;
