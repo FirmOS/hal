@@ -49,12 +49,14 @@ uses
 type
 
   TFRE_SignalStatus = (statusUnknown, statusOK, statusWarning, statusFailure);
+  TFRE_JobState     = (jobStateUnknown,jobStateToRun,jobStateImmediateStart,jobStateRunning,jobStateDone,jobStateFailed);
   TFRE_TestPeriodic = (everyDay, everyHour, everyMinute);
 
 const
 
   CFRE_SignalStatus  : Array[TFRE_SignalStatus]         of string  = ('UNKNOWN', 'OK', 'WARNING', 'FAILURE');
   CFRE_TestPeriodic  : Array[TFRE_TestPeriodic]         of string  = ('EVERYDAY', 'EVERYHOUR', 'EVERYMINUTE');
+  CFRE_JobState      : Array[TFRE_JobState]             of string  = ('unknown','torun','immediatestart','running','done','failed');
 
   cWinRMDiskKey      = 'FOS_RMI_WIN_DISKS';
   cWinRMServiceKey   = 'FOS_RMI_WIN_SERVICES';
@@ -82,39 +84,64 @@ type
     procedure       SetJobID                    (const value : TFRE_DB_String);
   end;
 
-  { TFRE_DB_Testcase }
+  { TFRE_DB_JOB }
 
-  TFRE_DB_Testcase = class (TFRE_DB_ObjectEx)
+  TFRE_DB_JOB = class (TFRE_DB_ObjectEx)
   private
     procedure       InternalSetup               ; override;
     function        GetConfig                   : IFRE_DB_Object;
     procedure       SetConfig                   (AValue: IFRE_DB_Object);
     function        GetReport                   : IFRE_DB_Object;
     procedure       SetReport                   (AValue: IFRE_DB_Object);
+    function        GetJobFilename              : string;
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure       SetStatus                   (const status : TFRE_SignalStatus; const statussummary : string);
     procedure       SetDetailStatus             (const detail : IFRE_DB_Object; const status : TFRE_SignalStatus; const statussummary : string);
   public
     procedure       SetRemoteSSH                (const user   : string; const host  : string; const keyfilename : string);
-    procedure       ExecuteTest                 ; virtual; abstract;
+    procedure       ExecuteJob                  ; virtual; abstract;
     property        Config                      : IFRE_DB_Object read GetConfig write SetConfig;
     property        Report                      : IFRE_DB_Object read GetReport write SetReport;
     function        JobKey                      : string;
     procedure       SetJobkeyDescription        (const newjobkey : string; const description_: string);
     procedure       SetPeriodic                 (const periodic  : TFRE_TestPeriodic);
     function        GetPeriodic                 : TFRE_TestPeriodic;
+    procedure       SaveJobToFile               ;
+    procedure       SetJobState                 (const value:TFRE_JobState);
+    procedure       SetJobStateandSave          (const value:TFRE_JobState);
+    function        GetJobState                 :TFRE_JobState;
+    procedure       SetPid                      (const value  : QWord);
+    procedure       ClearPid                    ;
+    procedure       SetProgress                 (const percent:integer);
+    procedure       AddProgressLog              (const msg: string;const percent:integer=-1);
+    class function  GetJobBaseFilename          (const state  : TFRE_JobState; const vjobkey:string):string;
   published
     function        IMI_Do_the_Job              (const input:IFRE_DB_Object):IFRE_DB_Object; virtual;
     procedure       CALC_GetDisplayName         (const setter : IFRE_DB_CALCFIELD_SETTER);
+
   end;
 
-  { TFRE_DB_TestcaseResult }
+  { TFRE_DB_JobReport }
 
-  TFRE_DB_TestcaseResult = class (TFRE_DB_ObjectEx)
+  TFRE_DB_JobReport = class (TFRE_DB_ObjectEx)
+  public
+    procedure       SetProgress                 (const percent:integer);
+    procedure       AddProgressLog              (const msg:string);
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects            (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_TIMERTEST_JOB }
+
+  TFRE_DB_TIMERTEST_JOB=class(TFRE_DB_JOB)
+  protected
+    procedure  InternalSetup ; override;
+    class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+  public
+    procedure  SetTimeout    (const value:integer);
+    procedure  ExecuteJob    ; override;
   end;
 
   { TFRE_DB_TestcaseStatus }
@@ -133,14 +160,14 @@ type
 
   { TFRE_DB_InternetTestcase }
 
-  TFRE_DB_InternetTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_InternetTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     function        GetAllHosts                 : TFRE_DB_StringArray;
     procedure       AddReport                   (const reportname   : string   ; const proc: TFRE_DB_Process; const rtt: Single);
   public
     procedure       PrepareTest                 (const localgateway : TFRE_DB_String; const providergateway : TFRE_DB_String; const remotehosts : TFRE_DB_StringArray);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                  ; override;
   end;
 
   { TFRE_DB_WinRMTarget }
@@ -162,50 +189,50 @@ type
 
   { TFRE_DB_WinRMTestcase }
 
-  TFRE_DB_WinRMTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_WinRMTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure       InternalSetup               ; override;
   public
     function        AddWinRMTarget              (const url:string; const user: string; const password : string) : TFRE_DB_WinRMTarget;
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                  ; override;
   end;
 
   { TFRE_DB_MailSendTestcase }
 
-  TFRE_DB_MailSendTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_MailSendTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure       Analyze                     (const proc : TFRE_DB_Process);
   public
     procedure       AddMailserver               (const host : string; const user : string; const password: string; const mailfrom:string; const mailto:string);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                 ; override;
   end;
 
   { TFRE_DB_MailCheckTestcase }
 
-  TFRE_DB_MailCheckTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_MailCheckTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure       Analyze                     (const testmethod : IFRE_DB_Object);
   public
     procedure       SetMailserver               (const host : string; const sendjobkey:string; const warning_seconds: integer; const error_seconds: integer);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                  ; override;
   end;
 
   { TFRE_DB_SMBTestcase }
 
-  TFRE_DB_SMBTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_SMBTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure       SetFileshare                (const host : string; const user : string; const password: string; const fileshare: string; const mountpoint : string);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                 ; override;
   end;
 
   { TFRE_DB_MultiPingTestcase }
 
-  TFRE_DB_MultiPingTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_MultiPingTestcase = class (TFRE_DB_JOB)
   protected
     procedure       InternalSetup               ; override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
@@ -216,12 +243,12 @@ type
     procedure       SetRTTTimeout_ms            (const rtt_timeout: integer);
     procedure       SetPingCount                (const count: integer);
     procedure       AddPingTest                 (const host : string; const information : string);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                 ; override;
   end;
 
   { TFRE_DB_ProcessTestcase }
 
-  TFRE_DB_ProcessTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_ProcessTestcase = class (TFRE_DB_JOB)
   protected
     procedure       InternalSetup               ; override;
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
@@ -230,37 +257,37 @@ type
   public
     procedure       SetInformation              (const information : string);
     procedure       AddProcessTest              (const processname : string; const warning_count:integer; const error_count:integer; const information : string);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                 ; override;
   end;
 
   { TFRE_DB_DiskspaceTestcase }
 
-  TFRE_DB_DiskspaceTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_DiskspaceTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure       SetMountpoint               (const mountpoint : string; const warning_percent: integer; const error_percent: integer);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                 ; override;
   end;
 
   { TFRE_DB_HTTPTestcase }
 
-  TFRE_DB_HTTPTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_HTTPTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure       SetURL                      (const url : string; const header: string; const responsematch: string);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                 ; override;
   end;
 
   { TFRE_DB_CPULoadTestcase }
 
-  TFRE_DB_CPULoadTestcase = class (TFRE_DB_Testcase)
+  TFRE_DB_CPULoadTestcase = class (TFRE_DB_JOB)
   protected
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
   public
     procedure       SetLimits                   (const warning_load:integer; const error_load:integer);
-    procedure       ExecuteTest                 ; override;
+    procedure       ExecuteJob                 ; override;
   end;
 
 
@@ -269,6 +296,44 @@ function  GetStatusIconURI(const status:string) : string;
 function  GetSignalStatus(const status:string): TFRE_SignalStatus;
 
 implementation
+
+{ TFRE_DB_TIMERTEST_JOB }
+
+procedure TFRE_DB_TIMERTEST_JOB.InternalSetup;
+begin
+ inherited InternalSetup;
+ Field('MAX_ALLOWED_TIME').AsInt32 := 86400;
+end;
+
+class procedure TFRE_DB_TIMERTEST_JOB.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+ inherited RegisterSystemScheme(scheme);
+ scheme.SetParentSchemeByName(TFRE_DB_JOB.ClassName);
+end;
+
+procedure TFRE_DB_TIMERTEST_JOB.SetTimeout(const value: integer);
+begin
+  Field('testtimeout').asInt64 := value;
+end;
+
+procedure TFRE_DB_TIMERTEST_JOB.ExecuteJob;
+var timeout: int64;
+    total  : int64;
+begin
+  timeout := Field('testtimeout').asint64;
+  total   := timeout;
+  while timeout>0 do
+    begin
+      sleep(1000);
+      Field('timetogo').AsInt64 := timeout;
+      AddProgressLog('NOW WE HAVE '+inttostr(timeout)+' to go!',trunc((total-timeout)*100/total));
+      writeln('SWL JOBFILE:',DumpToString());
+      dec(timeout);
+    end;
+  AddProgressLog('Now we are done!',100);
+  writeln('SWL JOBFILE:',DumpToString());
+end;
+
 
 { TFRE_DB_JobProgress }
 
@@ -313,7 +378,7 @@ end;
 class procedure TFRE_DB_CPULoadTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
  inherited RegisterSystemScheme(scheme);
- scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+ scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_CPULoadTestcase.SetLimits(const warning_load: integer; const error_load: integer);
@@ -322,7 +387,7 @@ begin
  config.Field('error_load').AsUInt16    := error_load;
 end;
 
-procedure TFRE_DB_CPULoadTestcase.ExecuteTest;
+procedure TFRE_DB_CPULoadTestcase.ExecuteJob;
 var
   test  : TFRE_DB_Testmethod_CPULoad;
   proc  : TFRE_DB_Process;
@@ -358,7 +423,7 @@ end;
 class procedure TFRE_DB_HTTPTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_HTTPTestcase.SetURL(const url: string; const header: string; const responsematch: string);
@@ -368,7 +433,7 @@ begin
  config.Field('responsematch').AsString := responsematch;
 end;
 
-procedure TFRE_DB_HTTPTestcase.ExecuteTest;
+procedure TFRE_DB_HTTPTestcase.ExecuteJob;
 var
   test  : TFRE_DB_Testmethod_HTTP;
   proc  : TFRE_DB_Process;
@@ -403,7 +468,7 @@ end;
 class procedure TFRE_DB_DiskspaceTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_DiskspaceTestcase.SetMountpoint(const mountpoint: string; const warning_percent: integer; const error_percent: integer);
@@ -413,7 +478,7 @@ begin
   config.Field('error_percent').AsByte     := error_percent;
 end;
 
-procedure TFRE_DB_DiskspaceTestcase.ExecuteTest;
+procedure TFRE_DB_DiskspaceTestcase.ExecuteJob;
 var
   test  : TFRE_DB_Testmethod_Diskspace;
   proc  : TFRE_DB_Process;
@@ -462,7 +527,7 @@ end;
 class procedure TFRE_DB_ProcessTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_ProcessTestcase.AddReport(const proc: TFRE_DB_Process; const warning_count: integer; const error_count: integer; const information: string);
@@ -512,7 +577,7 @@ begin
   config.Field('information_process').AddString(information);
 end;
 
-procedure TFRE_DB_ProcessTestcase.ExecuteTest;
+procedure TFRE_DB_ProcessTestcase.ExecuteJob;
 var
    proctest  : TFRE_DB_Testmethod_Process;
    i         : integer;
@@ -544,7 +609,7 @@ end;
 class procedure TFRE_DB_MultiPingTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_MultiPingTestcase.AddReport(const proc: TFRE_DB_Process; const rtt: Single; const information: string);
@@ -614,7 +679,7 @@ begin
   config.Field('information_hosts').AddString(information);
 end;
 
-procedure TFRE_DB_MultiPingTestcase.ExecuteTest;
+procedure TFRE_DB_MultiPingTestcase.ExecuteJob;
 var
   ping      : TFRE_DB_Testmethod_Ping;
   i         : integer;
@@ -646,7 +711,7 @@ end;
 class procedure TFRE_DB_SMBTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_SMBTestcase.SetFileshare(const host: string; const user: string; const password: string; const fileshare: string; const mountpoint: string);
@@ -658,7 +723,7 @@ begin
   config.Field('mountpoint').AsString      := mountpoint;
 end;
 
-procedure TFRE_DB_SMBTestcase.ExecuteTest;
+procedure TFRE_DB_SMBTestcase.ExecuteJob;
 var
   smb           : TFRE_DB_Testmethod_SMB;
   res           : integer;
@@ -690,7 +755,7 @@ begin
   enum.addEntry('unknown',GetTranslateableTextKey('enum_tcs_signal_status_unknown'));
   GFRE_DBI.RegisterSysEnum(enum);
 
-  scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
   scheme.AddSchemeField('status',fdbft_String).SetupFieldDef(true,false,'tcs_signal_status');
   scheme.AddSchemeField('statusupdatetime',fdbft_DateTimeUTC);
   scheme.AddSchemeField('statussummary',fdbft_String);
@@ -773,9 +838,30 @@ begin
   setter.SetAsString(GetStatusIconURI(Field('status').asstring));
 end;
 
-{ TFRE_DB_TestcaseResult }
+{ TFRE_DB_JobReport }
 
-class procedure TFRE_DB_TestcaseResult.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+procedure TFRE_DB_JobReport.SetProgress(const percent: integer);
+begin
+  Field('progress').AsInt32:=percent;
+end;
+
+procedure TFRE_DB_JobReport.AddProgressLog(const msg: string);
+var ts:TFRE_DB_DateTime64;
+    l :IFRE_DB_Object;
+    lo:IFRE_DB_Object;
+begin
+  if not FieldExists('L') then
+   Field('L').AsObject:=GFRE_DBI.NewObject;
+
+  ts:=GFRE_DT.Now_UTC;
+  lo:=GFRE_DBI.NewObject;
+  lo.Field('TS').AsDateTimeUTC:=ts;
+  lo.Field('M').asstring      :=msg;
+  lo.Field('P').asint32       :=Field('progress').AsInt32;
+  Field('L').asObject.Field(inttostr(ts)).AsObject:=lo;
+end;
+
+class procedure TFRE_DB_JobReport.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var
   enum: IFRE_DB_Enum;
 begin
@@ -788,14 +874,14 @@ begin
   enum.addEntry('unknown',GetTranslateableTextKey('enum_tcr_signal_status_unknown'));
   GFRE_DBI.RegisterSysEnum(enum);
 
-  scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
   scheme.AddSchemeField('status',fdbft_String).SetupFieldDef(true,false,'tcr_signal_status');
   scheme.AddSchemeField('statussummary',fdbft_String);
   scheme.AddSchemeField('starttime',fdbft_DateTimeUTC);
   scheme.AddSchemeField('endtime',fdbft_DateTimeUTC);
 end;
 
-class procedure TFRE_DB_TestcaseResult.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_JobReport.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
  newVersionId:='1.0';
 
@@ -820,7 +906,7 @@ end;
 class procedure TFRE_DB_MailCheckTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_MailCheckTestcase.Analyze(const testmethod: IFRE_DB_Object);
@@ -876,7 +962,7 @@ begin
  config.Field('mailserver').asObject      := mailserver;
 end;
 
-procedure TFRE_DB_MailCheckTestcase.ExecuteTest;
+procedure TFRE_DB_MailCheckTestcase.ExecuteJob;
 var
   fm           : TFRE_DB_Testmethod_FetchMailDir;
   ms           : IFRE_DB_Object;
@@ -893,7 +979,7 @@ end;
 class procedure TFRE_DB_MailSendTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_MailSendTestcase.Analyze(const proc: TFRE_DB_Process);
@@ -925,7 +1011,7 @@ begin
  config.Field('mailserver').AddObject(mailserver);
 end;
 
-procedure TFRE_DB_MailSendTestcase.ExecuteTest;
+procedure TFRE_DB_MailSendTestcase.ExecuteJob;
 var
   sm           : TFRE_DB_Testmethod_SMTPSend;
   ms           : IFRE_DB_Object;
@@ -1106,7 +1192,7 @@ begin
     Field('statussummary').AsString := statussummary;
   end;
   if Assigned(parent.Parent) then begin
-    TFRE_DB_Testcase(parent.parent.Implementor_HC).SetStatus(status,statussummary);
+    TFRE_DB_JOB(parent.parent.Implementor_HC).SetStatus(status,statussummary);
   end;
 end;
 
@@ -1167,7 +1253,7 @@ end;
 class procedure TFRE_DB_WinRMTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 procedure TFRE_DB_WinRMTestcase.InternalSetup;
@@ -1185,7 +1271,7 @@ begin
   config.Field('target').AddObject(result);
 end;
 
-procedure TFRE_DB_WinRMTestcase.ExecuteTest;
+procedure TFRE_DB_WinRMTestcase.ExecuteJob;
 var
   winrm        : TFRE_DB_Testmethod_WinRM;
   winrmtarget  : IFRE_DB_Object;
@@ -1209,7 +1295,7 @@ end;
 class procedure TFRE_DB_InternetTestcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_TESTCASE');
+  scheme.SetParentSchemeByName  (TFRE_DB_JOB.ClassName);
 end;
 
 function TFRE_DB_InternetTestcase.GetAllHosts : TFRE_DB_StringArray;
@@ -1275,7 +1361,7 @@ begin
   config.Field('pingcount').Asint32            := 4;
 end;
 
-procedure TFRE_DB_InternetTestcase.ExecuteTest;
+procedure TFRE_DB_InternetTestcase.ExecuteJob;
 var
   ping      : TFRE_DB_Testmethod_Ping;
   i         : integer;
@@ -1342,45 +1428,56 @@ begin
   end; end;
 end;
 
-{ TFRE_DB_Testcase }
+{ TFRE_DB_JOB }
 
-procedure TFRE_DB_Testcase.InternalSetup;
+procedure TFRE_DB_JOB.InternalSetup;
 begin
   inherited InternalSetup;
   Field('MAX_ALLOWED_TIME').AsInt32 := 10;
 end;
 
-function TFRE_DB_Testcase.GetConfig: IFRE_DB_Object;
+function TFRE_DB_JOB.GetConfig: IFRE_DB_Object;
 begin
  result := Field('c').AsObject;
 end;
 
-procedure TFRE_DB_Testcase.SetConfig(AValue: IFRE_DB_Object);
+procedure TFRE_DB_JOB.SetConfig(AValue: IFRE_DB_Object);
 begin
  Field('c').AsObject := AValue;
 end;
 
 
-function TFRE_DB_Testcase.GetReport: IFRE_DB_Object;
+function TFRE_DB_JOB.GetReport: IFRE_DB_Object;
 begin
  result :=Field('r').AsObject;
 end;
 
-procedure TFRE_DB_Testcase.SetReport(AValue: IFRE_DB_Object);
+procedure TFRE_DB_JOB.SetReport(AValue: IFRE_DB_Object);
 begin
   Field('r').AsObject := AValue;
 end;
 
-class procedure TFRE_DB_Testcase.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+function TFRE_DB_JOB.GetJobFilename: string;
+var jobstate     : TFRE_JobState;
+begin
+ jobstate     := GetJobState;
+ result       := GetJobBaseFilename(jobstate,jobkey);
+ if not ((jobstate=jobStateUnknown) or (jobstate=jobStateToRun) or (jobstate=jobStateImmediateStart)) then
+   result := result + '_'+inttostr(report.Field('starttime').AsDateTimeUTC);
+ result := result +'.dbo';
+end;
+
+class procedure TFRE_DB_JOB.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
   scheme.AddSchemeField('machine',fdbft_ObjLink);
   scheme.AddSchemeField('troubleshooting',fdbft_String);
+  scheme.AddSchemeField('jobstate',fdbft_String);  // enum
   scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
 end;
 
-procedure TFRE_DB_Testcase.SetStatus(const status: TFRE_SignalStatus; const statussummary: string);
+procedure TFRE_DB_JOB.SetStatus(const status: TFRE_SignalStatus; const statussummary: string);
 begin
  if report.FieldExists('status_ord') then begin
   if Ord(status) > report.Field('status_ord').AsInt16 then begin
@@ -1395,7 +1492,7 @@ begin
  end;
 end;
 
-procedure TFRE_DB_Testcase.SetDetailStatus(const detail: IFRE_DB_Object; const status: TFRE_SignalStatus; const statussummary: string);
+procedure TFRE_DB_JOB.SetDetailStatus(const detail: IFRE_DB_Object; const status: TFRE_SignalStatus; const statussummary: string);
 begin
  detail.Field('status_ord').AsInt16     := Ord(status);
  detail.Field('status').AsString        := CFRE_SignalStatus [status];
@@ -1403,19 +1500,19 @@ begin
  SetStatus(status,statussummary);
 end;
 
-procedure TFRE_DB_Testcase.SetJobkeyDescription(const newjobkey: string; const description_: string);
+procedure TFRE_DB_JOB.SetJobkeyDescription(const newjobkey: string; const description_: string);
 begin
  FNamedObject.ObjectName  := newjobkey;
  FNamedObject.Description.SetupText(newjobkey,description_);
 end;
 
-procedure TFRE_DB_Testcase.SetPeriodic(const periodic: TFRE_TestPeriodic);
+procedure TFRE_DB_JOB.SetPeriodic(const periodic: TFRE_TestPeriodic);
 begin
   config.Field('periodic_ord').AsInt16     := Ord(periodic);
   config.Field('periodic').AsString        := CFRE_TestPeriodic [periodic];
 end;
 
-function TFRE_DB_Testcase.GetPeriodic: TFRE_TestPeriodic;
+function TFRE_DB_JOB.GetPeriodic: TFRE_TestPeriodic;
 begin
  if config.FieldExists('periodic_ord') then begin
    result :=TFRE_TestPeriodic(config.Field('periodic_ord').AsInt16);
@@ -1424,27 +1521,108 @@ begin
  end;
 end;
 
-procedure TFRE_DB_Testcase.SetRemoteSSH(const user: string; const host: string; const keyfilename: string);
+procedure TFRE_DB_JOB.SaveJobToFile;
+var
+  jobfilename  : string;
+begin
+  jobfilename := GetJobFilename;
+  if not DirectoryExists(ExtractFileDir(jobfilename)) then
+    ForceDirectories(ExtractFileDir(jobfilename));
+  SaveToFile(jobfilename);
+end;
+
+procedure TFRE_DB_JOB.SetJobState(const value: TFRE_JobState);
+begin
+  if (GetJobState<>value) and (GetJobstate<>jobStateToRun) then
+    DeleteFile(GetJobFilename);
+  Field('jobstate').asstring := CFRE_JobState[value];
+end;
+
+procedure TFRE_DB_JOB.SetJobStateandSave(const value: TFRE_JobState);
+begin
+ SetJobState(value);
+ SaveJobToFile;
+end;
+
+function TFRE_DB_JOB.GetJobState: TFRE_JobState;
+var i : TFRE_JobState;
+begin
+ for i:=low(TFRE_JobState) to high(TFRE_JobState) do
+  if CFRE_JobState[i]=Field('jobstate').asstring then
+    begin
+      result := i;
+      exit;
+    end;
+ result := jobStateUnknown;
+end;
+
+procedure TFRE_DB_JOB.SetPid(const value: QWord);
+begin
+  field('pid').AsUInt64:=value;
+end;
+
+procedure TFRE_DB_JOB.ClearPid;
+begin
+  DeleteField('pid');
+end;
+
+procedure TFRE_DB_JOB.SetProgress(const percent: integer);
+var jr:TFRE_DB_JobReport;
+begin
+  jr:=(report.Implementor_HC) as TFRE_DB_JobReport;
+  jr.SetProgress(percent);
+end;
+
+procedure TFRE_DB_JOB.AddProgressLog(const msg: string; const percent: integer);
+var jr:TFRE_DB_JobReport;
+begin
+  jr:=(report.Implementor_HC) as TFRE_DB_JobReport;
+  jr.AddProgressLog(msg);
+  if percent<>-1 then
+    jr.SetProgress(percent);
+  SaveJobToFile;
+end;
+
+class function TFRE_DB_JOB.GetJobBaseFilename(const state: TFRE_JobState; const vjobkey: string): string;
+begin
+  result       :=cFRE_JOB_RESULT_DIR+CFRE_JobState[State]+DirectorySeparator+GFRE_BT.Str2HexStr(vJobKey);
+end;
+
+procedure TFRE_DB_JOB.SetRemoteSSH(const user: string; const host: string; const keyfilename: string);
 begin
   Field('remoteuser').AsString        := user;
   Field('remotehost').AsString        := host;
   Field('remotekeyfilename').AsString := keyfilename;
 end;
 
-function TFRE_DB_Testcase.JobKey: string;
+function TFRE_DB_JOB.JobKey: string;
 begin
  result := FNamedObject.ObjectName;
 end;
 
-function TFRE_DB_Testcase.IMI_Do_the_Job(const input: IFRE_DB_Object): IFRE_DB_Object;
+function TFRE_DB_JOB.IMI_Do_the_Job(const input: IFRE_DB_Object): IFRE_DB_Object;
 begin
-  report := TFRE_DB_TestcaseResult.Create;
-  report.Field('starttime').AsDateTimeUTC:=GFRE_DT.Now_UTC;
-  ExecuteTest;
-  report.Field('endtime').AsDateTimeUTC:=GFRE_DT.Now_UTC;
+  try
+    report := TFRE_DB_JobReport.Create;
+    report.Field('starttime').AsDateTimeUTC := GFRE_DT.Now_UTC;
+    report.Field('progress').asint32        := 0;
+    SetJobStateandSave(jobStateRunning);
+    ExecuteJob;
+    report.Field('endtime').AsDateTimeUTC:=GFRE_DT.Now_UTC;
+    ClearPid;
+    SetJobStateandSave(jobStateDone);
+    writeln('SWL: DONE ',Report.DumpToString());
+  except on E:Exception do
+    begin
+      AddProgressLog('EXCEPTION:'+E.Message);
+      SetJobStateandSave(jobStateFailed);
+      writeln('SWL: DONE FAILED',Report.DumpToString());
+      raise;
+    end;
+  end;
 end;
 
-procedure TFRE_DB_Testcase.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
+procedure TFRE_DB_JOB.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
   setter.SetAsString(FNamedObject.Description.Getshort);
   //result := GFRE_DBI.NewObject;
@@ -1455,8 +1633,9 @@ end;
 
 procedure Register_DB_Extensions;
 begin
-  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Testcase);
-  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_TestcaseResult);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_JOB);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_TIMERTEST_JOB);
+  GFRE_DBI.RegisterObjectClassEx(TFRE_DB_JobReport);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_TestcaseStatus);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_InternetTestcase);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_WinRMTarget);

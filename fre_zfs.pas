@@ -459,7 +459,7 @@ type
 
   { TFRE_DB_ZFSJob }
 
-  TFRE_DB_ZFSJob = class (TFRE_DB_Testcase)
+  TFRE_DB_ZFSJob = class (TFRE_DB_JOB)
   private
     procedure       _SSHSnapShotReplicate       (const do_replicate: boolean);
     procedure       _TCPSnapShotReplicate       (const do_replicate: boolean);

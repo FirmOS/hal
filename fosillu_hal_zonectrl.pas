@@ -7,7 +7,7 @@ interface
 
 uses
   Classes, SysUtils,unix,ctypes,unixtype,fos_illumos_defs,fosillu_priv,fosillu_libzonecfg,fosillu_priv_names,
-  fos_tool_interfaces,fosillu_libzfs,fre_db_interface,fosillu_hal_dbo_zfs_dataset,fre_process;
+  fos_tool_interfaces,fosillu_libzfs,fre_db_interface,fosillu_hal_dbo_zfs_dataset,fre_process,fre_testcase;
 
 const
   CMD_HELP      =   0;
@@ -54,18 +54,18 @@ var zents  : array of zone_entry_t;
 procedure sanity_check(zone : string; cmd_num : integer; running, unsafe_when_running, force : boolean);
 
 procedure list_zones;
-function  fre_install_zone  (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_create_zonecfg(const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_boot_zone     (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_halt_zone     (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_shutdown_zone (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
-function  fre_destroy_zone  (const zone_dbo:IFRE_DB_Object): IFRE_DB_Object;
+function  fre_install_zone  (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
+function  fre_create_zonecfg(const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
+function  fre_boot_zone     (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
+function  fre_halt_zone     (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
+function  fre_shutdown_zone (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
+function  fre_destroy_zone  (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
 
 function  fre_set_zonestate (const zonename:string; const state:uint_t): boolean;
 
 implementation
 
-procedure add_dataset      (const handle: zone_dochandle_t; const fs_dir,fs_type,fs_special:string);
+procedure add_filesystem      (const handle: zone_dochandle_t; const fs_dir,fs_type,fs_special:string;const job:TFRE_DB_JOB);
 var
   fstab           : zone_fstab;
   err             : integer;
@@ -90,6 +90,7 @@ begin
       msg := StrPas(zonecfg_strerror(err));
       raise Exception.Create('error on adding fs :'+inttostr(err)+' '+msg);
     end;
+  if Assigned(job) then job.AddProgressLog('Added Filesystem '+fs_dir+' '+fs_special);
 end;
 
 procedure add_device       (const handle: zone_dochandle_t; const dev_match : string);
@@ -111,7 +112,7 @@ begin
    end;
 end;
 
-procedure add_dataset      (const handle: zone_dochandle_t; const ds_name : string);
+procedure add_dataset      (const handle: zone_dochandle_t; const ds_name : string; const job:TFRE_DB_JOB);
 var
   err             : integer;
   msg             : string;
@@ -127,6 +128,7 @@ begin
       msg := StrPas(zonecfg_strerror(err));
       raise Exception.Create('error on adding dataset :'+inttostr(err)+' '+msg);
     end;
+  if Assigned(job) then job.AddProgressLog('Added Dataset '+ds_name);
 end;
 
 procedure lookup_zone_info(const zone_name:string; zid : zoneid_t ; var zent : zone_entry_t);
@@ -430,7 +432,7 @@ begin
    //writeln;
 end;
 
-function fre_install_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+function fre_install_zone(const zone_dbo: IFRE_DB_Object; const job: TFRE_DB_Job): IFRE_DB_Object;
 var
   zone_caption    : string;
   domainname      : string;
@@ -463,6 +465,7 @@ var
       end;
     setzfsproperties(dsname,'fre:zonename',zone_caption);
     setzfsproperties(dsname,'fre:domainname',domainname);
+    if assigned(job) then job.AddProgressLog('Created dataset '+dsname);
   end;
 
   procedure       clone_dataset(const snapshot_name:string; const dsname:string);
@@ -476,6 +479,7 @@ var
       end;
     setzfsproperties(dsname,'fre:zonename',zone_caption);
     setzfsproperties(dsname,'fre:domainname',domainname);
+    if assigned(job) then job.AddProgressLog('Cloned dataset '+snapshot_name+' '+dsname);
   end;
 
 begin
@@ -486,8 +490,12 @@ begin
   template_dataset := zone_dbo.Field('templatedataset').asstring;
   zone_dataset     := zone_dbo.Field('zonedataset').asstring;
 
-  writeln('SWL: DOMAINDATASET');
+  if assigned(job) then job.AddProgressLog('Installing Zone '+zone_caption+' '+zone_dataset,65);
+
+//  writeln('SWL: DOMAINDATASET');
   fosillu_zfs_create_ds(master_dataset+'/domains',errs);
+//  writeln('SWL: DOMAINDATASET DONE');
+
   // ignore errors here
   fosillu_zfs_create_ds(master_dataset+'/domains/'+zone_dbo.DomainID.AsHexString,errs);
   // ignore errors here
@@ -496,10 +504,10 @@ begin
   fosillu_zfs_create_ds(master_dataset+'/zones/'+zone_dbo.UID.AsHexString,errs);
   // ignore errors here
 
-  writeln('SWL: ZONEDATASET');
+//  writeln('SWL: ZONEDATASET');
+
   clone_dataset (template_dataset+'@final',zone_dataset);
   create_dataset(zone_dataset+'/vmdisk');
-
 
   create_dataset(zone_dataset+'/zonedata');
   create_dataset(zone_dataset+'/zonedata/vfiler');
@@ -509,10 +517,10 @@ begin
   clone_dataset (template_dataset+'/optfre@final',zone_dataset+'/zonedata/optfre');
 
   fre_set_zonestate(zone_dbo.UID_String,ZONE_STATE_INSTALLED);
-
+  if assigned(job) then job.AddProgressLog('Zonestate set to INSTALLED',90);
 end;
 
-function fre_create_zonecfg(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+function fre_create_zonecfg(const zone_dbo: IFRE_DB_Object;const job: TFRE_DB_Job): IFRE_DB_Object;
 var
   handle          : zone_dochandle_t;
   zone_template   : string;
@@ -535,7 +543,9 @@ var
   domainname      : string;
 
 begin
- writeln('SWL ZONE:',zone_dbo.DumpToString());
+// writeln('SWL ZONE:',zone_dbo.DumpToString());
+// writeln('SWL JOB:',job.DumpToString());
+
  zone_caption     := zone_dbo.Field('objname').asstring;
  domainname       := zone_dbo.Field('domainname').asstring;
  zone_name        := zone_dbo.UID.AsHexString;
@@ -560,7 +570,7 @@ begin
      raise Exception.Create('error on zone creation :'+msg);
    end;
 
- writeln('got template handle');
+ // writeln('got template handle');
 
  err := zonecfg_set_zonepath(handle,PChar(zone_path));
  if err<>Z_OK then
@@ -596,17 +606,20 @@ begin
      msg := StrPas(zonecfg_strerror(err));
      raise Exception.Create('error on getting zonename :'+msg);
    end;
- writeln('assigned zonename ',czonename);
 
- add_dataset(handle,'/etc','lofs',zone_path+'/zonedata/etc');
- add_dataset(handle,'/var','lofs',zone_path+'/zonedata/var');
- add_dataset(handle,'/opt/local/etc','lofs',zone_path+'/zonedata/optetc');
- add_dataset(handle,'/opt/local/fre','lofs',zone_path+'/zonedata/optfre');
- add_dataset(handle,'/vfiler','lofs',zone_path+'/zonedata/vfiler');
- add_dataset(handle,'/zonedbo','lofs',master_dspath+'/zones/'+zone_dbo.UID.asHexstring);
+ if assigned(job) then job.AddProgressLog('Assigned zonename '+czonename+',15');
+
+ add_filesystem(handle,'/etc','lofs',zone_path+'/zonedata/etc',job);
+ add_filesystem(handle,'/var','lofs',zone_path+'/zonedata/var',job);
+ add_filesystem(handle,'/opt/local/etc','lofs',zone_path+'/zonedata/optetc',job);
+ add_filesystem(handle,'/opt/local/fre','lofs',zone_path+'/zonedata/optfre',job);
+ add_filesystem(handle,'/vfiler','lofs',zone_path+'/zonedata/vfiler',job);
+ add_filesystem(handle,'/zonedbo','lofs',master_dspath+'/zones/'+zone_dbo.UID.asHexstring,job);
+
+ if assigned(job) then job.AddProgressLog('Added Datasets ',20);
 
  add_device (handle,'/dev/zvol/rdsk/'+zone_dataset+'/vmdisk/*');
- add_dataset(handle,zone_dataset+'/vmdisk');
+ add_dataset(handle,zone_dataset+'/vmdisk',job);
 
  err := zonecfg_save(handle);
  if err<>Z_OK then
@@ -615,14 +628,21 @@ begin
      raise Exception.Create('error on saving zone :'+inttostr(err)+' '+msg);
    end;
 
+ if assigned(job) then job.AddProgressLog('Zonecfg saved in System',25);
+
  // copying zone dbo dataset
  writeln('SWL: Saving zones file ',master_dspath+'/zones/'+zone_dbo.UID.asHexstring+'/zone.dbo');
  zone_dbo.SaveToFile(master_dspath+'/zones/'+zone_dbo.UID.asHexstring+'/zone.dbo');
 
+ if assigned(job) then job.AddProgressLog('Zonecfg saved to zone dbo file',30);
+
  fre_set_zonestate(zone_name,ZONE_STATE_CONFIGURED);
+
+ if assigned(job) then job.AddProgressLog('Zonestate set to CONFIGURED',40);
 end;
 
-function fre_boot_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+function fre_boot_zone(const zone_dbo: IFRE_DB_Object; const job: TFRE_DB_Job
+  ): IFRE_DB_Object;
 var
   zarg         : zone_cmd_arg;
   zone_name    : string;
@@ -644,19 +664,24 @@ begin
     end;
 end;
 
-function fre_halt_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+function fre_halt_zone(const zone_dbo: IFRE_DB_Object; const job: TFRE_DB_Job): IFRE_DB_Object;
 var
   zarg         : zone_cmd_arg;
   zone_name    : string;
   err          : integer;
   msg          : string;
+  czone_lock_env  : PChar;
 begin
-  writeln('SWL ZONE:',zone_dbo.DumpToString());
+//  writeln('SWL ZONE:',zone_dbo.DumpToString());
   zone_name     := zone_dbo.UID.AsHexString;
 
   FillByte(zarg,sizeof(zarg),0);
   zarg.cmd      := Z_HALT;
 
+//  writeln('init lock file');
+  zonecfg_init_lock_file(PChar(zone_name),@czone_lock_env);
+
+  writeln('SWL BEFORE CALL ZONEADMD');
   err := zonecfg_call_zoneadmd(Pchar(zone_name),@zarg,Pchar('C'),B_TRUE);
   if err<>Z_OK then
     begin
@@ -665,7 +690,8 @@ begin
     end;
 end;
 
-function fre_shutdown_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+function fre_shutdown_zone(const zone_dbo: IFRE_DB_Object;
+  const job: TFRE_DB_Job): IFRE_DB_Object;
 var
   zone_name    : string;
   cmd          : string;
@@ -675,7 +701,8 @@ begin
   FRE_ProcessCMDException('zlogin '+zone_name+' shutdown -i5 -g0 -y');
 end;
 
-function fre_destroy_zone(const zone_dbo: IFRE_DB_Object): IFRE_DB_Object;
+function fre_destroy_zone(const zone_dbo: IFRE_DB_Object; const job: TFRE_DB_Job
+  ): IFRE_DB_Object;
 var
   zone_name    : string;
   zone_dataset : string;

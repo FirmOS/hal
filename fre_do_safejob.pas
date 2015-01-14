@@ -43,7 +43,7 @@ unit fre_do_safejob;
 interface
 
 uses  Classes, SysUtils,FRE_SYSTEM,FOS_TOOL_INTERFACES,FRE_DB_INTERFACE,BaseUnix, FOS_TOOL_FACTORY,
-      FRE_PROCESS;//Unix,pthreads;
+      FRE_PROCESS,fre_testcase;//Unix,pthreads;
 
 type
 
@@ -63,8 +63,8 @@ type
 
 
 
-procedure DO_SaveJob(const job_key:String;const job_desc_dbo_path:string);
-procedure DO_SaveJob(const job_desc_dbo : IFRE_DB_Object);
+procedure DO_SaveJob(const job_key:String);
+procedure DO_SaveJob(const jobdbo : IFRE_DB_Object);
 
 
 function TestIt:IFRE_DB_Object;
@@ -152,59 +152,66 @@ end;
 
 
 
-procedure DO_SaveJob(const job_key: String; const job_desc_dbo_path: string);
-var jobsdbo      : IFRE_DB_Object;
+procedure DO_SaveJob(const job_key: String);
+var jobdbo      : IFRE_DB_Object;
+    jobfile     : string;
 begin
-  if job_key                         = ''    then AbortCritical('NO JOBKEY SPECIFIED');
-  if not FileExists(job_desc_dbo_path)      then AbortCritical('NO JOB DESC DBO FILE FOUND');
+  if job_key='' then
+    AbortCritical('NO JOBKEY SPECIFIED');
+  jobfile := TFRE_DB_JOB.GetJobBaseFilename(jobStateImmediateStart,job_key)+'.dbo';
+  if not FileExists(jobfile) then
+    jobfile := TFRE_DB_JOB.GetJobBaseFilename(jobStateToRun,job_key)+'.dbo';
+  if not FileExists(jobfile)      then AbortCritical('NO JOB DESC DBO FILE FOUND');
   try
-    jobsdbo                          := GFRE_DBI.CreateFromFile(job_desc_dbo_path);
+    jobdbo                          := GFRE_DBI.CreateFromFile(jobfile);
   except on E: Exception do begin
     AbortCritical ('EXCEPTION ON LOADING JOB DESC DBO FILE :'+E.Message);
   end; end;
-  if jobsdbo.FieldExists(job_key)  = false then AbortCritical('JOBKEY NOT FOUND IN JOB DESC DBO:'+job_key);
-  DO_SaveJob(jobsdbo.Field(job_key).AsObject);
+  DO_SaveJob(jobdbo);
 end;
 
-procedure DO_SaveJob(const job_desc_dbo: IFRE_DB_Object);
+procedure DO_SaveJob(const jobdbo: IFRE_DB_Object);
 var watchtimeout : integer;
-    job_dbo      : IFRE_DB_NAMED_OBJECT;
     job_key      : string;
     to_thread    : TTimeoutThread;
     pidlockfile  : string;
     pidlockinfo  : string;
+    job          : TFRE_DB_JOB;
 begin
+  writeln('SWL: DO SAFE JOB');
   _SetupSignals;
-  try
-    job_dbo     := job_desc_dbo.Implementor as IFRE_DB_NAMED_OBJECT;
-    job_key     := job_dbo.ObjectName;
-    pidlockfile :=  cFRE_PID_LOCK_DIR+DirectorySeparator+'SJ_'+uppercase(GFRE_BT.Str2HexStr(job_key)+'.flck');
-    if job_desc_dbo.FieldExists('MAX_ALLOWED_TIME') then begin
-      watchtimeout := job_desc_dbo.Field('MAX_ALLOWED_TIME').AsInt32;
-    end else begin
-      watchtimeout := 1;
+  if jobdbo.IsA(TFRE_DB_JOB,job) then
+    begin
+      job_key     := job.ObjectName;
+      try
+        writeln('SWL: DO SAFE JOB ',job_key);
+        pidlockfile :=  cFRE_PID_LOCK_DIR+DirectorySeparator+'SJ_'+uppercase(GFRE_BT.Str2HexStr(job_key)+'.flck');
+        if job.FieldExists('MAX_ALLOWED_TIME') then begin
+          watchtimeout := job.Field('MAX_ALLOWED_TIME').AsInt32;
+        end else begin
+          watchtimeout := 1;
+        end;
+        if FileExists(pidlockfile) then begin
+          AbortCritical('SAFEJOB START FAILED, JOB [%s] IS RUNNING!',[job_key]);
+          halt(1);
+        end else begin
+           pidlockinfo := IntToStr(GetProcessID)+LineEnding+job_key+LineEnding+inttostr(watchtimeout);
+           GFRE_BT.StringToFile(pidlockfile,pidlockinfo);
+           job.SetPid(GetProcessID);
+        end;
+        to_thread := TTimeoutThread.Create(watchtimeout*1000,GetProcessID,pidlockfile);
+        try
+          jobdbo.Invoke('DO_THE_JOB',nil,nil,nil,nil);
+        except on e:exception do begin
+          LogSaveJob_ERROR('ERROR ON JOB [%s] : [%s]',[job_key,e.Message]);
+        end;end;
+        to_thread.WorkerDone;
+        to_thread.SignalBreak;
+      finally
+        writeln('DELETE PIDLOCK FILE');
+        DeleteFile(pidlockfile);
+      end;
     end;
-    if FileExists(pidlockfile) then begin
-      AbortCritical('SAFEJOB START FAILED, JOB [%s] IS RUNNING!',[job_key]);
-      halt(1);
-    end else begin
-       pidlockinfo := IntToStr(GetProcessID)+LineEnding+job_key+LineEnding+inttostr(watchtimeout);
-       GFRE_BT.StringToFile(pidlockfile,pidlockinfo);
-    end;
-    to_thread := TTimeoutThread.Create(watchtimeout*1000,GetProcessID,pidlockfile);
-    try
-      job_desc_dbo.Invoke('DO_THE_JOB',nil,nil,nil,nil);
-      job_desc_dbo.SaveToFile(cFRE_JOB_RESULT_DIR+uppercase(GFRE_BT.Str2HexStr(job_key))+'.job');
-//      writeln (job_desc_dbo.DumpToString);
-    except on e:exception do begin
-      LogSaveJob_ERROR('ERROR ON JOB [%s] : [%s]',[job_key,e.Message]);
-    end;end;
-    to_thread.WorkerDone;
-    to_thread.SignalBreak;
-  finally
-    writeln('DELETE PIDLOCK FILE');
-    DeleteFile(pidlockfile);
-  end;
 end;
 
 function TestIt:IFRE_DB_Object;

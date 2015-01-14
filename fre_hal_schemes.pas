@@ -58,6 +58,7 @@ uses
   fre_openssl_interface,
   fre_monitoring,
   {$IFDEF SOLARIS}
+  fosillu_hal_dbo_common,
   fosillu_hal_zonectrl,
   fosillu_hal_svcctrl,
   fosillu_dladm,
@@ -497,7 +498,24 @@ type
      function        RIF_ZoneCreate        : IFRE_DB_Object;
    end;
 
-  { TFRE_DB_DEVICE }
+   { TFRE_DB_ZONECREATION_JOB }
+
+   TFRE_DB_ZONECREATION_JOB=class(TFRE_DB_JOB)
+   public
+     procedure       SetZoneObject               (const zonedbo:IFRE_DB_Object);
+     procedure       ExecuteJob                  ; override;
+   end;
+
+   { TFRE_DB_ZONEDESTROY_JOB }
+
+   TFRE_DB_ZONEDESTROY_JOB=class(TFRE_DB_JOB)
+   public
+     procedure       SetZoneObject               (const zonedbo:IFRE_DB_Object);
+     procedure       ExecuteJob                  ; override;
+   end;
+
+
+   { TFRE_DB_DEVICE }
 
   TFRE_DB_DEVICE=class(TFRE_DB_ASSET)
   private
@@ -1252,6 +1270,63 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_ZONEDESTROY_JOB }
+
+procedure TFRE_DB_ZONEDESTROY_JOB.SetZoneObject(const zonedbo: IFRE_DB_Object);
+begin
+  Field('zone').asobject:=zonedbo;
+  SetJobkeyDescription(uppercase('ZONEDESTROY_'+zonedbo.UID.AsHexString),'Destruction of Zone '+zonedbo.UID.AsHexString);
+end;
+
+procedure TFRE_DB_ZONEDESTROY_JOB.ExecuteJob;
+var zobj : IFRE_DB_Object;
+begin
+  {$IFDEF SOLARIS}
+//  writeln('SWL EXEC ZONEDESTROY');
+  InitIllumosLibraryHandles;
+
+  zobj := Field('zone').asobject;
+
+  AddProgressLog('Zone destruction started',10);
+  fre_halt_zone(zobj,self);
+  AddProgressLog('Zone halt done',50);
+  fre_destroy_zone(zobj,self);
+  AddProgressLog('Zone destruction done',100);
+  {$ENDIF SOLARIS}
+end;
+
+{ TFRE_DB_ZONECREATION_JOB }
+
+procedure TFRE_DB_ZONECREATION_JOB.SetZoneObject(const zonedbo: IFRE_DB_Object);
+begin
+  Field('zone').asobject:=zonedbo;
+  SetJobkeyDescription(uppercase('ZONECREATE_'+zonedbo.UID.AsHexString),'Creation of Zone '+zonedbo.UID.AsHexString);
+end;
+
+procedure TFRE_DB_ZONECREATION_JOB.ExecuteJob;
+var zobj : IFRE_DB_Object;
+begin
+  {$IFDEF SOLARIS}
+  InitIllumosLibraryHandles;
+
+  zobj := Field('zone').asobject;
+
+  AddProgressLog('Zone creation started',10);
+  fre_create_zonecfg(zobj,self);
+  AddProgressLog('Zone configuration done',50);
+//  readln;
+  fre_install_zone(zobj,self);
+  AddProgressLog('Zone installation done',100);
+//  readln;
+//  fre_set_zonestate(obj.UID.AsHexString,ZONE_STATE_INSTALLED);
+//  writeln('zone set to installed');
+//  readln;
+//  fre_boot_zone(zobj);
+//  writeln('zone booting');
+  {$ENDIF SOLARIS}
+end;
+
 
 { TFRE_DB_SUBSERVICE }
 
@@ -5117,7 +5192,7 @@ end;
  function TFRE_DB_ZONE.RIF_ZoneCreate: IFRE_DB_Object;
  begin
    {$IFDEF SOLARIS}
-   result := fre_create_zonecfg(self);
+//   result := fre_create_zonecfg(self);
    {$ENDIF SOLARIS}
  end;
 
@@ -6549,6 +6624,10 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_HOSTNET);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FS_ENTRY);
+
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONECREATION_JOB);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONEDESTROY_JOB);
+
    //GFRE_DBI.Initialize_Extension_Objects;
  end;
 
