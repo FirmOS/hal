@@ -101,17 +101,28 @@ type
       procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER);
     end;
 
-   { TFRE_DB_SERVICE }
+    { TFRE_DB_SERVICE_BASE }
 
-   TFRE_DB_SERVICE=class(TFRE_DB_VIRTUALMOSOBJECT)
+   TFRE_DB_SERVICE_BASE=class(TFRE_DB_VIRTUALMOSOBJECT)
+   public
+     class function  OnlyOneServicePerZone  : Boolean; virtual;
+     class function  GetCaption             (const conn:IFRE_DB_CONNECTION): String; virtual;
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     class function  WBC_GetConfig          (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object; virtual;
+   end;
+
+    { TFRE_DB_SERVICE }
+
+   TFRE_DB_SERVICE=class(TFRE_DB_SERVICE_BASE)
    protected
      procedure       ClearErrors;
      function        ExecuteCMD(const cmd:string;out outstring:string;const ignore_errors:boolean=false):integer;
 
+   public
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-     class function  OnlyOneServicePerZone : boolean; virtual;
-   public
      class function  GetMachineUIDForService(const conn : IFRE_DB_CONNECTION ; service_uid : TFRE_DB_GUID):TFRE_DB_GUID;
      procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
      procedure       SetSvcNameandType      (const service_name:string; const common_name : string; const duration:string; const ignore_error:string; const enabled:boolean=false);
@@ -123,7 +134,7 @@ type
      procedure       AddSvcDependent        (const name:string; const fmri:string; const grouping:string; const restart_on:string);
      function        GetFMRI                : TFRE_DB_STRING; virtual;
    published
-     procedure       CALC_GetDisplayName (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
+     procedure       CALC_GetDisplayName       (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; virtual;
      function        RIF_StartService          : IFRE_DB_Object; virtual; abstract;
      function        RIF_StopService           : IFRE_DB_Object; virtual; abstract;
@@ -131,7 +142,7 @@ type
 
    { TFRE_DB_SUBSERVICE }
 
-   TFRE_DB_SUBSERVICE=class(TFRE_DB_ObjectEx)
+   TFRE_DB_SUBSERVICE=class(TFRE_DB_SERVICE_BASE)
    protected
      class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -306,6 +317,7 @@ type
      function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        RIF_CreateVNIC         : IFRE_DB_Object;
+     class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
    end;
 
    { TFRE_DB_DATALINK_IPTUN }
@@ -315,6 +327,7 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
+     class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
    end;
 
    { TFRE_DB_IP_HOSTNET }
@@ -376,6 +389,7 @@ type
      function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_AddVNIC            (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
+     class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
    end;
 
    { TFRE_DB_DATALINK_AGGR }
@@ -388,6 +402,7 @@ type
      function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_AddVNIC            (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
+     class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
    end;
 
    { TFRE_DB_DATALINK_IPMP }
@@ -396,6 +411,8 @@ type
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
    end;
 
    { TFRE_DB_ZIP_STATUS }
@@ -433,8 +450,9 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
-     procedure       CALC_GetDisplayName    (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+     procedure       CALC_GetDisplayName       (const setter: IFRE_DB_CALCFIELD_SETTER); override;
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
+     class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
    public
      function        GetFMRI                : TFRE_DB_STRING; override;
 
@@ -454,7 +472,8 @@ type
    public
      function        GetFMRI                : TFRE_DB_STRING; override;
    published
-     procedure       CALC_GetDisplayName    (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+     procedure       CALC_GetDisplayName       (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+     class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
    end;
 
@@ -462,12 +481,13 @@ type
 
    TFRE_DB_LDAP_SERVICE=class(TFRE_DB_SERVICE)
    protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     class procedure RegisterSystemScheme      (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects          (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
-     function        GetFMRI                : TFRE_DB_STRING; override;
+     function        GetFMRI                   : TFRE_DB_STRING; override;
    published
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
+     class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
    end;
 
    { TFRE_DB_NAS }
@@ -805,6 +825,7 @@ type
     function WEB_ChildrenData            (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
     function IMI_addSubnet               (const input:IFRE_DB_Object) : IFRE_DB_Object;
     function IMI_addFixedHost            (const input:IFRE_DB_Object) : IFRE_DB_Object;
+    class function  GetCaption           (const conn: IFRE_DB_CONNECTION): String; override;
     function RIF_CreateOrUpdateService   : IFRE_DB_Object; override;
   end;
 
@@ -839,6 +860,7 @@ type
   public
     function        GetFMRI                : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -869,6 +891,7 @@ type
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
     class function  OnlyOneServicePerZone : boolean; override;
+    class function  GetCaption            (const conn: IFRE_DB_CONNECTION): String; override;
   published
   end;
 
@@ -900,6 +923,8 @@ type
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    class function  GetCaption           (const conn:IFRE_DB_CONNECTION): String; override;
   end;
 
   { TFRE_DB_VIRTUAL_FILESERVER }
@@ -912,6 +937,7 @@ type
     function        GetFMRI                : TFRE_DB_STRING; override;
   published
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
   end;
 
   { TFRE_DB_CRYPTO_FILESERVER }
@@ -935,6 +961,7 @@ type
   public
     function        GetFMRI                : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -947,6 +974,7 @@ type
   public
     function        GetFMRI                : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -959,6 +987,7 @@ type
   public
     function        GetFMRI                : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -971,6 +1000,7 @@ type
   public
     function        GetFMRI                : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -983,6 +1013,7 @@ type
   public
     function        GetFMRI              : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -995,6 +1026,7 @@ type
   public
     function        GetFMRI              : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -1007,6 +1039,7 @@ type
   public
     function        GetFMRI              : TFRE_DB_STRING; override;
   published
+    class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
@@ -1271,6 +1304,39 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_SERVICE_BASE }
+
+class function TFRE_DB_SERVICE_BASE.OnlyOneServicePerZone: Boolean;
+begin
+  Result := false;
+end;
+
+class function TFRE_DB_SERVICE_BASE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=ClassName;
+end;
+
+class procedure TFRE_DB_SERVICE_BASE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  ('TFRE_DB_VIRTUALMOSOBJECT');
+end;
+
+class procedure TFRE_DB_SERVICE_BASE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
+class function TFRE_DB_SERVICE_BASE.WBC_GetConfig(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  Result:=GFRE_DBI.NewObject;
+  Result.Field('OnlyOneServicePerZone').AsBoolean:=OnlyOneServicePerZone;
+  Result.Field('Caption').AsString:=GetCaption(conn);
+end;
+
 { TFRE_DB_ZONEDESTROY_JOB }
 
 procedure TFRE_DB_ZONEDESTROY_JOB.SetZoneObject(const zonedbo: IFRE_DB_Object);
@@ -1335,7 +1401,7 @@ var
   group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+  scheme.SetParentSchemeByName  (TFRE_DB_SERVICE_BASE.ClassName);
   scheme.GetSchemeField('objname').required:=true;
   scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
   scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
@@ -1373,12 +1439,18 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','PHP');
   end;
 end;
 
 function TFRE_DB_PHPFPM_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_phpfpm';
+end;
+
+class function TFRE_DB_PHPFPM_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_PHPFPM_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -1414,6 +1486,7 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','LDAP');
   end;
 end;
 
@@ -1441,6 +1514,11 @@ begin
    result.Field('fmri').asstring:=servicename;
 
  {$ENDIF}
+end;
+
+class function TFRE_DB_LDAP_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 { TFRE_DB_CRYPTO_FILESERVER }
@@ -1495,7 +1573,7 @@ end;
 
 class procedure TFRE_DB_DATALINK_IPMP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
 
@@ -1504,6 +1582,15 @@ begin
     StoreTranslateableText(conn,'scheme_description','Description');
     StoreTranslateableText(conn,'scheme_mtu','MTU');
   end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'caption','Datalink - IPMP');
+  end;
+end;
+
+class function TFRE_DB_DATALINK_IPMP.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 { TFRE_DB_SSH_SERVICE }
@@ -1519,12 +1606,18 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','SSH');
   end;
 end;
 
 function TFRE_DB_SSH_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_ssh';
+end;
+
+class function TFRE_DB_SSH_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_SSH_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -1589,12 +1682,18 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','Webserver');
   end;
 end;
 
 function TFRE_DB_HTTP_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_httpd';
+end;
+
+class function TFRE_DB_HTTP_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_HTTP_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -1636,12 +1735,18 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','MySQL');
   end;
 end;
 
 function TFRE_DB_MYSQL_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_mysql';
+end;
+
+class function TFRE_DB_MYSQL_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_MYSQL_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -1683,12 +1788,18 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','Postgres');
   end;
 end;
 
 function TFRE_DB_POSTGRES_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_postgresql';
+end;
+
+class function TFRE_DB_POSTGRES_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_POSTGRES_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -1726,12 +1837,18 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','MTA');
   end;
 end;
 
 function TFRE_DB_MTA_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_mta';
+end;
+
+class function TFRE_DB_MTA_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_MTA_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -1767,12 +1884,18 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','IMAP');
   end;
 end;
 
 function TFRE_DB_IMAP_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_imap';
+end;
+
+class function TFRE_DB_IMAP_SERVICE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_IMAP_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -1907,7 +2030,7 @@ end;
 
 class procedure TFRE_DB_DATALINK_IPTUN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'enum_ip_tun_mode_ip6ip6','IPv6 in IPv6');
@@ -1919,6 +2042,15 @@ begin
     StoreTranslateableText(conn,'scheme_local_ip_net_ipv4','IPv4 Local Address');
     StoreTranslateableText(conn,'scheme_device','Device');
   end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'caption','Datalink - IPTUN');
+  end;
+end;
+
+class function TFRE_DB_DATALINK_IPTUN.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 { TFRE_DB_IP_ADDRESS }
@@ -2739,9 +2871,13 @@ end;
 
 class procedure TFRE_DB_DNS.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+  end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'caption','DNS');
   end;
 end;
 
@@ -2753,6 +2889,11 @@ end;
 procedure TFRE_DB_DNS.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
   setter.SetAsString('DNS: '+Field('objname').AsString);
+end;
+
+class function TFRE_DB_DNS.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_DNS.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -2881,7 +3022,6 @@ begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_main_group','General Information');
   end;
-
 end;
 
 procedure TFRE_DB_SERVICE_DOMAIN.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
@@ -3626,17 +3766,26 @@ end;
 
 class procedure TFRE_DB_Routing.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_main_group','Routing');
     StoreTranslateableText(conn,'scheme_default','Default Routing');
+  end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'caption','Routing');
   end;
 end;
 
 class function TFRE_DB_Routing.OnlyOneServicePerZone: boolean;
 begin
   result := true;
+end;
+
+class function TFRE_DB_Routing.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 { TFRE_DB_Radius }
@@ -3665,15 +3814,24 @@ end;
 
 class procedure TFRE_DB_VPN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+  end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'caption','VPN');
   end;
 end;
 
 function TFRE_DB_VPN.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_vpn_'+UID.AsHexString;
+end;
+
+class function TFRE_DB_VPN.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_VPN.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -3831,7 +3989,7 @@ end;
 
 class procedure TFRE_DB_DHCP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_main_group','General Information');
@@ -3840,6 +3998,10 @@ begin
     StoreTranslateableText(conn,'scheme_default_leasetime','Default Leasetime');
     StoreTranslateableText(conn,'scheme_fixed_start','Begin of fixed addresses');
     StoreTranslateableText(conn,'scheme_fixed_end','End of fixed addresses');
+  end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'caption','DHCP');
   end;
 end;
 
@@ -3937,6 +4099,11 @@ begin
   serverFunc.AddParam.Describe('collection','dhcp_fixed');
   res.AddButton.Describe('Save',serverFunc,fdbbt_submit);
   Result:=res;
+end;
+
+class function TFRE_DB_DHCP.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 function TFRE_DB_DHCP.RIF_CreateOrUpdateService: IFRE_DB_Object;
@@ -5417,9 +5584,13 @@ end;
 
  class procedure TFRE_DB_DATALINK_STUB.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
+     StoreTranslateableText(conn,'caption','Datalink - Stub');
    end;
  end;
 
@@ -5445,6 +5616,11 @@ end;
    result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
  end;
 
+class function TFRE_DB_DATALINK_STUB.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
+end;
+
  { TFRE_DB_DATALINK_AGGR }
 
  class procedure TFRE_DB_DATALINK_AGGR.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -5456,9 +5632,13 @@ end;
 
  class procedure TFRE_DB_DATALINK_AGGR.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
  begin
-   newVersionId:='1.0';
+   newVersionId:='1.1';
    if currentVersionId='' then begin
      currentVersionId := '1.0';
+   end;
+   if currentVersionId='1.0' then begin
+     currentVersionId := '1.1';
+     StoreTranslateableText(conn,'caption','Datalink - Aggregation');
    end;
  end;
 
@@ -5483,6 +5663,11 @@ end;
  begin
    result :=  TFRE_DB_MESSAGE_DESC.create.Describe('','Feature disabled in Demo Mode',fdbmt_info,nil);
  end;
+
+class function TFRE_DB_DATALINK_AGGR.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
+end;
 
  { TFRE_DB_DATALINK_VNIC }
 
@@ -5511,6 +5696,8 @@ end;
      StoreTranslateableText(conn,'scheme_name','Link Name');
      StoreTranslateableText(conn,'scheme_description','Description');
      StoreTranslateableText(conn,'scheme_mtu','MTU');
+
+     StoreTranslateableText(conn,'caption','Datalink - VNIC');
    end;
  end;
 
@@ -5565,6 +5752,11 @@ end;
    writeln('CREATE VNIC DONE');
    {$ENDIF}
  end;
+
+class function TFRE_DB_DATALINK_VNIC.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
+end;
 
  { TFRE_DB_DATALINK_PHYS }
 
@@ -5868,6 +6060,7 @@ end;
 
      StoreTranslateableText(conn,'scheme_main_group','General Information');
      StoreTranslateableText(conn,'scheme_objname','Servicename');
+     StoreTranslateableText(conn,'caption','Virtual Machine');
    end;
  end;
 
@@ -5895,6 +6088,11 @@ end;
 
    {$ENDIF}
  end;
+
+class function TFRE_DB_VMACHINE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
+end;
 
  function TFRE_DB_VMACHINE.GetFMRI: TFRE_DB_STRING;
  begin
@@ -6198,7 +6396,7 @@ end;
  var group : IFRE_DB_InputGroupSchemeDefinition;
  begin
    inherited RegisterSystemScheme(scheme);
-   scheme.SetParentSchemeByName  ('TFRE_DB_OBJECTEX');
+   scheme.SetParentSchemeByName  ('TFRE_DB_SERVICE_BASE');
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
    scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
@@ -6215,11 +6413,6 @@ end;
      StoreTranslateableText(conn,'scheme_main_group','General Information');
      StoreTranslateableText(conn,'scheme_objname','Servicename');
    end;
- end;
-
- class function TFRE_DB_SERVICE.OnlyOneServicePerZone: boolean;
- begin
-   result := false;
  end;
 
  class function TFRE_DB_SERVICE.GetMachineUIDForService(const conn: IFRE_DB_CONNECTION; service_uid: TFRE_DB_GUID): TFRE_DB_GUID;
@@ -6337,7 +6530,6 @@ end;
   {$ENDIF}
  end;
 
-
  { TFRE_DB_VIRTUAL_FILESERVER }
 
 class procedure TFRE_DB_VIRTUAL_FILESERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -6354,7 +6546,7 @@ end;
 
 class procedure TFRE_DB_VIRTUAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'vfs_scheme_main_group','Virtual Fileserver Properties');
@@ -6364,6 +6556,10 @@ begin
     //StoreTranslateableText(conn,'scheme_ip','IP');
     //StoreTranslateableText(conn,'scheme_interface','Interface');
     //StoreTranslateableText(conn,'scheme_vlan','Vlan');
+  end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+    StoreTranslateableText(conn,'caption','Virtual Fileserver');
   end;
 end;
 
@@ -6392,6 +6588,11 @@ begin
   {$ENDIF}
 end;
 
+class function TFRE_DB_VIRTUAL_FILESERVER.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
+end;
+
 
 { TFRE_DB_GLOBAL_FILESERVER }
 
@@ -6403,10 +6604,20 @@ end;
 
 class procedure TFRE_DB_GLOBAL_FILESERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  newVersionId:='1.0';
+  newVersionId:='1.1';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
   end;
+  if currentVersionId='1.0' then begin
+    currentVersionId := '1.1';
+
+    StoreTranslateableText(conn,'caption','Global Fileserver');
+  end;
+end;
+
+class function TFRE_DB_GLOBAL_FILESERVER.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
 end;
 
 { TFRE_DB_FS_ENTRY }
@@ -6538,12 +6749,15 @@ end;
 
 procedure Register_DB_Extensions;
 begin
+   fre_monitoring.Register_DB_Extensions;
+
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_POWER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_MAIL);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_TIME);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_MACHINE_SETTING_HOSTNAME);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FC_PORT);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_BASE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SUBSERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK);
