@@ -110,6 +110,7 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
+     procedure       CALC_GetDisplayName    (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
      class function  WBC_GetConfig          (const input:IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION):IFRE_DB_Object; virtual;
    end;
 
@@ -134,7 +135,6 @@ type
      procedure       AddSvcDependent        (const name:string; const fmri:string; const grouping:string; const restart_on:string);
      function        GetFMRI                : TFRE_DB_STRING; virtual;
    published
-     procedure       CALC_GetDisplayName       (const setter:IFRE_DB_CALCFIELD_SETTER); virtual;
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; virtual;
      function        RIF_StartService          : IFRE_DB_Object; virtual; abstract;
      function        RIF_StopService           : IFRE_DB_Object; virtual; abstract;
@@ -1317,9 +1317,17 @@ begin
 end;
 
 class procedure TFRE_DB_SERVICE_BASE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName  ('TFRE_DB_VIRTUALMOSOBJECT');
+  scheme.GetSchemeField('objname').required:=true;
+  scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
+  scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
+
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
 end;
 
 class procedure TFRE_DB_SERVICE_BASE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1327,7 +1335,14 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Servicename');
   end;
+end;
+
+procedure TFRE_DB_SERVICE_BASE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
+begin
+  setter.SetAsString(Field('objname').AsString);
 end;
 
 class function TFRE_DB_SERVICE_BASE.WBC_GetConfig(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
@@ -1397,22 +1412,13 @@ end;
 { TFRE_DB_SUBSERVICE }
 
 class procedure TFRE_DB_SUBSERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-var
-  group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName  (TFRE_DB_SERVICE_BASE.ClassName);
-  scheme.GetSchemeField('objname').required:=true;
-  scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
-  scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
-
-  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-  group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
 end;
 
 class procedure TFRE_DB_SUBSERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
-  inherited InstallDBObjects(conn, currentVersionId, newVersionId);
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
@@ -5181,6 +5187,8 @@ end;
    scheme.SetParentSchemeByName('TFRE_DB_OBJECTEX');
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('templateid',fdbft_ObjLink).Required:=true;
+   scheme.AddSchemeField('disabledSCs',fdbft_String).MultiValues:=true;
+
    scheme.AddSchemeField('zonepath',fdbft_String);
    scheme.AddSchemeField('hostid',fdbft_ObjLink).required:=true;
    scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
@@ -6392,17 +6400,10 @@ end;
      end;
  end;
 
-  class procedure TFRE_DB_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
- var group : IFRE_DB_InputGroupSchemeDefinition;
+ class procedure TFRE_DB_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName  ('TFRE_DB_SERVICE_BASE');
-   scheme.GetSchemeField('objname').required:=true;
-   scheme.AddSchemeField('serviceParent',fdbft_ObjLink);
-   scheme.AddCalcSchemeField('displayname',fdbft_String,@CALC_GetDisplayName);
-
-   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-   group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
  end;
 
   class procedure TFRE_DB_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -6503,11 +6504,6 @@ function TFRE_DB_SERVICE.GetFMRI: TFRE_DB_STRING;
 begin
   result := 'svc:/fos/fos_'+ClassName;
 end;
-
- procedure TFRE_DB_SERVICE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
- begin
-   setter.SetAsString(Field('objname').AsString);
- end;
 
  function TFRE_DB_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
  var servicename :string;
