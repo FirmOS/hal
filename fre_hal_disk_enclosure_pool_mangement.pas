@@ -173,6 +173,17 @@ begin
           UpdateMpath(dbo.Field('data').asobject,machinename)
         else
           writeln('UNHANDLED SUBFEEDMODULE ',subfeedmodule);
+
+  // SAVE TO FILE
+  writeln('SWL SUBFEEDMODULE:',subfeedmodule);
+
+  hdata_lock.Acquire;
+  try
+    hdata.SaveToFile('current_boxconsole.dbo');
+  finally
+    hdata_lock.Release;
+  end;
+
 end;
 
 procedure TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.UpdateDiskAndEnclosure(const dbo: IFRE_DB_Object; const machinename: TFRE_DB_NameType);
@@ -752,7 +763,7 @@ begin
     begin
       hdata_lock.Acquire;
       try
-        FREDIFF_GenerateDiffContainersandAddToObject(hdata,snap_data,update_data);
+        FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject(hdata,snap_data,nil,update_data); // FIXME, COLLECTION ASSIGN
 
         writeln('SWL: UPDATES:',update_data.DumpToString());
 //        writeln('SWL: STRUCTURE:',hdata.DumpToString());
