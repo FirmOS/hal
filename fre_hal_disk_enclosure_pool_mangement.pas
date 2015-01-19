@@ -57,6 +57,7 @@ type
   TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT = class (TFRE_DB_Base)
   private
     finitialized_from_db               : boolean;
+    collection_assign                  : IFRE_DB_Object;
 
     hdata_lock                         : IFOS_LOCK;
     hdata                              : IFRE_DB_Object;
@@ -87,16 +88,9 @@ type
   published
   end;
 
-function  Common_Disk_DataFeed          (const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-
 
 implementation
 
-function Common_Disk_DataFeed(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
-begin
-  FREDIFF_ApplyTransportObjectToDB(input,conn);
-  result := GFRE_DB_NIL_DESC;
-end;
 
 { TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT }
 
@@ -109,11 +103,32 @@ begin
   hdata       :=GFRE_DBI.NewObject;
   update_data :=GFRE_DBI.NewObject;
   snap_data   :=hdata.CloneToNewObject();
+
+  collection_assign := GFRE_DBI.NewObject;
+  collection_assign.Field(TFRE_DB_MACHINE.Classname).asstring              := '$SYSMACHINE';
+  collection_assign.Field(TFRE_DB_ZFS_POOL.Classname).asstring             := CFRE_DB_ZFS_POOL_COLLECTION;
+  collection_assign.Field(TFRE_DB_SG_LOGS.Classname).asstring              := CFRE_DB_SG_LOGS_COLLECTION;
+  collection_assign.Field(TFRE_DB_ENCLOSURE.Classname).asstring            := CFRE_DB_ENCLOSURE_COLLECTION;
+  collection_assign.Field(TFRE_DB_DRIVESLOT.ClassName).asstring            := CFRE_DB_DRIVESLOT_COLLECTION;
+  collection_assign.Field(TFRE_DB_SAS_EXPANDER.ClassName).AsString         := CFRE_DB_SAS_EXPANDER_COLLECTION;
+  collection_assign.Field(TFRE_DB_OS_BLOCKDEVICE.ClassName).asstring       := CFRE_DB_DEVICE_COLLECTION;
+  collection_assign.Field(TFRE_DB_ZFS_DISKCONTAINER.Classname).asstring    := CFRE_DB_ZFS_VDEV_COLLECTION;
+  collection_assign.Field(TFRE_DB_ZFS_BLOCKDEVICE.Classname).asstring      := CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION;
+  collection_assign.Field(TFRE_DB_UNDEFINED_BLOCKDEVICE.Classname).asstring:= CFRE_DB_DEVICE_COLLECTION;
+  collection_assign.Field(TFRE_DB_SAS_DISK.Classname).asstring             := CFRE_DB_DEVICE_COLLECTION;
+  collection_assign.Field(TFRE_DB_ZFS_LOG.Classname).asstring              := CFRE_DB_ZFS_VDEV_COLLECTION;
+  collection_assign.Field(TFRE_DB_ZFS_SPARE.Classname).asstring            := CFRE_DB_ZFS_VDEV_COLLECTION;
+  collection_assign.Field(TFRE_DB_ZFS_DATASTORAGE.Classname).asstring      := CFRE_DB_ZFS_VDEV_COLLECTION;
+  collection_assign.Field(TFRE_DB_ZFS_VDEV.Classname).asstring             := CFRE_DB_ZFS_VDEV_COLLECTION;
+  collection_assign.Field(TFRE_DB_ZFS_UNASSIGNED.Classname).asstring       := CFRE_DB_ZFS_BLOCKDEVICE_COLLECTION;
+  collection_assign.Field(TFRE_DB_EMBEDDING_GROUP.Classname).asstring      := '';
+
 end;
 
 destructor TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.Destroy;
 begin
 
+  collection_assign.Finalize;
   hdata_lock.Finalize;
   hdata.Finalize;
   update_data.Finalize;
@@ -179,6 +194,7 @@ begin
 
   hdata_lock.Acquire;
   try
+//    writeln('SWL TOTAL STRUCTURE', hdata.DumpToString());
     hdata.SaveToFile('current_boxconsole.dbo');
   finally
     hdata_lock.Release;
@@ -390,6 +406,8 @@ var
       begin
         new_enclosure := feed_enclosure.CloneToNewObject;
       end;
+    new_enclosure.DeleteField('slots');
+    new_enclosure.DeleteField('expanders');
     feed_enclosure.Field('slots').AsObject.ForAllObjects(@_updateslots);
     feed_enclosure.Field('expanders').AsObject.ForAllObjects(@_updateexpanders);
     (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).ObjectName := 'Enclosure '+inttostr((new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).EnclosureNr);
@@ -408,7 +426,7 @@ begin
       pools := mdata.Field('pools').AsObject
     else
       begin
-        pools := GFRE_DBI.NewObject;
+        pools := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
         mdata.Field('pools').AsObject:=pools;
       end;
 
@@ -420,13 +438,13 @@ begin
       end;
 
     if not mdata.FieldExists('disks') then
-      mdata.Field('disks').AsObject:=GFRE_DBI.NewObject;
+      mdata.Field('disks').AsObject:=TFRE_DB_EMBEDDING_GROUP.CreateForDB;
 
     if not mdata.FieldExists('enclosures') then
-      mdata.Field('enclosures').AsObject:=GFRE_DBI.NewObject;
+      mdata.Field('enclosures').AsObject:=TFRE_DB_EMBEDDING_GROUP.CreateForDB;
 
 
-    newenclosures := GFRE_DBI.NewObject;
+    newenclosures := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
     newenclosures.Field('UID').AsGUID := mdata.Field('enclosures').AsObject.UID;
     newenclosures.SetDomainID(mdata.Field('enclosures').AsObject.DomainID);
 
@@ -435,7 +453,7 @@ begin
 
 //    writeln('SWL DBOENCLOSURE STRUCTURE', dbo.Field('enclosures').AsObject.DumpToString());
 //    writeln('SWL UPDATED ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
-    newdisks := GFRE_DBI.NewObject;
+    newdisks := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
     newdisks.Field('UID').AsGUID := mdata.Field('disks').AsObject.UID;
     newdisks.SetDomainID(mdata.Field('disks').AsObject.DomainID);
 
@@ -447,8 +465,6 @@ begin
 //    writeln('SWL UPDATED DISK STRUCTURE', mdata.Field('disks').AsObject.DumpToString());
 
 
-//    writeln('SWL TOTAL STRUCTURE', mdata.DumpToString());
-//    writeln('MDATA:',mdata.DumpToString());
     last_fdata.Finalize;
   finally
     ReleaseLockedData;
@@ -697,9 +713,9 @@ begin
 //    writeln('SWL: FEEDERPOOLS',dbo.DumpToString());
 
     if not mdata.FieldExists('pools') then
-      mdata.Field('pools').AsObject:=GFRE_DBI.NewObject;
+      mdata.Field('pools').AsObject:=TFRE_DB_EMBEDDING_GROUP.createforDB;
 
-    newpools := GFRE_DBI.NewObject;
+    newpools := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
     newpools.Field('UID').AsGUID := mdata.Field('pools').AsObject.UID;
     newpools.SetDomainID(mdata.Field('pools').AsObject.DomainID);
 
@@ -749,7 +765,7 @@ begin
   mdata := GetLockedDataForMachine(machinename);
   try
     if not mdata.FieldExists('disks') then
-      mdata.Field('disks').AsObject:=GFRE_DBI.NewObject;
+      mdata.Field('disks').AsObject:=TFRE_DB_EMBEDDING_GROUP.CreateForDB;
     dbo.ForAllObjects(@_updatempath);
   finally
     ReleaseLockedData;
@@ -763,7 +779,7 @@ begin
     begin
       hdata_lock.Acquire;
       try
-        FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject(hdata,snap_data,nil,update_data); // FIXME, COLLECTION ASSIGN
+        FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject(hdata,snap_data,collection_assign,update_data);
 
         writeln('SWL: UPDATES:',update_data.DumpToString());
 //        writeln('SWL: STRUCTURE:',hdata.DumpToString());
@@ -812,7 +828,7 @@ var machine     : TFRE_DB_MACHINE;
         machinename := machine.GetName;
         assert(length(machinename)>0,'TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ServerDiskEncPoolDataAnswer no machineame provided!');
         hdata.Field(machinename).AsObject := machine.CloneToNewObject;
-//        writeln('DUMP SERVERMACHINEDATA ',hdata.Field(machinename).AsObject.DumpToString());
+        writeln('DUMP SERVERMACHINEDATA ',hdata.Field(machinename).AsObject.DumpToString());
       end;
   end;
 

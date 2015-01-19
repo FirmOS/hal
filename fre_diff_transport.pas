@@ -76,17 +76,19 @@ function FREDIFF_TRANSPORT_CreateInsertObject(const insert_obj: IFRE_DB_Object; 
 var new_obj   : IFRE_DB_Object;
     coll_name : string;
 begin
-  if insert_obj.Schemeclass='TFRE_DB_OBJECT' then
-    begin
-      writeln('SWL: DEBUG SKIP TFRE_DB_OBJECT ',insert_obj.UID_String);    //FIXME
-      result := nil;
-      exit;
-    end;
-
   if collection_assign.FieldExists(insert_obj.SchemeClass) then
-    coll_name := collection_assign.Field(insert_obj.SchemeClass).asstring
+    begin
+      coll_name := collection_assign.Field(insert_obj.SchemeClass).asstring;
+      if coll_name='' then
+        begin
+          writeln('SWL: NO COLLECTION FOR ',insert_obj.SchemeClass,' SKIP');
+        end;
+    end
   else
-    raise EFRE_DB_Exception.Create(edb_ERROR,'SCHEME CLASS NOT IN COLLECTION ASSIGNMENT [%s]',[insert_obj.SchemeClass]);
+    begin
+      writeln('SWL: SCHEME CLASS NOT IN COLLECTION ASSIGNMENT:',insert_obj.DumpToString);
+      raise EFRE_DB_Exception.Create(edb_ERROR,'SCHEME CLASS NOT IN COLLECTION ASSIGNMENT [%s]',[insert_obj.SchemeClass]);
+    end;
 
   result := GFRE_DBI.NewObject;
   new_obj := insert_obj.CloneToNewObjectWithoutSubobjects;

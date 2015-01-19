@@ -208,6 +208,9 @@ type
      class procedure InstallDBObjects           (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    end;
 
+
+
+
    { TFRE_DB_MACHINE }
 
    TFRE_DB_MACHINE=class(TFRE_DB_ASSET)
@@ -1303,6 +1306,7 @@ implementation
 
    result   := gresult;
   end;
+
 
 { TFRE_DB_SERVICE_BASE }
 
@@ -6288,9 +6292,9 @@ begin
   mo     := CloneToNewObject;
   result.Field(field('objname').asstring).AsObject := mo;
 
-  pools      := GFRE_DBI.NewObject;
-  disks      := GFRE_DBI.NewObject;
-  enclosures := GFRE_DBI.NewObject;
+  pools      := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
+  disks      := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
+  enclosures := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
 
   mo.Field('POOLS').asObject := pools;
   mo.Field('DISKS').asObject := disks;
@@ -6337,7 +6341,7 @@ begin
       pools.Field(ua_name).AsObject:=obj;
     end;
 
- // writeln('SWL REQUEST_DISC_ENC_POOL: ',result.DumpToString);
+  writeln('SWL REQUEST_DISC_ENC_POOL: ',result.DumpToString);
 
 end;
 

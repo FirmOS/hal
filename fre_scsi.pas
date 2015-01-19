@@ -696,7 +696,7 @@ begin
   if devicename<>'' then
     expander.DeviceIdentifier:=DeviceIdentifier+'_'+devicename;
   if not FieldExists('expanders') then
-    Field('expanders').AsObject:= GFRE_DBI.NewObject;
+    Field('expanders').AsObject:= TFRE_DB_EMBEDDING_GROUP.Create;
   Field('expanders').asObject.Field(expander.DeviceIdentifier).AsObject:=expander;
 end;
 
@@ -718,7 +718,7 @@ procedure TFRE_DB_ENCLOSURE.AddDriveSlotEmbedded(const slotnr: UInt16; const dri
 begin
   driveslot.DeviceIdentifier:=DeviceIdentifier+'_slot'+inttostr(slotnr);
   if not FieldExists('slots') then
-    Field('slots').AsObject:= GFRE_DBI.NewObject;
+    Field('slots').AsObject:= TFRE_DB_EMBEDDING_GROUP.Create;
   driveslot.SlotNr       := slotnr;
   driveslot.EnclosureNr  := EnclosureNr;
   Field('slots').AsObject.Field('slot'+inttostr(slotnr)).AsObject:=driveslot;

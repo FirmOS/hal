@@ -86,6 +86,15 @@ type
 
   TFRE_DB_ZFS_ROOTOBJ=class;
 
+  { TFRE_DB_EMBEDDING_GROUP }
+
+  TFRE_DB_EMBEDDING_GROUP=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+
   { TFRE_DB_ZPOOL_IOSTAT }
 
   TFRE_DB_ZPOOL_IOSTAT=class(TFRE_DB_ObjectEx)
@@ -597,6 +606,24 @@ type
 
 implementation
 
+{ TFRE_DB_EMBEDDING_GROUP }
+
+{ TFRE_DB_EMBEDDING_GROUP }
+
+class procedure TFRE_DB_EMBEDDING_GROUP.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName  (TFRE_DB_ObjectEx.ClassName);
+end;
+
+class procedure TFRE_DB_EMBEDDING_GROUP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+  end;
+end;
+
 { TFRE_DB_ZFS_DATASET_PARENT }
 
 class procedure TFRE_DB_ZFS_DATASET_PARENT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -892,6 +919,7 @@ procedure TFRE_DB_ZFS_UNASSIGNED.InitforMachine(const avalue: TFRE_DB_GUID);
 begin
  setZFSGuid(FREDB_G2H(avalue)+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'));
  SetName('Unassigned disks');  //FIXXME: should be a languge key ?!?
+ Field('uniquephysicalid').AsString:='UNASSIGNED'+'@'+FREDB_G2H(avalue);
  SetParentInZFSId(avalue);
  MachineID := avalue;
 end;
@@ -4152,6 +4180,7 @@ begin
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_LUN_VIEW);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_LUN);
   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VIRTUAL_FILESHARE);
+  GFre_DBI.RegisterObjectClassEx(TFRE_DB_EMBEDDING_GROUP);
 
   //GFRE_DBI.Initialize_Extension_Objects;
 end;
