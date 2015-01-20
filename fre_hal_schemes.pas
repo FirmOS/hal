@@ -1525,6 +1525,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','PHP');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1572,6 +1575,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','LDAP');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1692,6 +1698,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','SSH');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1768,6 +1777,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','Webserver');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1821,6 +1833,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','MySQL');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1874,6 +1889,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','Postgres');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1923,6 +1941,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','MTA');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -1970,6 +1991,9 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'caption','IMAP');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -2963,6 +2987,9 @@ begin
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
     StoreTranslateableText(conn,'caption','DNS');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -3905,6 +3932,9 @@ begin
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
     StoreTranslateableText(conn,'caption','VPN');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -6149,10 +6179,10 @@ end;
    end;
    if currentVersionId='1.0' then begin
      currentVersionId := '1.1';
+     StoreTranslateableText(conn,'caption','Virtual Machine');
 
      StoreTranslateableText(conn,'scheme_main_group','General Information');
-     StoreTranslateableText(conn,'scheme_objname','Servicename');
-     StoreTranslateableText(conn,'caption','Virtual Machine');
+     StoreTranslateableText(conn,'scheme_objname','Name');
    end;
  end;
 
@@ -6640,6 +6670,9 @@ begin
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
     StoreTranslateableText(conn,'caption','Virtual Fileserver');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
