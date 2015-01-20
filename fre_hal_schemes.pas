@@ -3843,9 +3843,7 @@ begin
   scheme.SetParentSchemeByName('TFRE_DB_SERVICE');
   scheme.AddSchemeField('default',fdbft_String).required:=true;
   //scheme.AddSchemeFieldSubscheme('static','TFRE_DB_ROUTE').multiValues:=true; { FIXXME:HH -> TFRE_DB_ROUTE }
-
-  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-  group.UseInputGroup('TFRE_DB_SERVICE','main');
+  group:=scheme.GetInputGroup('main');
   group.AddInput('default',GetTranslateableTextKey('scheme_default'));
 end;
 
@@ -3860,6 +3858,7 @@ begin
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
     StoreTranslateableText(conn,'caption','Routing');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
@@ -6691,8 +6690,10 @@ begin
   end;
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
-
     StoreTranslateableText(conn,'caption','Global Fileserver');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_objname','Name');
   end;
 end;
 
