@@ -414,23 +414,29 @@ var
   begin
     if (collection_assign.FieldExists(o.SchemeClass)) and (collection_assign.Field(o.SchemeClass).asstring<>'') then
       begin
-        //if mark_deleted=false then
-        //  begin
+        if mark_deleted=false then
+          begin
             diff_step := FREDIFF_TRANSPORT_CreateDeleteObject(o);
             if assigned(diff_step) then
               transport_list_obj.Field(CDIFF_DELETE_LIST).AddObject(diff_step);
-        //  end
-        //else
-        //  begin
-        //    if o.FieldExists('$OBJSTATUS') then           //
-        //      begin
-        //
-        //      end
-        //    else
-        //      begin
-        //
-        //      end;
-        //  end;
+          end
+        else
+          begin
+            if o.FieldExists('OBJSTATUS') then           //  TODO : USE CORRECT FIELD NAME/FUNCTION
+              begin
+                writeln('SWL UPDATE OBJSTATUS');
+                obj_status := o.Field('OBJSTATUS').AsObject;
+                obj_status.Field('deleted').asboolean := true;
+                _Update(true,obj_status,cev_FieldAdded,obj_status.Field('deleted'),nil);
+              end
+            else
+              begin
+                obj_status := GFRE_DBI.NewObject;         // TODO : CREATE CORRECT CLASS
+                obj_status.Field('deleted').AsBoolean := true;
+                o.Field('OBJSTATUS').AsObject:=obj_status;
+                _Update(true,o,cev_FieldAdded,o.Field('OBJSTATUS'),nil);
+              end;
+          end;
       end;
   end;
 
