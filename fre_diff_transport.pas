@@ -186,6 +186,11 @@ begin
       exit(result);
     end;
 
+  if (update_type=cev_FieldChanged) and (new_field.FieldType=fdbft_Object) and (new_field.AsObject.UID=old_field.AsObject.UID) then
+    begin
+      exit(nil); // ignore updates on object fields with same uid, handled in this object
+    end;
+
   if assigned(last_diff_update_obj) and (last_diff_update_obj.UID=update_obj.UID) then
     begin
       result          := nil;   // no new update
