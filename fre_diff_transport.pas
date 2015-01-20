@@ -133,6 +133,7 @@ begin
       result          := GFRE_DBI.NewObject;
       diff_update_obj := result;
       diff_update_obj.Field('UID').AsGUID := update_obj.UID;
+      diff_update_obj.Field('P').AddGUID(update_obj.UID);
     end;
 
   //  diff_update_obj.Field('C').AsBoolean    := is_child_update;
