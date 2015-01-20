@@ -82,6 +82,7 @@ begin
       if coll_name='' then
         begin
           writeln('SWL: NO COLLECTION FOR ',insert_obj.SchemeClass,' SKIP');
+          exit(nil);
         end;
     end
   else
