@@ -1341,12 +1341,12 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','Simnet');
 
-    StoreTranslateableText(conn,'scheme_main_group','Link Properties');
-    StoreTranslateableText(conn,'scheme_name','Link Name');
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_name','Name');
     StoreTranslateableText(conn,'scheme_description','Description');
     StoreTranslateableText(conn,'scheme_mtu','MTU');
-    StoreTranslateableText(conn,'caption','Simnet');
   end;
 end;
 
@@ -1368,12 +1368,12 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
+    StoreTranslateableText(conn,'caption','Bridge');
 
-    StoreTranslateableText(conn,'scheme_main_group','Link Properties');
-    StoreTranslateableText(conn,'scheme_name','Link Name');
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_name','Name');
     StoreTranslateableText(conn,'scheme_description','Description');
     StoreTranslateableText(conn,'scheme_mtu','MTU');
-    StoreTranslateableText(conn,'caption','Bridge');
   end;
 end;
 
@@ -1676,6 +1676,11 @@ begin
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
     StoreTranslateableText(conn,'caption','IPMP');
+
+    DeleteTranslateableText(conn,'scheme_main_group');
+    DeleteTranslateableText(conn,'scheme_name');
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_name','Name');
   end;
 end;
 
@@ -2154,6 +2159,11 @@ begin
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
     StoreTranslateableText(conn,'caption','IPTUN');
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_name','Name');
+    StoreTranslateableText(conn,'scheme_description','Description');
+    StoreTranslateableText(conn,'scheme_mtu','MTU');
   end;
 end;
 
@@ -5707,6 +5717,11 @@ end;
    if currentVersionId='1.0' then begin
      currentVersionId := '1.1';
      StoreTranslateableText(conn,'caption','Stub');
+
+     StoreTranslateableText(conn,'scheme_main_group','General Information');
+     StoreTranslateableText(conn,'scheme_name','Name');
+     StoreTranslateableText(conn,'scheme_description','Description');
+     StoreTranslateableText(conn,'scheme_mtu','MTU');
    end;
  end;
 
@@ -5755,6 +5770,11 @@ end;
    if currentVersionId='1.0' then begin
      currentVersionId := '1.1';
      StoreTranslateableText(conn,'caption','Aggregation');
+
+     StoreTranslateableText(conn,'scheme_main_group','General Information');
+     StoreTranslateableText(conn,'scheme_name','Name');
+     StoreTranslateableText(conn,'scheme_description','Description');
+     StoreTranslateableText(conn,'scheme_mtu','MTU');
    end;
  end;
 
@@ -5808,12 +5828,12 @@ end;
      StoreTranslateableText(conn,'scheme_vlan_group','Vlan Properties');
      StoreTranslateableText(conn,'scheme_vlan','Vlan');
 
-     StoreTranslateableText(conn,'scheme_main_group','Link Properties');
-     StoreTranslateableText(conn,'scheme_name','Link Name');
+     StoreTranslateableText(conn,'caption','VNIC');
+
+     StoreTranslateableText(conn,'scheme_main_group','General Information');
+     StoreTranslateableText(conn,'scheme_name','Name');
      StoreTranslateableText(conn,'scheme_description','Description');
      StoreTranslateableText(conn,'scheme_mtu','MTU');
-
-     StoreTranslateableText(conn,'caption','VNIC');
    end;
  end;
 
@@ -5946,7 +5966,7 @@ end;
    scheme.AddSchemeField('type',fdbft_String).SetupFieldDef(true,false,'datalink_network_type');
 
    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-   group.AddInput('objname',GetTranslateableTextKey('scheme_name'),true);
+   group.AddInput('objname',GetTranslateableTextKey('scheme_name'));
    group.AddInput('desc.txt',GetTranslateableTextKey('scheme_description'));
    group.AddInput('mtu',GetTranslateableTextKey('scheme_mtu'));
  end;
