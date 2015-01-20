@@ -643,6 +643,7 @@ var mdata    : IFRE_DB_Object;
     new_pool.MachineID := mdata.UID;
     new_pool.parentInZFSId := mdata.UID;
     new_pool.AddMosParentID(mdata.UID);
+    new_pool.Field('uniquephysicalid').asstring := new_pool.getZFSGuid;
     newpools.Field(feed_pool.Field('objname').asstring).AsObject:= new_pool;
   end;
 

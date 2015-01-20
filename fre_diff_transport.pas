@@ -60,11 +60,18 @@ type
 
 
   function FREDIFF_TRANSPORT_CreateInsertObject(const insert_obj : IFRE_DB_Object; const collection_assign:IFRE_DB_OBject)  : IFRE_DB_Object;
-  function FREDIFF_TRANSPORT_CreateDeleteObject(const delete_obj : IFRE_DB_Object)  : IFRE_DB_Object;
-  function FREDIFF_TRANSPORT_CreateUpdateObject(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj:IFRE_DB_Object) : IFRE_DB_Object;
-  function FREDIFF_TRANSPORT_CreateSubUpdateObject (const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj:IFRE_DB_Object; const parent_guid:TFRE_DB_GUID; const collection_assign:IFRE_DB_OBject; out transport_type:TFREDIFF_TransportType) : IFRE_DB_Object;
+  function FREDIFF_TRANSPORT_CreateDeleteObject(const delete_obj : IFRE_DB_Object)                                          : IFRE_DB_Object;
+  function FREDIFF_TRANSPORT_CreateUpdateObject(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj:IFRE_DB_Object; const collection_assign:IFRE_DB_Object; const top_guid:TFRE_DB_GUID) : IFRE_DB_Object;
 
-  procedure FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject  (const first_obj:IFRE_DB_Object;const second_obj:IFRE_DB_Object;const collection_assign:IFRE_DB_Object;const transport_list_obj:IFRE_DB_Object);
+  { Collection Assignment }
+  {collection_assign.Field(<classname>).asstring := <collection_name>;}
+  {collection_assign.Field(<classname>).asstring := '';  // skip }
+  {no entry => embedd in parent object}
+
+  procedure FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject  (const first_obj:IFRE_DB_Object;const second_obj:IFRE_DB_Object;const collection_assign:IFRE_DB_Object;const transport_list_obj:IFRE_DB_Object; const mark_deleted:boolean=true);
+
+  { obsolete, replaced with GenerateRelationalDiffContainersandAddToBulkObject }
+  function  FREDIFF_TRANSPORT_CreateSubUpdateObject (const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj:IFRE_DB_Object; const collection_assign:IFRE_DB_OBject; const top_guid:TFRE_DB_GUID; out transport_type:TFREDIFF_TransportType) : IFRE_DB_Object;
   procedure FREDIFF_GenerateSubobjectDiffContainersandAddToBulkObject   (const first_obj:IFRE_DB_Object;const second_obj:IFRE_DB_Object;const collection_assign:IFRE_DB_Object;const transport_list_obj:IFRE_DB_Object);
 
   procedure FREDIFF_ApplyTransportObjectToDB                  (const transport_object: IFRE_DB_Object; const conn: IFRE_DB_CONNECTION);      // GetDefaultCollection must be defined on every object to insert in db
@@ -75,24 +82,34 @@ implementation
 function FREDIFF_TRANSPORT_CreateInsertObject(const insert_obj: IFRE_DB_Object; const collection_assign: IFRE_DB_OBject): IFRE_DB_Object;
 var new_obj   : IFRE_DB_Object;
     coll_name : string;
+
+    procedure IterateSubobjects(const subobj:IFRE_DB_Object);
+    begin
+      if not collection_assign.FieldExists(subobj.SchemeClass) then  // embedd subobject and all below
+        new_obj.Field(subobj.ParentField.FieldName).AsObject:=subobj.CloneToNewObject;
+    end;
+
 begin
   if collection_assign.FieldExists(insert_obj.SchemeClass) then
     begin
       coll_name := collection_assign.Field(insert_obj.SchemeClass).asstring;
       if coll_name='' then
         begin
-          writeln('SWL: NO COLLECTION FOR ',insert_obj.SchemeClass,' SKIP');
+//          writeln('SWL: NO COLLECTION FOR ',insert_obj.SchemeClass,' SKIP');
           exit(nil);
         end;
     end
   else
     begin
-      writeln('SWL: SCHEME CLASS NOT IN COLLECTION ASSIGNMENT:',insert_obj.DumpToString);
-      raise EFRE_DB_Exception.Create(edb_ERROR,'SCHEME CLASS NOT IN COLLECTION ASSIGNMENT [%s]',[insert_obj.SchemeClass]);
+//      writeln('SWL: SCHEME CLASS NOT IN COLLECTION ASSIGNMENT, EMBED:',insert_obj.DumpToString);
+//      raise EFRE_DB_Exception.Create(edb_ERROR,'SCHEME CLASS NOT IN COLLECTION ASSIGNMENT [%s]',[insert_obj.SchemeClass]);
+      exit(nil);
     end;
 
   result := GFRE_DBI.NewObject;
   new_obj := insert_obj.CloneToNewObjectWithoutSubobjects;
+  insert_obj.ForAllObjects(@IterateSubobjects);
+
   result.Field('UID').AsGUID:=new_obj.UID;
   result.Field('N').AsObject:=new_obj;
   result.Field('COLL').asstring := coll_name;
@@ -105,22 +122,32 @@ end;
 
 function FREDIFF_TRANSPORT_CreateDeleteObject(const delete_obj: IFRE_DB_Object): IFRE_DB_Object;
 begin
- result := GFRE_DBI.NewObject;
- result.Field('UID').AsGUID:=delete_obj.UID;
+  result := GFRE_DBI.NewObject;
+  result.Field('UID').AsGUID:=delete_obj.UID;
 end;
 
-function FREDIFF_TRANSPORT_CreateUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj: IFRE_DB_Object): IFRE_DB_Object;
+function FREDIFF_TRANSPORT_CreateUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj: IFRE_DB_Object; const collection_assign: IFRE_DB_Object; const top_guid: TFRE_DB_GUID): IFRE_DB_Object;
 var diff_update_obj:IFRE_DB_Object;
+    pobj           :IFRE_DB_Object;
     c              :NativeInt;
 begin
   if (update_type=cev_FieldAdded) and (new_field.FieldType=fdbft_Object) then
     begin
-      exit(nil);  { do not send insert for fields with type object, handled in insert object  }
+      if (update_obj.UID=top_guid) or collection_assign.FieldExists(new_field.asObject.SchemeClass) then  // skip classes with collection assignment
+        begin
+         exit(nil);  { do not send insert for fields with type object, handled in insert object  }
+        end;
     end;
 
   if ((update_type=cev_FieldDeleted) or (update_type=cev_FieldChanged)) and (old_field.FieldType=fdbft_Object) then
     begin
-      exit(nil);  { do not send update oder delete for fields with type object, handled in insert and delete object  }
+      if (update_obj.UID=top_guid) or collection_assign.FieldExists(old_field.asobject.SchemeClass) then  // skip classes with collection assignment
+        exit(nil);  { do not send update oder delete for fields with type object, handled in insert and delete object  }
+    end;
+
+  if (update_type=cev_FieldChanged) and (new_field.FieldType=fdbft_Object) and (new_field.AsObject.UID=old_field.AsObject.UID) then
+    begin
+      exit(nil); // ignore updates on object fields with same uid, handled in this object
     end;
 
   if assigned(last_diff_update_obj) and (last_diff_update_obj.UID=update_obj.UID) then
@@ -133,14 +160,32 @@ begin
       result          := GFRE_DBI.NewObject;
       diff_update_obj := result;
       diff_update_obj.Field('UID').AsGUID := update_obj.UID;
+      if not collection_assign.FieldExists(update_obj.SchemeClass) then  // find next parent class with collection assignment
+        begin
+          pobj := update_obj.Parent;
+          while assigned(pobj) do
+            begin
+    //          writeln('SWL: TOP GUID ',parent_guid.AsHexString);
+              if pobj.UID<>top_guid then
+                begin
+                  diff_update_obj.Field('P_REV').AddGuid(pobj.UID);
+                  diff_update_obj.SetDomainID(pobj.DomainID);
+                end;
+              if collection_assign.FieldExists(pobj.SchemeClass) then   // only iterate to the first object with assigned collection
+                begin
+                  writeln('SWL DONE ON ',pobj.SchemeClass);
+                  break;
+                end;
+              pobj := pobj.Parent;
+            end;
+          for c:=diff_update_obj.Field('P_REV').ValueCount-1 downto 0 do
+            diff_update_obj.Field('P').AddGuid(diff_update_obj.Field('P_REV').AsGUIDItem[c]);
+          diff_update_obj.DeleteField('P_REV');
+        end;
       diff_update_obj.Field('P').AddGUID(update_obj.UID);
     end;
 
   //  diff_update_obj.Field('C').AsBoolean    := is_child_update;
-  //  diff_update_obj.Field('T').AsByte       := Ord(update_type);
-  //  diff_update_obj.Field('S').asstring      := update_obj.SchemeClass;
-  //  if assigned(update_obj.Parent) then
-  //    diff_update_obj.Field('P').asGUID        := update_obj.Parent.UID;
   case update_type of
     cev_FieldAdded:
       begin
@@ -163,14 +208,14 @@ begin
   end;
 end;
 
-function FREDIFF_TRANSPORT_CreateSubUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj: IFRE_DB_Object; const parent_guid: TFRE_DB_GUID; const collection_assign: IFRE_DB_OBject;  out transport_type:TFREDIFF_TransportType): IFRE_DB_Object;
+function FREDIFF_TRANSPORT_CreateSubUpdateObject(const is_child_update: boolean; const update_obj: IFRE_DB_Object; const update_type: TFRE_DB_ObjCompareEventType; const new_field, old_field: IFRE_DB_Field; const last_diff_update_obj: IFRE_DB_Object; const collection_assign: IFRE_DB_OBject; const top_guid: TFRE_DB_GUID; out transport_type: TFREDIFF_TransportType): IFRE_DB_Object;
 var diff_update_obj:IFRE_DB_Object;
     c              :NativeInt;
     diff_step      :IFRE_DB_Object;
     pobj           :IFRE_DB_Object;
 
 begin
-  if (update_obj.UID=parent_guid) and (update_type=cev_FieldAdded) and (new_field.FieldType=fdbft_Object) then
+  if (update_obj.UID=top_guid) and (update_type=cev_FieldAdded) and (new_field.FieldType=fdbft_Object) then
     begin
       // handle insert parent level
 //      writeln('SWL: HANDLE PARENT INSERT');
@@ -180,7 +225,7 @@ begin
       exit(result);
     end;
 
-  if (update_obj.UID=parent_guid) and ((update_type=cev_FieldDeleted) or (update_type=cev_FieldChanged)) and (old_field.FieldType=fdbft_Object) then
+  if (update_obj.UID=top_guid) and ((update_type=cev_FieldDeleted) or (update_type=cev_FieldChanged)) and (old_field.FieldType=fdbft_Object) then
     begin
 //      writeln('SWL: HANDLE PARENT DELETE');
       result := FREDIFF_TRANSPORT_CreateDeleteObject(old_field.AsObject);
@@ -207,7 +252,7 @@ begin
       while assigned(pobj) do
         begin
 //          writeln('SWL: TOP GUID ',parent_guid.AsHexString);
-          if pobj.UID<>parent_guid then
+          if pobj.UID<>top_guid then
             diff_update_obj.Field('P_REV').AddGuid(pobj.UID);
           pobj := pobj.Parent;
         end;
@@ -220,7 +265,6 @@ begin
   transport_type :=frediffUpdateObject;
 
   //  diff_update_obj.Field('C').AsBoolean    := is_child_update;
-  //  diff_update_obj.Field('S').asstring      := update_obj.SchemeClass;
 
   case update_type of
     cev_FieldAdded:
@@ -244,63 +288,19 @@ begin
   end;
 end;
 
-//function FREDIFF_TRANSPORT_GetIsChild(const self: IFRE_DB_Object): boolean;
-//begin
-//  result :=  self.Field('C').AsBoolean;
-//end;
-//
-//function FREDIFF_TRANSPORT_GetCompareType(const self: IFRE_DB_Object): TFRE_DB_ObjCompareEventType;
-//begin
-//  result := TFRE_DB_ObjCompareEventType(self.Field('T').AsByte);
-//end;
-//
-//function FREDIFF_TRANSPORT_GetNewField(const self: IFRE_DB_Object): IFRE_DB_Field;
-//begin
-//  result := self.Field('N');
-//end;
-//
-//function FREDIFF_TRANSPORT_GetOldField(const self: IFRE_DB_Object): IFRE_DB_Field;
-//begin
-//  result := self.Field('O');
-//end;
-//
-//function FREDIFF_TRANSPORT_GetNewFieldName(const self: IFRE_DB_Object): TFRE_DB_NameType;
-//begin
-// result := self.Field('NFN').asstring;
-//end;
-//
-//function FREDIFF_TRANSPORT_GetOldFieldName(const self: IFRE_DB_Object): TFRE_DB_NameType;
-//begin
-//  result := self.Field('OFN').asstring;
-//end;
-//
-//function FREDIFF_TRANSPORT_GetUpdateScheme(const self: IFRE_DB_Object): TFRE_DB_NameType;
-//begin
-//  result := self.Field('S').asstring;
-//end;
-//
-//function FREDIFF_TRANSPORT_GetParentUID(const self: IFRE_DB_Object): TFRE_DB_GUID;
-//begin
-//  result := self.Field('P').AsGUID;
-//end;
-//
-//function FREDIFF_TRANSPORT_GetTransportType(const self: IFRE_DB_OBject): TFREDIFF_TransportType;
-//begin
-//  result := TFREDIFF_TransportType(self.Field('TT').asbyte);
-//end;
-
-
-procedure FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject(const first_obj: IFRE_DB_Object; const second_obj: IFRE_DB_Object; const collection_assign: IFRE_DB_Object; const transport_list_obj: IFRE_DB_Object);
+procedure FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject(const first_obj: IFRE_DB_Object; const second_obj: IFRE_DB_Object; const collection_assign: IFRE_DB_Object; const transport_list_obj: IFRE_DB_Object; const mark_deleted: boolean);
 var
   last_update_object:IFRE_DB_Object;
   inserted_list     :IFRE_DB_Object;
   waiting_list      :IFRE_DB_Object;
   backlog_list      :IFRE_DB_Object;
+  top_guid          : TFRE_DB_GUID;
+
 
   procedure _Update(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field);
   var diff_step : IFRE_DB_Object;
   begin
-    diff_step :=  FREDIFF_TRANSPORT_CreateUpdateObject(is_child_update,update_obj,update_type,new_field,old_field,last_update_object);       //TODO: Combine fields in one update object with only changed fields
+    diff_step :=  FREDIFF_TRANSPORT_CreateUpdateObject(is_child_update,update_obj,update_type,new_field,old_field,last_update_object,collection_assign,top_guid);       //TODO: Combine fields in one update object with only changed fields
     if assigned(diff_step) then
       begin
         transport_list_obj.Field(CDIFF_UPDATE_LIST).AddObject(diff_step);
@@ -409,10 +409,29 @@ var
   end;
 
   procedure _Delete(const o : IFRE_DB_Object);
-  var diff_step : IFRE_DB_Object;
+  var diff_step  : IFRE_DB_Object;
+      obj_status : IFRE_DB_Object;
   begin
-    diff_step := FREDIFF_TRANSPORT_CreateDeleteObject(o);
-    transport_list_obj.Field(CDIFF_DELETE_LIST).AddObject(diff_step);
+    if (collection_assign.FieldExists(o.SchemeClass)) and (collection_assign.Field(o.SchemeClass).asstring<>'') then
+      begin
+        //if mark_deleted=false then
+        //  begin
+            diff_step := FREDIFF_TRANSPORT_CreateDeleteObject(o);
+            if assigned(diff_step) then
+              transport_list_obj.Field(CDIFF_DELETE_LIST).AddObject(diff_step);
+        //  end
+        //else
+        //  begin
+        //    if o.FieldExists('$OBJSTATUS') then           //
+        //      begin
+        //
+        //      end
+        //    else
+        //      begin
+        //
+        //      end;
+        //  end;
+      end;
   end;
 
   procedure CleanupBacklog(const fld:IFRE_DB_Field);
@@ -446,25 +465,18 @@ var
 
 
 begin
-  last_update_object :=nil;
+  top_guid           := first_obj.UID;
+  last_update_object := nil;
+
   inserted_list      := GFRE_DBI.NewObject;
   waiting_list       := GFRE_DBI.NewObject;
   backlog_list       := GFRE_DBI.NewObject;
 
   GFRE_DBI.GenerateAnObjChangeList(first_obj,second_obj,@_Insert,@_Delete,@_Update);
 
-//  writeln('SWL: ------------- WAITING',waiting_list.DumpToString);
-//  writeln('SWL: ------------- BACKLOG',backlog_list.DumpToString);
-
-//  writeln('SWL CLEANING WL');
-
   // mark all in waiting list as already inserted, because they have not been in the bulk insert list, so they must be in the db
 
   waiting_list.ForAllFields(@CleanupWaitingList,true,true);;
-
-//  writeln('SWL: ------------- WAITING',waiting_list.DumpToString);
-//  writeln('SWL: ------------- BACKLOG',backlog_list.DumpToString);
-
 
   // try to insert all in backlog, run till all remaining objects are inserted (needed if they are referring to another object in the backlog)
 
@@ -474,9 +486,6 @@ begin
       backlog_list.ForAllFields(@CleanupBacklog);
     end;
 
-//  writeln('SWL: ------------- WAITING',waiting_list.DumpToString);
-//  writeln('SWL: ------------- BACKLOG',backlog_list.DumpToString);
-
   inserted_list.Finalize;
   waiting_list.Finalize;
   backlog_list.Finalize;
@@ -485,13 +494,13 @@ end;
 procedure FREDIFF_GenerateSubobjectDiffContainersandAddToBulkObject(const first_obj: IFRE_DB_Object; const second_obj: IFRE_DB_Object; const collection_assign: IFRE_DB_Object; const transport_list_obj: IFRE_DB_Object);
 var
   last_update_object : IFRE_DB_Object;
-  parent_guid        : TFRE_DB_GUID;
+  top_guid        : TFRE_DB_GUID;
 
   procedure _Update(const is_child_update : boolean ; const update_obj : IFRE_DB_Object ; const update_type :TFRE_DB_ObjCompareEventType  ;const new_field, old_field: IFRE_DB_Field);
   var diff_step      : IFRE_DB_Object;
       transport_type : TFREDIFF_TransportType;
   begin
-    diff_step :=  FREDIFF_TRANSPORT_CreateSubUpdateObject(is_child_update,update_obj,update_type,new_field,old_field,last_update_object,parent_guid,collection_assign,transport_type);       //TODO: Combine fields in one update object with only changed fields
+    diff_step :=  FREDIFF_TRANSPORT_CreateSubUpdateObject(is_child_update,update_obj,update_type,new_field,old_field,last_update_object,collection_assign,top_guid,transport_type);       //TODO: Combine fields in one update object with only changed fields
     if assigned(diff_step) then
       begin
         case transport_type of
@@ -509,7 +518,7 @@ var
   end;
 
 begin
-  parent_guid:=first_obj.UID;
+  top_guid:=first_obj.UID;
   last_update_object :=nil;
 
   GFRE_DBI.GenerateAnObjChangeList(first_obj,second_obj,nil,nil,@_Update);
