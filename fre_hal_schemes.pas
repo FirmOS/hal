@@ -297,6 +297,7 @@ type
    published
      function       IMI_Menu                (const input:IFRE_DB_Object): IFRE_DB_Object;
      function       RIF_CreateOrUpdateServices                          : IFRE_DB_Object;
+     class function WBC_GetConfig           (const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object; override;
    end;
 
    { TFRE_DB_DATALINK_PHYS }
@@ -411,6 +412,26 @@ type
    { TFRE_DB_DATALINK_IPMP }
 
    TFRE_DB_DATALINK_IPMP=class(TFRE_DB_DATALINK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
+   end;
+
+   { TFRE_DB_DATALINK_BRIDGE }
+
+   TFRE_DB_DATALINK_BRIDGE=class(TFRE_DB_DATALINK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   published
+     class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
+   end;
+
+   { TFRE_DB_DATALINK_SIMNET }
+
+   TFRE_DB_DATALINK_SIMNET=class(TFRE_DB_DATALINK)
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -1307,6 +1328,59 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_DATALINK_SIMNET }
+
+class procedure TFRE_DB_DATALINK_SIMNET.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+end;
+
+class procedure TFRE_DB_DATALINK_SIMNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main_group','Link Properties');
+    StoreTranslateableText(conn,'scheme_name','Link Name');
+    StoreTranslateableText(conn,'scheme_description','Description');
+    StoreTranslateableText(conn,'scheme_mtu','MTU');
+    StoreTranslateableText(conn,'caption','Simnet');
+  end;
+end;
+
+class function TFRE_DB_DATALINK_SIMNET.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
+end;
+
+{ TFRE_DB_DATALINK_BRIDGE }
+
+class procedure TFRE_DB_DATALINK_BRIDGE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_DATALINK.ClassName);
+end;
+
+class procedure TFRE_DB_DATALINK_BRIDGE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+
+    StoreTranslateableText(conn,'scheme_main_group','Link Properties');
+    StoreTranslateableText(conn,'scheme_name','Link Name');
+    StoreTranslateableText(conn,'scheme_description','Description');
+    StoreTranslateableText(conn,'scheme_mtu','MTU');
+    StoreTranslateableText(conn,'caption','Bridge');
+  end;
+end;
+
+class function TFRE_DB_DATALINK_BRIDGE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
+begin
+  Result:=GetTranslateableTextShort(conn,'caption');
+end;
 
 { TFRE_DB_SERVICE_BASE }
 
@@ -1354,6 +1428,7 @@ begin
   Result:=GFRE_DBI.NewObject;
   Result.Field('OnlyOneServicePerZone').AsBoolean:=OnlyOneServicePerZone;
   Result.Field('Caption').AsString:=GetCaption(conn);
+  Result.Field('Type').AsString:='service';
 end;
 
 { TFRE_DB_ZONEDESTROY_JOB }
@@ -1594,7 +1669,7 @@ begin
   end;
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
-    StoreTranslateableText(conn,'caption','Datalink - IPMP');
+    StoreTranslateableText(conn,'caption','IPMP');
   end;
 end;
 
@@ -2054,7 +2129,7 @@ begin
   end;
   if currentVersionId='1.0' then begin
     currentVersionId := '1.1';
-    StoreTranslateableText(conn,'caption','Datalink - IPTUN');
+    StoreTranslateableText(conn,'caption','IPTUN');
   end;
 end;
 
@@ -5602,7 +5677,7 @@ end;
    end;
    if currentVersionId='1.0' then begin
      currentVersionId := '1.1';
-     StoreTranslateableText(conn,'caption','Datalink - Stub');
+     StoreTranslateableText(conn,'caption','Stub');
    end;
  end;
 
@@ -5650,7 +5725,7 @@ end;
    end;
    if currentVersionId='1.0' then begin
      currentVersionId := '1.1';
-     StoreTranslateableText(conn,'caption','Datalink - Aggregation');
+     StoreTranslateableText(conn,'caption','Aggregation');
    end;
  end;
 
@@ -5709,7 +5784,7 @@ end;
      StoreTranslateableText(conn,'scheme_description','Description');
      StoreTranslateableText(conn,'scheme_mtu','MTU');
 
-     StoreTranslateableText(conn,'caption','Datalink - VNIC');
+     StoreTranslateableText(conn,'caption','VNIC');
    end;
  end;
 
@@ -5878,7 +5953,7 @@ end;
 
  class function TFRE_DB_DATALINK.getAllDataLinkClasses: TFRE_DB_StringArray;
  begin
-   Result:=TFRE_DB_StringArray.create(TFRE_DB_DATALINK_PHYS.ClassName,TFRE_DB_DATALINK_AGGR.ClassName,TFRE_DB_DATALINK_IPMP.ClassName,TFRE_DB_DATALINK_IPTUN.ClassName,TFRE_DB_DATALINK_STUB.ClassName,TFRE_DB_DATALINK_VNIC.ClassName);
+   Result:=TFRE_DB_StringArray.create(TFRE_DB_DATALINK_PHYS.ClassName,TFRE_DB_DATALINK_AGGR.ClassName,TFRE_DB_DATALINK_IPMP.ClassName,TFRE_DB_DATALINK_IPTUN.ClassName,TFRE_DB_DATALINK_STUB.ClassName,TFRE_DB_DATALINK_BRIDGE.ClassName,TFRE_DB_DATALINK_SIMNET.ClassName,TFRE_DB_DATALINK_VNIC.ClassName);
  end;
 
   procedure TFRE_DB_DATALINK.Embed(const conn: IFRE_DB_CONNECTION);
@@ -5916,7 +5991,7 @@ end;
    result := GFRE_DB_NIL_DESC;
  end;
 
- function TFRE_DB_DATALINK.RIF_CreateorUpdateServices: IFRE_DB_Object;
+  function TFRE_DB_DATALINK.RIF_CreateOrUpdateServices: IFRE_DB_Object;
  var
    oldsvclist : IFRE_DB_Object;
    resultdatalink : IFRE_DB_Object;
@@ -5965,6 +6040,12 @@ end;
    end;
    {$ENDIF}
  end;
+
+ class function TFRE_DB_DATALINK.WBC_GetConfig(const input: IFRE_DB_Object; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;
+begin
+  Result:=inherited WBC_GetConfig(input, ses, app, conn);
+  Result.Field('Type').AsString:='datalink';
+end;
 
  { TFRE_DB_TESTER }
 
@@ -6767,6 +6848,8 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_AGGR);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_STUB);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_IPMP);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_BRIDGE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATALINK_SIMNET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_DOMAIN);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_SERVICE_INSTANCE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DATACENTER);
