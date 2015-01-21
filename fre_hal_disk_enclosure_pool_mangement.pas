@@ -617,6 +617,8 @@ var mdata    : IFRE_DB_Object;
           if old_pool.FetchObjWithStringFieldValue('ZFS_GUID',zfs_guid,zfs_obj,'') then
             begin
 //              writeln('SWL: FOUND ZFS OBJECT');
+              zfs_obj.SetAllSimpleObjectFieldsFromObject(new_obj);  // copy all new fields to old zfs obj
+              new_obj.SetAllSimpleObjectFieldsFromObject(zfs_obj);  // copy merged fields back (including db fields)
               new_obj.Field('UID').AsGUID := zfs_obj.UID;
               if assigned(zpool_iostat) then
                 begin
@@ -788,8 +790,8 @@ begin
       try
         FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject(hdata,snap_data,collection_assign,update_data);
 
-        writeln('SWL: UPDATES:',update_data.DumpToString());
 //        writeln('SWL: STRUCTURE:',hdata.DumpToString());
+//        writeln('SWL: UPDATES:',update_data.DumpToString());
 
         snap_data.Finalize;
 
@@ -835,7 +837,7 @@ var machine     : TFRE_DB_MACHINE;
         machinename := machine.GetName;
         assert(length(machinename)>0,'TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ServerDiskEncPoolDataAnswer no machineame provided!');
         hdata.Field(machinename).AsObject := machine.CloneToNewObject;
-        writeln('DUMP SERVERMACHINEDATA ',hdata.Field(machinename).AsObject.DumpToString());
+//        writeln('DUMP SERVERMACHINEDATA ',hdata.Field(machinename).AsObject.DumpToString());
         hdata.SaveToFile('database_boxconsole.dbo');
       end;
   end;

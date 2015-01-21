@@ -1469,7 +1469,7 @@ begin
  children := getZFSChildren(conn);
  for i:= 0 to high(children) do
    begin
-     writeln('SWL EMBED :',children[i].SchemeClass);
+//     writeln('SWL EMBED :',children[i].SchemeClass);
      if children[i].IsA(TFRE_DB_ZFS_DATASTORAGE,ds_obj) then
        begin
          (self.Implementor_HC as TFRE_DB_ZFS_POOL).addDatastorageEmbedded(ds_obj);
@@ -1502,7 +1502,7 @@ begin
            end
          else
            begin
-             writeln('SWL SKIP :',children[i].SchemeClass);
+//             writeln('SWL SKIP :',children[i].SchemeClass);
              // do not embed for feeder
            end;
          continue;

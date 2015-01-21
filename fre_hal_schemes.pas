@@ -6492,7 +6492,7 @@ begin
       pools.Field(ua_name).AsObject:=obj;
     end;
 
-  writeln('SWL REQUEST_DISC_ENC_POOL: ',result.DumpToString);
+//  writeln('SWL REQUEST_DISC_ENC_POOL: ',result.DumpToString);
 
 end;
 
