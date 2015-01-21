@@ -344,6 +344,7 @@ type
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
+     class function  getAllHostnetClasses   : TFRE_DB_StringArray;
      function        GetFMRI                : TFRE_DB_String; override;
      procedure       SetIPCIDR              (const value:TFRE_DB_String);
    published
@@ -2203,7 +2204,7 @@ class procedure TFRE_DB_IP_HOSTNET.RegisterSystemScheme(const scheme: IFRE_DB_SC
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_SERVICE.Classname);
-  scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
+  scheme.AddSchemeField('datalinkParent',fdbft_ObjLink).multiValues:=false;
 end;
 
 class procedure TFRE_DB_IP_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -2212,6 +2213,11 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
   end;
+end;
+
+class function TFRE_DB_IP_HOSTNET.getAllHostnetClasses: TFRE_DB_StringArray;
+begin
+  Result:=TFRE_DB_StringArray.create(TFRE_DB_IPV4_HOSTNET.ClassName,TFRE_DB_IPV6_HOSTNET.ClassName);
 end;
 
 function TFRE_DB_IP_HOSTNET.GetFMRI: TFRE_DB_String;
@@ -5979,9 +5985,7 @@ end;
    GFRE_DBI.RegisterSysEnum(enum);
 
    scheme.GetSchemeField('objname').required:=true;
-   scheme.AddSchemeField('parentid',fdbft_ObjLink).multiValues:=false;
-   scheme.AddSchemeField('ipmpparentid',fdbft_ObjLink).multiValues:=false;
-   scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
+   scheme.AddSchemeField('datalinkParent',fdbft_ObjLink);
    scheme.AddSchemeField('mtu',fdbft_Uint16);
    scheme.AddSchemeField('type',fdbft_String).SetupFieldDef(true,false,'datalink_network_type');
 
