@@ -542,6 +542,14 @@ type
      function        RIF_ZoneCreate        : IFRE_DB_Object;
    end;
 
+   { TFRE_DB_GLOBAL_ZONE }
+
+   TFRE_DB_GLOBAL_ZONE=class(TFRE_DB_ZONE)
+   protected
+     class procedure RegisterSystemScheme  (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
    { TFRE_DB_ZONECREATION_JOB }
 
    TFRE_DB_ZONECREATION_JOB=class(TFRE_DB_JOB)
@@ -1327,6 +1335,18 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_GLOBAL_ZONE }
+
+class procedure TFRE_DB_GLOBAL_ZONE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+end;
+
+class procedure TFRE_DB_GLOBAL_ZONE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  inherited InstallDBObjects(conn, currentVersionId, newVersionId);
+end;
 
 { TFRE_DB_DATALINK_SIMNET }
 
@@ -6916,6 +6936,7 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DNS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_NAS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_GLOBAL_ZONE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Tester);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DEVICE);
