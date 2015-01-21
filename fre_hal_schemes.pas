@@ -7009,6 +7009,19 @@ var
   collection: IFRE_DB_COLLECTION;
   ix_def    : TFRE_DB_INDEX_DEF;
 begin
+
+  if not conn.CollectionExists(CFRE_DB_DATACENTER_COLLECTION) then
+    begin
+     collection:=conn.CreateCollection(CFRE_DB_DATACENTER_COLLECTION);
+     collection.DefineIndexOnField('objname',fdbft_String,true);
+    end;
+
+  if not conn.CollectionExists(CFRE_DB_TEMPLATE_COLLECTION) then
+    begin
+     collection:=conn.CreateCollection(CFRE_DB_TEMPLATE_COLLECTION);
+     collection.DefineIndexOnField('objname',fdbft_String,true);
+    end;
+
   if not conn.CollectionExists(CFOS_DB_SERVICES_COLLECTION) then begin
     collection  := conn.CreateCollection(CFOS_DB_SERVICES_COLLECTION);
     collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'def',false);
