@@ -249,7 +249,8 @@ var
               begin
                 sglog := (feed_disk.Field('log').CheckOutObject.Implementor_HC as TFRE_DB_SG_LOGS);
  //               writeln('SENDSTAT SGLOG, SEND HERE :',sglog.DumpToString());  // TODO SENDSTAT
-                feed_disk.DeleteField('log');
+//                feed_disk.DeleteField('log');
+                new_disk.Field('log').AsObject:=sglog;
               end;
             if not struct_obj.isA(TFRE_DB_UNDEFINED_BLOCKDEVICE.ClassName) then
               begin
@@ -290,6 +291,8 @@ var
       end;
 
     new_obj.SetDomainID(mdata.DomainID);
+    if new_obj.FieldExists('log') then
+      new_obj.Field('log').AsObject.SetDomainID(mdata.DomainID);
     new_obj.Field('objname').asstring := new_obj.Field('deviceidentifier').asstring;
     newdisks.Field(feed_disk.Field('DEVICEIDENTIFIER').asstring).asobject:=new_obj;
 
@@ -587,7 +590,9 @@ var mdata    : IFRE_DB_Object;
 
     begin
       halt :=false;
+      zpool_iostat := nil;
       new_obj.SetDomainID(mdata.DomainID);
+      new_obj.Field('MACHINEID').AsObjectLink := mdata.UID;
       if not (new_obj.Implementor_HC is TFRE_DB_ZFS_OBJ) then
         exit;
 //      writeln('SWL: CLASS ',new_obj.SchemeClass);
