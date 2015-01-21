@@ -195,9 +195,20 @@ begin
       end;
     cev_FieldChanged:
       begin
-        c:=diff_update_obj.Field('U_FN').ValueCount;
-        diff_update_obj.Field('U_FN').addstring(new_field.FieldName);
-        diff_update_obj.Field('U_F_'+inttostr(c)).CloneFromField(new_field);
+        if new_field.FieldType=fdbft_Object then
+          begin
+            c:=diff_update_obj.Field('D_FN').ValueCount;
+            diff_update_obj.Field('D_FN').addstring(new_field.FieldName);
+            c:=diff_update_obj.Field('I_FN').ValueCount;
+            diff_update_obj.Field('I_FN').addstring(new_field.FieldName);
+            diff_update_obj.Field('I_F_'+inttostr(c)).CloneFromField(new_field);
+          end
+        else
+          begin
+            c:=diff_update_obj.Field('U_FN').ValueCount;
+            diff_update_obj.Field('U_FN').addstring(new_field.FieldName);
+            diff_update_obj.Field('U_F_'+inttostr(c)).CloneFromField(new_field);
+          end;
       end;
     cev_FieldDeleted:
       begin

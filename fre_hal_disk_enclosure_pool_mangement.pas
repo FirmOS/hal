@@ -289,6 +289,7 @@ var
         new_obj := feed_disk.CloneToNewObject;
       end;
 
+    new_obj.SetDomainID(mdata.DomainID);
     new_obj.Field('objname').asstring := new_obj.Field('deviceidentifier').asstring;
     newdisks.Field(feed_disk.Field('DEVICEIDENTIFIER').asstring).asobject:=new_obj;
 
@@ -366,6 +367,7 @@ var
         begin
           new_slot := feed_slot.CloneToNewObject;
         end;
+      new_slot.SetDomainID(mdata.DomainID);
       (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddDriveSlotEmbedded(feed_slot.SlotNr,new_slot.Implementor_HC as TFRE_DB_DRIVESLOT);
       (new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).ParentInEnclosureUID  := new_enclosure.UID;
       slotnr := '0'+inttostr((new_slot.Implementor_HC as TFRE_DB_DRIVESLOT).SlotNr);
@@ -387,6 +389,7 @@ var
         begin
           new_expander := feed_expander.CloneToNewObject;
         end;
+      new_expander.SetDomainID(mdata.DomainID);
       (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).AddExpanderEmbedded(new_expander.Implementor_HC as TFRE_DB_SAS_EXPANDER);
       (new_expander.Implementor_HC as TFRE_DB_SAS_EXPANDER).ParentInEnclosureUID  := new_enclosure.UID;
       (new_expander.Implementor_HC as TFRE_DB_SAS_EXPANDER).ObjectName            := (new_expander.Implementor_HC as TFRE_DB_SAS_EXPANDER).DeviceIdentifier;
@@ -408,6 +411,7 @@ var
       end;
     new_enclosure.DeleteField('slots');
     new_enclosure.DeleteField('expanders');
+    new_enclosure.SetDomainID(mdata.DomainID);
     feed_enclosure.Field('slots').AsObject.ForAllObjects(@_updateslots);
     feed_enclosure.Field('expanders').AsObject.ForAllObjects(@_updateexpanders);
     (new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).ObjectName := 'Enclosure '+inttostr((new_enclosure.Implementor_HC as TFRE_DB_ENCLOSURE).EnclosureNr);
@@ -446,7 +450,6 @@ begin
 
     newenclosures := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
     newenclosures.Field('UID').AsGUID := mdata.Field('enclosures').AsObject.UID;
-    newenclosures.SetDomainID(mdata.Field('enclosures').AsObject.DomainID);
 
     dbo.Field('enclosures').AsObject.ForAllObjects(@_updateenclosures);
     mdata.Field('enclosures').AsObject:=newenclosures;
@@ -455,9 +458,6 @@ begin
 //    writeln('SWL UPDATED ENCLOSURE STRUCTURE', mdata.Field('enclosures').AsObject.DumpToString());
     newdisks := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
     newdisks.Field('UID').AsGUID := mdata.Field('disks').AsObject.UID;
-    newdisks.SetDomainID(mdata.Field('disks').AsObject.DomainID);
-
-
 
     dbo.Field('disks').AsObject.ForAllObjects(@_updatedisks);
     mdata.Field('disks').AsObject:=newdisks;
@@ -587,6 +587,7 @@ var mdata    : IFRE_DB_Object;
 
     begin
       halt :=false;
+      new_obj.SetDomainID(mdata.DomainID);
       if not (new_obj.Implementor_HC is TFRE_DB_ZFS_OBJ) then
         exit;
 //      writeln('SWL: CLASS ',new_obj.SchemeClass);
@@ -641,6 +642,7 @@ var mdata    : IFRE_DB_Object;
         new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
       end;
     new_pool.MachineID := mdata.UID;
+    new_pool.SetDomainID(mdata.DomainID);
     new_pool.parentInZFSId := mdata.UID;
     new_pool.AddMosParentID(mdata.UID);
     new_pool.Field('uniquephysicalid').asstring := new_pool.getZFSGuid;
@@ -718,7 +720,6 @@ begin
 
     newpools := TFRE_DB_EMBEDDING_GROUP.CreateForDB;
     newpools.Field('UID').AsGUID := mdata.Field('pools').AsObject.UID;
-    newpools.SetDomainID(mdata.Field('pools').AsObject.DomainID);
 
 
     dbo.ForAllObjects(@_updatepools);
@@ -830,13 +831,11 @@ var machine     : TFRE_DB_MACHINE;
         assert(length(machinename)>0,'TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ServerDiskEncPoolDataAnswer no machineame provided!');
         hdata.Field(machinename).AsObject := machine.CloneToNewObject;
         writeln('DUMP SERVERMACHINEDATA ',hdata.Field(machinename).AsObject.DumpToString());
+        hdata.SaveToFile('database_boxconsole.dbo');
       end;
   end;
 
 begin
-//  writeln('SWL: SERVERDISKENC ');
-//  writeln('SWL: SERVERDISKENC ',data.DumpToString());
-
   hdata_lock.Acquire;
   try
     data.ForAllObjects(@_forallObjects);

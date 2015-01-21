@@ -6463,6 +6463,7 @@ begin
   if not foundua then
     begin
       ua := TFRE_DB_ZFS_UNASSIGNED.CreateForDB;
+      ua.SetDomainID(DomainID);
       ua.InitforMachine(UID);
       ua_uid       := ua.UID;
       ua_name      := ua.GetName;
