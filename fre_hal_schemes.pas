@@ -540,6 +540,7 @@ type
      function        WEB_SaveOperation     (const input:IFRE_DB_Object ; const ses: IFRE_DB_Usersession; const app: IFRE_DB_APPLICATION; const conn: IFRE_DB_CONNECTION): IFRE_DB_Object;override;
      function        hasNAS                (const conn: IFRE_DB_CONNECTION):Boolean;
      function        hasDNS                (const conn: IFRE_DB_CONNECTION):Boolean;
+     function        MachineID             : TFRE_DB_GUID;
      function        RIF_ZoneCreate        : IFRE_DB_Object;
    end;
 
@@ -1474,6 +1475,8 @@ begin
   AddProgressLog('Zone halt done',50);
   fre_destroy_zone(zobj,self);
   AddProgressLog('Zone destruction done',100);
+  {$ELSE}
+  AddProgressLog('Zone uninstallation not implemented on this system',100);
   {$ENDIF SOLARIS}
 end;
 
@@ -1505,6 +1508,8 @@ begin
 //  readln;
 //  fre_boot_zone(zobj);
 //  writeln('zone booting');
+  {$ELSE}
+  AddProgressLog('Zone installation not implemented on this system',100);
   {$ENDIF SOLARIS}
 end;
 
@@ -5393,6 +5398,7 @@ end;
            break;
          if obj.IsA(TFRE_DB_ZFS_DATASET,ds) then
            begin
+             writeln('SWL DS:',obj.DumpToString);
              if whole_dsname='' then   // first, zonedataset
                begin
                  Field('zonepath').asstring := ds.Field('mountpoint').asstring;
@@ -5506,6 +5512,11 @@ end;
  function TFRE_DB_ZONE.hasDNS(const conn: IFRE_DB_CONNECTION): Boolean;
  begin
    Result:=conn.IsReferenced(UID,TFRE_DB_DNS.ClassName,'serviceParent');
+ end;
+
+ function TFRE_DB_ZONE.MachineID: TFRE_DB_GUID;
+ begin
+   result := Field('hostid').AsObjectLink;
  end;
 
  function TFRE_DB_ZONE.RIF_ZoneCreate: IFRE_DB_Object;
