@@ -5439,6 +5439,8 @@ end;
              begin
                for i:=0 to tmpl.Field('serviceclasses').valuecount-1 do
                  begin
+                   if tmpl.Field('serviceclasses').AsStringItem[i]='TFOS_DB_CITYCOM_VOIP_SERVICE' then
+                     continue;
                    if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_VIRTUAL_FILESERVER.ClassName then
                      continue;
                    if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_DATALINK_VNIC.ClassName then
@@ -6064,13 +6066,16 @@ end;
          obj.Finalize;
      end;
    // embed parent (datalink)
-   if FieldExists('parentid') then
+   if FieldExists('datalinkparent') then
      begin
-       CheckDbResult(conn.Fetch(field('parentid').AsGUID,obj),' could not fetch parent object '+field('parentid').AsGUID.AsHexString);
-       if obj.IsA(TFRE_DB_DATALINK,dl) then
-         self.Field('PARENT').AsObject:=dl
-       else
-         obj.Finalize;
+       for i:=0 to field('datalinkparent').ValueCount-1 do
+         begin
+           CheckDbResult(conn.Fetch(field('datalinkparent').AsObjectLinkItem[i],obj),' could not fetch parent object '+field('datalinkparent').AsObjectLinkItem[i].AsHexString);
+           if obj.IsA(TFRE_DB_DATALINK,dl) then
+             self.Field('PARENT').AsObject:=dl
+           else
+             obj.Finalize;
+         end;
      end;
  end;
 
