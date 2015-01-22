@@ -107,7 +107,7 @@ begin
     with DC_CA do begin
       SetDeriveParent           (conn.GetCollection(CFRE_DB_CA_COLLECTION));
       SetDeriveTransformation   (ca_Grid);
-      SetDisplayType            (cdt_Listview,[],'',nil,'',CWSF(@WEB_CAMenu),nil,CWSF(@WEB_CAContent));
+      SetDisplayType            (cdt_Listview,[],'',CWSF(@WEB_CAMenu),nil,CWSF(@WEB_CAContent));
     end;
 
     GFRE_DBI.NewObjectIntf(IFRE_DB_SIMPLE_TRANSFORM,crt_Grid);
@@ -122,7 +122,7 @@ begin
       SetDeriveParent(conn.GetCollection(CFRE_DB_CERTIFICATE_COLLECTION));
       SetUseDependencyAsRefLinkFilter(['TFRE_DB_CERTIFICATE<CA'],false);
       SetDeriveTransformation(crt_Grid);
-      SetDisplayType(cdt_Listview,[],'',nil,'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
+      SetDisplayType(cdt_Listview,[],'',CWSF(@WEB_CrtMenu),nil,CWSF(@WEB_CrtContent));
     end;
   end;
 end;
