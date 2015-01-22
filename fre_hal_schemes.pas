@@ -541,7 +541,8 @@ type
      function        hasNAS                (const conn: IFRE_DB_CONNECTION):Boolean;
      function        hasDNS                (const conn: IFRE_DB_CONNECTION):Boolean;
      function        MachineID             : TFRE_DB_GUID;
-     function        RIF_ZoneCreate        : IFRE_DB_Object;
+     function        RIF_Boot              (const runnning_ctx : TObject) : IFRE_DB_Object;
+     function        RIF_Halt              (const runnning_ctx : TObject) : IFRE_DB_Object;
    end;
 
    { TFRE_DB_GLOBAL_ZONE }
@@ -1457,7 +1458,8 @@ end;
 
 procedure TFRE_DB_ZONEDESTROY_JOB.SetZoneObject(const zonedbo: IFRE_DB_Object);
 begin
-  Field('zone').asobject:=zonedbo;
+  Field('zone').asobject       :=zonedbo;
+  Field('linkid').AsObjectLink :=zonedbo.UID;
   SetJobkeyDescription(uppercase('ZONEDESTROY_'+zonedbo.UID.AsHexString),'Destruction of Zone '+zonedbo.UID.AsHexString);
 end;
 
@@ -1484,7 +1486,8 @@ end;
 
 procedure TFRE_DB_ZONECREATION_JOB.SetZoneObject(const zonedbo: IFRE_DB_Object);
 begin
-  Field('zone').asobject:=zonedbo;
+  Field('zone').asobject       :=zonedbo;
+  Field('linkid').AsObjectLink :=zonedbo.UID;
   SetJobkeyDescription(uppercase('ZONECREATE_'+zonedbo.UID.AsHexString),'Creation of Zone '+zonedbo.UID.AsHexString);
 end;
 
@@ -5522,10 +5525,21 @@ end;
    result := Field('hostid').AsObjectLink;
  end;
 
- function TFRE_DB_ZONE.RIF_ZoneCreate: IFRE_DB_Object;
+ function TFRE_DB_ZONE.RIF_Boot(const runnning_ctx: TObject): IFRE_DB_Object;
  begin
    {$IFDEF SOLARIS}
-//   result := fre_create_zonecfg(self);
+   result := fre_boot_zone (self,nil);
+   {$ELSE}
+   writeln('zone boot not implemented on this system');
+   {$ENDIF SOLARIS}
+ end;
+
+ function TFRE_DB_ZONE.RIF_Halt(const runnning_ctx: TObject): IFRE_DB_Object;
+ begin
+   {$IFDEF SOLARIS}
+   result := fre_halt_zone (self,nil);
+   {$ELSE}
+   writeln('zone halt not implemented on this system');
    {$ENDIF SOLARIS}
  end;
 
