@@ -5481,6 +5481,7 @@ end;
      if obj.IsA(TFRE_DB_DATALINK_VNIC,dl_vnic) then
        begin
          dl_vnic.Field('zonename').asstring := UID.AsHexString;
+         writeln('SWL ZONENAME:',UID.AsHexString);
          dl_vnic.RIF_CreateVNIC;
        end;
    end;
@@ -5900,6 +5901,7 @@ end;
    writeln('CREATE VNIC START');
   //writeln('SWL DUMP:',self.DumpToString());
    parent_if := Field('parent').AsObject.Field('objname').AsString;
+   writeln('SWL: PARENT IF:',parent_if);
    if FieldExists('zonename') then
      zonename  := Field('zonename').asstring
    else
@@ -5908,11 +5910,14 @@ end;
      mac.SetFromString(Field('UNIQUEPHYSICALID').asstring)
    else
      mac.GenerateRandom;
+   writeln('SWL: MAC ',mac.GetAsString);
 
    if FieldExists('vlan') then
      vlan := Field('vlan').AsUInt16
    else
      vlan := 0;
+
+   writeln('SWL: VLAN ',vlan);
 
    if zonename<>'' then
      begin
