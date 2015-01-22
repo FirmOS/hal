@@ -68,6 +68,7 @@ type
   {collection_assign.Field(<classname>).asstring := '';  // skip }
   {no entry => embedd in parent object}
 
+  function  FREDIFF_GetCollectionForObject                              (const obj:IFRE_DB_Object; const collection_assign:IFRE_DB_Object; out collectionname:string) : boolean;
   procedure FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject  (const first_obj:IFRE_DB_Object;const second_obj:IFRE_DB_Object;const collection_assign:IFRE_DB_Object;const transport_list_obj:IFRE_DB_Object; const mark_deleted:boolean=true);
 
   { obsolete, replaced with GenerateRelationalDiffContainersandAddToBulkObject }
@@ -84,15 +85,15 @@ var new_obj   : IFRE_DB_Object;
     coll_name : string;
 
     procedure IterateSubobjects(const subobj:IFRE_DB_Object);
+    var collname:string;
     begin
-      if not collection_assign.FieldExists(subobj.SchemeClass) then  // embedd subobject and all below
+      if FREDIFF_GetCollectionForObject(subobj,collection_assign,collname)=false then
         new_obj.Field(subobj.ParentField.FieldName).AsObject:=subobj.CloneToNewObject;
     end;
 
 begin
-  if collection_assign.FieldExists(insert_obj.SchemeClass) then
+  if FREDIFF_GetCollectionForObject(insert_obj,collection_assign,coll_name) then
     begin
-      coll_name := collection_assign.Field(insert_obj.SchemeClass).asstring;
       if coll_name='' then
         begin
 //          writeln('SWL: NO COLLECTION FOR ',insert_obj.SchemeClass,' SKIP');
@@ -130,10 +131,11 @@ function FREDIFF_TRANSPORT_CreateUpdateObject(const is_child_update: boolean; co
 var diff_update_obj:IFRE_DB_Object;
     pobj           :IFRE_DB_Object;
     c              :NativeInt;
+    dummy_collname :string;
 begin
   if (update_type=cev_FieldAdded) and (new_field.FieldType=fdbft_Object) then
     begin
-      if (update_obj.UID=top_guid) or collection_assign.FieldExists(new_field.asObject.SchemeClass) then  // skip classes with collection assignment
+      if (update_obj.UID=top_guid) or FREDIFF_GetCollectionForObject(new_field.asObject,collection_assign,dummy_collname) then  // skip classes with collection assignment
         begin
          exit(nil);  { do not send insert for fields with type object, handled in insert object  }
         end;
@@ -141,7 +143,7 @@ begin
 
   if ((update_type=cev_FieldDeleted) or (update_type=cev_FieldChanged)) and (old_field.FieldType=fdbft_Object) then
     begin
-      if (update_obj.UID=top_guid) or collection_assign.FieldExists(old_field.asobject.SchemeClass) then  // skip classes with collection assignment
+      if (update_obj.UID=top_guid) or FREDIFF_GetCollectionForObject(old_field.asObject,collection_assign,dummy_collname) then  // skip classes with collection assignment
         exit(nil);  { do not send update oder delete for fields with type object, handled in insert and delete object  }
     end;
 
@@ -160,7 +162,7 @@ begin
       result          := GFRE_DBI.NewObject;
       diff_update_obj := result;
       diff_update_obj.Field('UID').AsGUID := update_obj.UID;
-      if not collection_assign.FieldExists(update_obj.SchemeClass) then  // find next parent class with collection assignment
+      if not FREDIFF_GetCollectionForObject(update_obj,collection_assign,dummy_collname) then  // find next parent class with collection assignment
         begin
           pobj := update_obj.Parent;
           while assigned(pobj) do
@@ -171,7 +173,7 @@ begin
                   diff_update_obj.Field('P_REV').AddGuid(pobj.UID);
                   diff_update_obj.SetDomainID(pobj.DomainID);
                 end;
-              if collection_assign.FieldExists(pobj.SchemeClass) then   // only iterate to the first object with assigned collection
+              if FREDIFF_GetCollectionForObject(pobj,collection_assign,dummy_collname) then   // only iterate to the first object with assigned collection
                 begin
                   writeln('SWL DONE ON ',pobj.SchemeClass);
                   break;
@@ -299,6 +301,57 @@ begin
   end;
 end;
 
+function FREDIFF_GetCollectionForObject(const obj:IFRE_DB_Object; const collection_assign: IFRE_DB_Object; out collectionname: string): boolean;
+var classname :string;
+
+  function _checkParentClass(const fld:IFRE_DB_Field):boolean;
+  var exc : TFRE_DB_ObjectClassEx;
+  begin
+    result:=false;
+    if fld.FieldType=fdbft_String then
+      begin
+        exc := GFRE_DBI.GetObjectClassEx(fld.FieldName);
+        if (obj.Implementor_HC).InheritsFrom(exc) then
+         begin
+           writeln('SWL: ADDING COLLECTION ',fld.AsString,' FOR CLASS',classname);
+           collection_assign.Field(classname).asstring:=fld.AsString;
+           result:=true;
+         end;
+      end;
+  end;
+
+begin
+  classname := obj.SchemeClass;
+  if collection_assign.FieldExists(classname) then
+    begin
+      collectionname:=collection_assign.Field(classname).asstring;
+//      writeln('SWL FOUND CLASSNAME ',classname,' ',collectionname);
+      result :=true;
+    end
+  else
+    begin
+      result :=false;
+      if collection_assign.FieldExists('BLACKLIST') then
+       if collection_assign.Field('BLACKLIST').AsObject.FieldExists(classname) then
+         exit;
+//      writeln('SWL NOT FOUND CLASSNAME, CHECKING ',classname,' ',collectionname);
+      collection_assign.ForAllFieldsBreak(@_checkParentClass);
+      // recheck
+      if collection_assign.FieldExists(classname) then
+        begin
+          writeln('SWL NOW FOUND CLASSNAME ',classname,' ',collectionname);
+          collectionname:=collection_assign.Field(classname).asstring;
+          result:=true;
+        end
+      else
+        begin
+          if not collection_assign.FieldExists('BLACKLIST') then
+            collection_assign.Field('BLACKLIST').AsObject:=GFRE_DBI.NewObject;
+          collection_assign.Field('BLACKLIST').AsObject.Field(classname).AsBoolean:=true;
+        end;
+    end;
+end;
+
 procedure FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject(const first_obj: IFRE_DB_Object; const second_obj: IFRE_DB_Object; const collection_assign: IFRE_DB_Object; const transport_list_obj: IFRE_DB_Object; const mark_deleted: boolean);
 var
   last_update_object:IFRE_DB_Object;
@@ -422,33 +475,35 @@ var
   procedure _Delete(const o : IFRE_DB_Object);
   var diff_step  : IFRE_DB_Object;
       obj_status : IFRE_DB_Object;
+      collname   : string;
   begin
-    if (collection_assign.FieldExists(o.SchemeClass)) and (collection_assign.Field(o.SchemeClass).asstring<>'') then
-      begin
-        if mark_deleted=false then
-          begin
-            diff_step := FREDIFF_TRANSPORT_CreateDeleteObject(o);
-            if assigned(diff_step) then
-              transport_list_obj.Field(CDIFF_DELETE_LIST).AddObject(diff_step);
-          end
-        else
-          begin
-            if o.FieldExists('OBJSTATUS') then           //  TODO : USE CORRECT FIELD NAME/FUNCTION
-              begin
-                writeln('SWL UPDATE OBJSTATUS');
-                obj_status := o.Field('OBJSTATUS').AsObject;
-                obj_status.Field('deleted').asboolean := true;
-                _Update(true,obj_status,cev_FieldAdded,obj_status.Field('deleted'),nil);
-              end
-            else
-              begin
-                obj_status := GFRE_DBI.NewObject;         // TODO : CREATE CORRECT CLASS
-                obj_status.Field('deleted').AsBoolean := true;
-                o.Field('OBJSTATUS').AsObject:=obj_status;
-                _Update(true,o,cev_FieldAdded,o.Field('OBJSTATUS'),nil);
-              end;
-          end;
-      end;
+    if FREDIFF_GetCollectionForObject(o,collection_assign,collname) then
+      if collname<>'' then
+        begin
+          if mark_deleted=false then
+            begin
+              diff_step := FREDIFF_TRANSPORT_CreateDeleteObject(o);
+              if assigned(diff_step) then
+                transport_list_obj.Field(CDIFF_DELETE_LIST).AddObject(diff_step);
+            end
+          else
+            begin
+              if o.FieldExists('OBJSTATUS') then           //  TODO : USE CORRECT FIELD NAME/FUNCTION
+                begin
+                  writeln('SWL UPDATE OBJSTATUS');
+                  obj_status := o.Field('OBJSTATUS').AsObject;
+                  obj_status.Field('deleted').asboolean := true;
+                  _Update(true,obj_status,cev_FieldAdded,obj_status.Field('deleted'),nil);
+                end
+              else
+                begin
+                  obj_status := GFRE_DBI.NewObject;         // TODO : CREATE CORRECT CLASS
+                  obj_status.Field('deleted').AsBoolean := true;
+                  o.Field('OBJSTATUS').AsObject:=obj_status;
+                  _Update(true,o,cev_FieldAdded,o.Field('OBJSTATUS'),nil);
+                end;
+            end;
+        end;
   end;
 
   procedure CleanupBacklog(const fld:IFRE_DB_Field);
