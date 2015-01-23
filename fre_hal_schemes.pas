@@ -527,7 +527,12 @@ type
    end;
 
 
+   { TFRE_DB_ZONESTATUS_PLUGIN }
+
    TFRE_DB_ZONESTATUS_PLUGIN=class(TFRE_DB_STATUS_PLUGIN)
+   public
+     procedure       SetZoneState         (const zonestatename:string; const zonestate_num:UInt32);
+     procedure       SetZoneID            (const zid:int64);
    end;
 
    { TFRE_DB_ZONE }
@@ -1343,6 +1348,19 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_ZONESTATUS_PLUGIN }
+
+procedure TFRE_DB_ZONESTATUS_PLUGIN.SetZoneState(const zonestatename: string;const zonestate_num: UInt32);
+begin
+  Field('zstate').asstring     := zonestatename;
+  Field('zstate_num').AsUInt32 := zonestate_num;
+end;
+
+procedure TFRE_DB_ZONESTATUS_PLUGIN.SetZoneID(const zid: int64);
+begin
+  Field('zid').AsInt64:=zid;
+end;
 
 { TFRE_DB_GLOBAL_ZONE }
 
@@ -7050,6 +7068,7 @@ begin
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONECREATION_JOB);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONEDESTROY_JOB);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONESTATUS_PLUGIN);
 
    //GFRE_DBI.Initialize_Extension_Objects;
  end;

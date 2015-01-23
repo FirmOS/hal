@@ -53,13 +53,13 @@ var zents  : array of zone_entry_t;
 
 procedure sanity_check(zone : string; cmd_num : integer; running, unsafe_when_running, force : boolean);
 
-procedure list_zones;
 function  fre_install_zone  (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
 function  fre_create_zonecfg(const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
 function  fre_boot_zone     (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
 function  fre_halt_zone     (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
 function  fre_shutdown_zone (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
 function  fre_destroy_zone  (const zone_dbo:IFRE_DB_Object; const job:TFRE_DB_Job): IFRE_DB_Object;
+function  fre_list_all_zones: IFRE_DB_Object;
 
 function  fre_set_zonestate (const zonename:string; const state:uint_t): boolean;
 
@@ -131,7 +131,7 @@ begin
   if Assigned(job) then job.AddProgressLog('Added Dataset '+ds_name);
 end;
 
-procedure lookup_zone_info(const zone_name:string; zid : zoneid_t ; var zent : zone_entry_t);
+procedure fre_lookup_zone_info(const zone_name:string; zid : zoneid_t ; var zent : zone_entry_t);
 var uuid   : uuid_t;
     scratch: string;
     flags  : cint;
@@ -245,7 +245,7 @@ again:
          zents[i].valid := false;
          continue;
        end;
-     lookup_zone_info(name,zids[i],zents[i]);
+     fre_lookup_zone_info(name,zids[i],zents[i]);
    end;
 end;
 
@@ -400,37 +400,6 @@ begin
    end;
 end;
 
-procedure list_zones;
-var
-    i      : Integer;
-    cookie : PFILE;
-    name   : string;
-    cname  : PChar;
-    zent   : zone_entry_t;
-
-begin
- //fetch_zents;
- //for i := 0 to high(zents) do
- //  begin
- //    with zents[i] do
- //      writeln(valid,' ',error,' ',zid,' ',zname,' ',ziptype,' ',zroot,' ',zstate,' ',zstate_num,' ',zuuid,' ',zbrand);
- //  end;
-   cookie := setzoneent;
-   repeat
-      cname := getzoneent(cookie);
-      if not assigned(cname) then
-        break;
-      name  := string(cname);
-      illu_Free(cname);
-      lookup_zone_info(name,ZONE_ID_UNDEFINED,zent);
-      with zent do
-        writeln(valid,' ',error,' ',zid,' ',zname,' ',ziptype,' ',zroot,' ',zstate,' ',zstate_num,' ',zuuid,' ',zbrand);
-   until false;
-   endzoneent(cookie);
-   //sleep(1000);
-   //writeln;
-   //writeln;
-end;
 
 function fre_install_zone(const zone_dbo: IFRE_DB_Object; const job: TFRE_DB_Job): IFRE_DB_Object;
 var
@@ -726,6 +695,44 @@ begin
     begin
       raise Exception.Create('error on destroy zone dataset for zone :'+errs);
     end;
+end;
+
+function fre_list_all_zones: IFRE_DB_Object;
+var
+  zfile : PFILE;
+  name  : string;
+  cname : PChar;
+  zent  : zone_entry_t;
+  zdbo  : IFRE_DB_Object;
+
+begin
+  result := GFRE_DBI.NewObject;
+  zfile  := setzoneent;
+  try
+    repeat
+      cname := getzoneent(zfile);
+      if not assigned(cname) then
+        break;
+      name  := string(cname);
+      illu_Free(cname);
+      fre_lookup_zone_info(name,ZONE_ID_UNDEFINED,zent);
+
+      zdbo  := GFRE_DBI.NewObject;
+      zdbo.Field('valid').asboolean     := zent.valid;
+      zdbo.Field('error').asstring      := zent.error;
+      zdbo.Field('zid').asint64         := zent.zid;
+      zdbo.Field('zname').asstring      := zent.zname;
+      zdbo.Field('zstate').asstring     := zent.zstate;
+      zdbo.Field('zstate_num').asuint32 := zent.zstate_num;
+      zdbo.Field('zbrand').asstring     := zent.zbrand;
+      zdbo.Field('zroot').asstring      := zent.zroot;
+      zdbo.Field('zuuid').asstring      := zent.zuuid;
+      zdbo.Field('ziptype').AsByte      := Ord(zent.ziptype);
+      result.Field(zdbo.Field('zname').asstring).AsObject:=zdbo;
+    until false;
+  finally
+    endzoneent(zfile);
+  end;
 end;
 
 function fre_set_zonestate(const zonename: string; const state: uint_t): boolean;

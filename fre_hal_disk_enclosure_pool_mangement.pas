@@ -195,7 +195,7 @@ begin
   hdata_lock.Acquire;
   try
 //    writeln('SWL TOTAL STRUCTURE', hdata.DumpToString());
-    hdata.SaveToFile('current_boxconsole.dbo');
+//    hdata.SaveToFile('current_boxconsole.dbo');
   finally
     hdata_lock.Release;
   end;
@@ -838,7 +838,7 @@ var machine     : TFRE_DB_MACHINE;
         assert(length(machinename)>0,'TFRE_HAL_DISK_ENCLOSURE_POOL_MANAGEMENT.ServerDiskEncPoolDataAnswer no machineame provided!');
         hdata.Field(machinename).AsObject := machine.CloneToNewObject;
 //        writeln('DUMP SERVERMACHINEDATA ',hdata.Field(machinename).AsObject.DumpToString());
-        hdata.SaveToFile('database_boxconsole.dbo');
+//        hdata.saveToFile('database_boxconsole.dbo');
       end;
   end;
 
