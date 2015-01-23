@@ -2328,8 +2328,8 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
     inherited RegisterSystemScheme(scheme);
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
-    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ipv6');
-    scheme.AddSchemeField('slaac',fdbft_Boolean).required:=true;
+    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ipv6');
+    scheme.AddSchemeField('slaac',fdbft_Boolean).addDepField('ip_net');
     scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ipv6');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
     group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_ipv6_group'));
@@ -2471,9 +2471,9 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
     inherited RegisterSystemScheme(scheme);
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
-    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(false,false,'','ip');
-    scheme.AddSchemeField('dhcp',fdbft_Boolean).required:=true;
-    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'');  // TODO: add ipv4 validator
+    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ip');
+    scheme.AddSchemeField('dhcp',fdbft_Boolean).addDepField('ip_net');
+    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ip');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
     group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
@@ -6058,6 +6058,7 @@ end;
 
    scheme.GetSchemeField('objname').required:=true;
    scheme.AddSchemeField('datalinkParent',fdbft_ObjLink);
+   scheme.AddSchemeField('zoneId',fdbft_ObjLink);
    scheme.AddSchemeField('mtu',fdbft_Uint16);
    scheme.AddSchemeField('type',fdbft_String).SetupFieldDef(true,false,'datalink_network_type');
 
@@ -7121,6 +7122,16 @@ begin
         CheckDbResult(collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'def',false));
       end;
   end;
+
+  if not conn.CollectionExists(CFRE_DB_IP_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_IP_COLLECTION);
+  end else begin
+    collection  := conn.GetCollection(CFRE_DB_IP_COLLECTION);
+  end;
+  if not collection.IndexExists('def') then begin
+    collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'def',false);
+  end;
+
   if not conn.CollectionExists(CFOS_DB_ZONES_COLLECTION) then begin
     collection  := conn.CreateCollection(CFOS_DB_ZONES_COLLECTION);
   end else begin
