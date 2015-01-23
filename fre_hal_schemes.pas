@@ -531,6 +531,9 @@ type
 
    TFRE_DB_ZONESTATUS_PLUGIN=class(TFRE_DB_STATUS_PLUGIN)
    public
+     class procedure RegisterSystemScheme                (const scheme : IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects                    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+
      procedure       SetZoneState         (const zonestatename:string; const zonestate_num:UInt32);
      procedure       SetZoneID            (const zid:int64);
    end;
@@ -1350,6 +1353,20 @@ implementation
   end;
 
 { TFRE_DB_ZONESTATUS_PLUGIN }
+
+class procedure TFRE_DB_ZONESTATUS_PLUGIN.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_STATUS_PLUGIN.Classname);
+end;
+
+class procedure TFRE_DB_ZONESTATUS_PLUGIN.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
 
 procedure TFRE_DB_ZONESTATUS_PLUGIN.SetZoneState(const zonestatename: string;const zonestate_num: UInt32);
 begin
