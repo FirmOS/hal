@@ -51,6 +51,7 @@ uses
   FRE_DBBUSINESS,
   FRE_DB_INTERFACE,
   fre_system,
+  fre_dbbase,
   fre_testcase,
   fre_alert,
   fre_zfs,
@@ -523,6 +524,10 @@ type
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
      procedure       CALC_GetDisplayName          (const setter: IFRE_DB_CALCFIELD_SETTER); override;
+   end;
+
+
+   TFRE_DB_ZONESTATUS_PLUGIN=class(TFRE_DB_STATUS_PLUGIN)
    end;
 
    { TFRE_DB_ZONE }
@@ -6542,6 +6547,7 @@ var mo          : IFRE_DB_Object;
     var  refs        : TFRE_DB_ObjectReferences;
          sobj        : IFRE_DB_Object;
          clonedobj   : IFRE_DB_Object;
+         svc         : TFRE_DB_SERVICE;
          i           : integer;
     begin
       refs := conn.GetReferencesDetailed(obj.uid,false);
@@ -6553,7 +6559,12 @@ var mo          : IFRE_DB_Object;
 //              writeln('SWL SET FIELD LEVEL',level,' ',obj.UID_String,' ',sobj.UID_String,' ',sobj.SchemeClass);
               clonedobj := sobj.CloneToNewObject;
               obj.Field(sobj.UID_String).AsObject:=clonedobj;
-              _getsubreferences(clonedobj,level+1);
+              if clonedobj.IsA(TFRE_DB_SERVICE,svc) then
+                begin
+                  svc.Embed(conn);
+                end
+              else
+                _getsubreferences(clonedobj,level+1);
             end;
         end;
     end;
