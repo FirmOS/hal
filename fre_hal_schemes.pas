@@ -79,6 +79,7 @@ const
   CFRE_DB_TEMPLATE_COLLECTION          = 'templates';
   CFRE_DB_IP_COLLECTION                = 'ip';
   CFRE_DB_ROUTING_COLLECTION           = 'routing';
+  CFRE_DB_VM_COMPONENTS_COLLECTION     = 'vmcomponents';
 
 type
 
@@ -465,6 +466,8 @@ type
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       Embed                     (const conn: IFRE_DB_CONNECTION); override;
    end;
 
    { TFRE_DB_VROOTSERVER }
@@ -475,16 +478,95 @@ type
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    end;
 
+
+   { TFRE_DB_VMACHINE_DISK }
+
+   TFRE_DB_VMACHINE_DISK=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     procedure       EmbedZVol              (const conn: IFRE_DB_CONNECTION);
+   public
+     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
+   end;
+
+   { TFRE_DB_VMACHINE_DISK_IDE }
+
+   TFRE_DB_VMACHINE_DISK_IDE=class(TFRE_DB_VMACHINE_DISK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       Embed                     (const conn: IFRE_DB_CONNECTION); override;
+   end;
+
+   { TFRE_DB_VMACHINE_DISK_VIRTIO }
+
+   TFRE_DB_VMACHINE_DISK_VIRTIO=class(TFRE_DB_VMACHINE_DISK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); override;
+   end;
+
+   { TFRE_DB_VMACHINE_DISK_ISO }
+
+   TFRE_DB_VMACHINE_DISK_ISO=class(TFRE_DB_VMACHINE_DISK)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); override;
+   end;
+
+   { TFRE_DB_VMACHINE_NIC }
+
+   TFRE_DB_VMACHINE_NIC=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     procedure       EmbedDatalink          (const conn: IFRE_DB_CONNECTION);
+   public
+     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
+   end;
+
+   { TFRE_DB_VMACHINE_NIC_E1000 }
+
+   TFRE_DB_VMACHINE_NIC_E1000=class(TFRE_DB_VMACHINE_NIC)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); override;
+   end;
+
+   { TFRE_DB_VMACHINE_NIC_VIRTIO }
+
+   TFRE_DB_VMACHINE_NIC_VIRTIO=class(TFRE_DB_VMACHINE_NIC)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   public
+     procedure       Embed                     (const conn: IFRE_DB_CONNECTION); override;
+   end;
+
    { TFRE_DB_VMACHINE }
 
    TFRE_DB_VMACHINE=class(TFRE_DB_VHOST)
    private
+     function  getCPUCores: Byte;
+     function  getCPUSockets: Byte;
      function  getKey    : TFRE_DB_String;
-     function getMType   : TFRE_DB_String;
+     function  getMemoryMB: Uint32;
+     function  getMType   : TFRE_DB_String;
      function  getState  : TFRE_DB_String;
      function  getVNCHost: TFRE_DB_String;
      function  getVNCPort: UInt32;
+     procedure setCPUCores(AValue: Byte);
+     procedure setCPUSockets(AValue: Byte);
      procedure setKey    (AValue: TFRE_DB_String);
+     procedure setMemoryMB(AValue: Uint32);
      procedure setMType  (AValue: TFRE_DB_String);
      procedure setState  (AValue: TFRE_DB_String);
      procedure setVNCHost(AValue: TFRE_DB_String);
@@ -497,13 +579,17 @@ type
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
      class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
    public
-     function        GetFMRI                : TFRE_DB_STRING; override;
+     procedure       Embed                     (const conn: IFRE_DB_CONNECTION); override;
+     function        GetFMRI                   : TFRE_DB_STRING; override;
 
-     property  key      : TFRE_DB_String read getKey     write setKey;
-     property  state    : TFRE_DB_String read getState   write setState;
-     property  mtype    : TFRE_DB_String read getMType   write setMType;
-     property  vncHost  : TFRE_DB_String read getVNCHost write setVNCHost;
-     property  vncPort  : UInt32         read getVNCPort write setVNCPort;
+     property  key        : TFRE_DB_String read getKey     write setKey;
+     property  state      : TFRE_DB_String read getState   write setState;
+     property  mtype      : TFRE_DB_String read getMType   write setMType;
+     property  vncHost    : TFRE_DB_String read getVNCHost write setVNCHost;
+     property  vncPort    : UInt32         read getVNCPort write setVNCPort;
+     property  MemoryMB   : Uint32         read getMemoryMB write setMemoryMB;
+     property  CpuCores   : Byte           read getCPUCores write setCPUCores;
+     property  CpuSockets : Byte           read getCPUSockets write setCPUSockets;
    end;
 
 
@@ -1370,6 +1456,186 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_VMACHINE_NIC_VIRTIO }
+
+class procedure TFRE_DB_VMACHINE_NIC_VIRTIO.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_NIC.ClassName);
+end;
+
+class procedure TFRE_DB_VMACHINE_NIC_VIRTIO.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+procedure TFRE_DB_VMACHINE_NIC_VIRTIO.Embed(const conn: IFRE_DB_CONNECTION);
+begin
+  inherited Embed(conn);
+end;
+
+{ TFRE_DB_VMACHINE_NIC_E1000 }
+
+class procedure TFRE_DB_VMACHINE_NIC_E1000.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_NIC.ClassName);
+end;
+
+class procedure TFRE_DB_VMACHINE_NIC_E1000.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+procedure TFRE_DB_VMACHINE_NIC_E1000.Embed(const conn: IFRE_DB_CONNECTION);
+begin
+  EmbedDatalink(conn);
+end;
+
+{ TFRE_DB_VMACHINE_NIC }
+
+class procedure TFRE_DB_VMACHINE_NIC.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+end;
+
+class procedure TFRE_DB_VMACHINE_NIC.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+procedure TFRE_DB_VMACHINE_NIC.EmbedDatalink(const conn: IFRE_DB_CONNECTION);
+var obj  : IFRE_DB_Object;
+    vnic : TFRE_DB_DATALINK;
+begin
+  if FieldExists('nic') then
+    begin
+      CheckDbResult(conn.Fetch(Field('nic').AsGUID,obj));
+      if obj.IsA(TFRE_DB_DATALINK,vnic) then
+        begin
+          Field('NIC_EMBED').asobject:=vnic;
+        end
+      else
+        raise EFRE_DB_Exception.Create(edb_ERROR,'TFRE_DB_VMACHINE_NIC %s LINKS A NON DATALINK OBJ %s',[self.UID_String,vnic.UID_String]);
+    end;
+end;
+
+procedure TFRE_DB_VMACHINE_NIC.Embed(const conn: IFRE_DB_CONNECTION);
+begin
+  EmbedDatalink(conn);
+end;
+
+{ TFRE_DB_VMACHINE_DISK_ISO }
+
+class procedure TFRE_DB_VMACHINE_DISK_ISO.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_DISK.ClassName);
+end;
+
+class procedure TFRE_DB_VMACHINE_DISK_ISO.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+procedure TFRE_DB_VMACHINE_DISK_ISO.Embed(const conn: IFRE_DB_CONNECTION);
+begin
+  inherited Embed(conn);
+end;
+
+{ TFRE_DB_VMACHINE_DISK_VIRTIO }
+
+class procedure TFRE_DB_VMACHINE_DISK_VIRTIO.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_DISK.ClassName);
+end;
+
+class procedure TFRE_DB_VMACHINE_DISK_VIRTIO.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+procedure TFRE_DB_VMACHINE_DISK_VIRTIO.Embed(const conn: IFRE_DB_CONNECTION);
+begin
+  EmbedZvol(conn);
+end;
+
+{ TFRE_DB_VMACHINE_DISK_IDE }
+
+class procedure TFRE_DB_VMACHINE_DISK_IDE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_DISK.ClassName);
+end;
+
+class procedure TFRE_DB_VMACHINE_DISK_IDE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+procedure TFRE_DB_VMACHINE_DISK_IDE.Embed(const conn: IFRE_DB_CONNECTION);
+begin
+  EmbedZvol(conn);
+end;
+
+{ TFRE_DB_VMACHINE_DISK }
+
+class procedure TFRE_DB_VMACHINE_DISK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+end;
+
+class procedure TFRE_DB_VMACHINE_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+procedure TFRE_DB_VMACHINE_DISK.EmbedZVol(const conn: IFRE_DB_CONNECTION);
+var obj  : IFRE_DB_Object;
+    zvol : TFRE_DB_ZFS_DATASET_ZVOL;
+begin
+  if FieldExists('zvol') then
+    begin
+      CheckDbResult(conn.Fetch(Field('zvol').AsGUID,obj));
+      if obj.IsA(TFRE_DB_ZFS_DATASET_ZVOL,zvol) then
+        begin
+          zvol.Field('FULLDATASETNAME').AsString := zvol.GetFullDatasetname(conn);
+          Field('ZVOL_EMBED').asobject:=zvol;
+        end
+      else
+        raise EFRE_DB_Exception.Create(edb_ERROR,'TFRE_DB_VMACHINE_DISK %s LINKS A NON ZVOL OBJ %s',[self.UID_String,zvol.UID_String]);
+    end;
+end;
+
+procedure TFRE_DB_VMACHINE_DISK.Embed(const conn: IFRE_DB_CONNECTION);
+begin
+
+end;
+
 { TFRE_DB_VHOST }
 
 class procedure TFRE_DB_VHOST.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1384,6 +1650,10 @@ begin
   if (currentVersionId='') then begin
     currentVersionId:='0.1';
   end;
+end;
+
+procedure TFRE_DB_VHOST.Embed(const conn: IFRE_DB_CONNECTION);
+begin
 end;
 
 { TFRE_DB_VROOTSERVER }
@@ -5536,6 +5806,8 @@ end;
                      continue;
                    if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_VIRTUAL_FILESERVER.ClassName then
                      continue;
+                   if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_VMACHINE.ClassName then
+                     continue;
                    if Pos('TFRE_DB_DATALINK',tmpl.Field('serviceclasses').AsStringItem[i])>0 then
                      continue;
 
@@ -5564,8 +5836,7 @@ end;
          obj.Finalize;
      end;
 
-   writeln('SWL: ZONEDBO: ',DumpToString());
- //  abort;
+ //  writeln('SWL: ZONEDBO: ',DumpToString());
  end;
 
 
@@ -6153,7 +6424,7 @@ end;
    Result:=TFRE_DB_StringArray.create(TFRE_DB_DATALINK_PHYS.ClassName,TFRE_DB_DATALINK_AGGR.ClassName,TFRE_DB_DATALINK_IPMP.ClassName,TFRE_DB_DATALINK_IPTUN.ClassName,TFRE_DB_DATALINK_STUB.ClassName,TFRE_DB_DATALINK_BRIDGE.ClassName,TFRE_DB_DATALINK_SIMNET.ClassName,TFRE_DB_DATALINK_VNIC.ClassName);
  end;
 
-  procedure TFRE_DB_DATALINK.Embed(const conn: IFRE_DB_CONNECTION);
+ procedure TFRE_DB_DATALINK.Embed(const conn: IFRE_DB_CONNECTION);
  var refs      : TFRE_DB_ObjectReferences;
     obj       : IFRE_DB_Object;
     i         : integer;
@@ -6262,9 +6533,24 @@ end;
    end;
  end;
 
+function TFRE_DB_VMACHINE.getCPUCores: Byte;
+begin
+  Result:=Field('cpucores').AsByte;
+end;
+
+function TFRE_DB_VMACHINE.getCPUSockets: Byte;
+begin
+  Result:=Field('cpusockets').AsByte;
+end;
+
 function TFRE_DB_VMACHINE.getKey: TFRE_DB_String;
 begin
   Result:=Field('key').AsString;
+end;
+
+function TFRE_DB_VMACHINE.getMemoryMB: Uint32;
+begin
+  Result:=Field('memorymb').AsUint32;
 end;
 
 function TFRE_DB_VMACHINE.getMType: TFRE_DB_String;
@@ -6287,9 +6573,24 @@ begin
   Result:=Field('vnc_port').AsUInt32;
 end;
 
+procedure TFRE_DB_VMACHINE.setCPUCores(AValue: Byte);
+begin
+  Field('cpucores').AsByte:=AValue;
+end;
+
+procedure TFRE_DB_VMACHINE.setCPUSockets(AValue: Byte);
+begin
+  Field('cpusockets').AsByte:=AValue;
+end;
+
 procedure TFRE_DB_VMACHINE.setKey(AValue: TFRE_DB_String);
 begin
   Field('key').AsString:=AValue;
+end;
+
+procedure TFRE_DB_VMACHINE.setMemoryMB(AValue: Uint32);
+begin
+  Field('memorymb').AsUint32:=AValue;
 end;
 
 procedure TFRE_DB_VMACHINE.setMType(AValue: TFRE_DB_String);
@@ -6385,6 +6686,35 @@ end;
 class function TFRE_DB_VMACHINE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
 begin
   Result:=GetTranslateableTextShort(conn,'caption');
+end;
+
+procedure TFRE_DB_VMACHINE.Embed(const conn: IFRE_DB_CONNECTION);
+var
+  refs      : TFRE_DB_ObjectReferences;
+  obj       : IFRE_DB_Object;
+  i         : integer;
+  disk      : TFRE_DB_VMACHINE_DISK;
+  nic       : TFRE_DB_VMACHINE_NIC;
+
+begin
+  refs := conn.GetReferencesDetailed(UID,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+refs[i].linked_uid.AsHexString);
+      if obj.IsA(TFRE_DB_VMACHINE_DISK,disk) then
+        begin
+          disk.Embed(conn);
+          self.Field(obj.UID.AsHexString).AsObject:=disk;
+        end
+      else
+        if obj.IsA(TFRE_DB_VMACHINE_NIC,nic) then
+          begin
+            nic.Embed(conn);
+            self.Field(obj.UID.AsHexString).AsObject:=nic
+          end
+      else
+        obj.Finalize;
+    end;
 end;
 
  function TFRE_DB_VMACHINE.GetFMRI: TFRE_DB_STRING;
@@ -7071,7 +7401,15 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VHOST);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VROOTSERVER);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMachine);
+
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK_IDE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK_VIRTIO);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK_ISO);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_NIC);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_NIC_E1000);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_NIC_VIRTIO);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DNS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_NAS);
@@ -7193,6 +7531,11 @@ begin
   end;
   if not collection.IndexExists('upid') then begin
     collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'upid',false);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_VM_COMPONENTS_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_VM_COMPONENTS_COLLECTION);
+    collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'def',false);
   end;
 end;
 

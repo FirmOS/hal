@@ -529,6 +529,7 @@ type
     class procedure InstallDBObjects      (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
   published
     procedure CALC_GetDisplayName         (const setter : IFRE_DB_CALCFIELD_SETTER);
+    function  GetFullDatasetname          (const conn:IFRE_DB_CONNECTION): TFRE_DB_String;
   end;
 
   { TFRE_DB_ZFS_DATASET_FILE }
@@ -4148,6 +4149,29 @@ end;
 procedure TFRE_DB_ZFS_DATASET.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
 begin
   setter.SetAsString(Field('fileservername').AsString+'/'+Field('objname').AsString);
+end;
+
+function TFRE_DB_ZFS_DATASET.GetFullDatasetname(const conn: IFRE_DB_CONNECTION): TFRE_DB_String;
+var sp_id  : TFRE_DB_GUID;
+    obj    : IFRE_DB_Object;
+    dataset: TFRE_DB_ZFS_DATASET;
+
+begin
+ result := ObjectName;
+ if FieldExists('serviceparent') then
+   begin
+      sp_id := Field('serviceparent').AsGUID;
+      repeat
+        CheckDbResult(conn.Fetch(sp_id,obj),'could not fetch serviceparent '+Field('serviceparent').AsGUID.AsHexString);
+        if obj.FieldExists('serviceparent') then
+          sp_id := obj.Field('serviceparent').AsGUID
+        else
+          break;
+        if obj.IsA(TFRE_DB_ZFS_DATASET,dataset) then
+          result := dataset.ObjectName+'/'+result;
+        obj.Finalize;
+      until false;
+   end;
 end;
 
 procedure Register_DB_Extensions;
