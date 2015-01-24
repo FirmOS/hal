@@ -458,9 +458,26 @@ type
      class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    end;
 
+
+   { TFRE_DB_VHOST }
+
+   TFRE_DB_VHOST=class(TFRE_DB_SERVICE)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
+   { TFRE_DB_VROOTSERVER }
+
+   TFRE_DB_VROOTSERVER=class(TFRE_DB_VHOST)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
    { TFRE_DB_VMACHINE }
 
-   TFRE_DB_VMACHINE=class(TFRE_DB_SERVICE)
+   TFRE_DB_VMACHINE=class(TFRE_DB_VHOST)
    private
      function  getKey    : TFRE_DB_String;
      function getMType   : TFRE_DB_String;
@@ -488,6 +505,7 @@ type
      property  vncHost  : TFRE_DB_String read getVNCHost write setVNCHost;
      property  vncPort  : UInt32         read getVNCPort write setVNCPort;
    end;
+
 
    { TFRE_DB_DNS }
 
@@ -1351,6 +1369,38 @@ implementation
 
    result   := gresult;
   end;
+
+{ TFRE_DB_VHOST }
+
+class procedure TFRE_DB_VHOST.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+end;
+
+class procedure TFRE_DB_VHOST.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
+
+{ TFRE_DB_VROOTSERVER }
+
+class procedure TFRE_DB_VROOTSERVER.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  inherited RegisterSystemScheme(scheme);
+  scheme.SetParentSchemeByName(TFRE_DB_VHOST.ClassName);
+end;
+
+class procedure TFRE_DB_VROOTSERVER.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if (currentVersionId='') then begin
+    currentVersionId:='0.1';
+  end;
+end;
 
 { TFRE_DB_ZONESTATUS_PLUGIN }
 
@@ -5486,8 +5536,9 @@ end;
                      continue;
                    if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_VIRTUAL_FILESERVER.ClassName then
                      continue;
-                   if tmpl.Field('serviceclasses').AsStringItem[i]=TFRE_DB_DATALINK_VNIC.ClassName then
+                   if Pos('TFRE_DB_DATALINK',tmpl.Field('serviceclasses').AsStringItem[i])>0 then
                      continue;
+
                    writeln('SWL : SERVICECLASSES ',tmpl.Field('serviceclasses').AsStringItem[i]);
                    svcobj := GFRE_DBI.NewObjectSchemeByName(tmpl.Field('serviceclasses').AsStringItem[i]);
                    self.Field(svcobj.UID.AsHexString).AsObject:=svcobj;
@@ -6266,7 +6317,7 @@ end;
    enum: IFRE_DB_Enum;
  begin
    inherited RegisterSystemScheme(scheme);
-   scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+   scheme.SetParentSchemeByName(TFRE_DB_VHOST.ClassName);
 
    enum:=GFRE_DBI.NewEnum('vmachine_state').Setup(GFRE_DBI.CreateText('$enum_vmachine_state','State'));
    enum.addEntry('STOPPED',GetTranslateableTextKey('enum_state_stopped'));
@@ -7018,7 +7069,10 @@ begin
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ASSET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VHOST);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VROOTSERVER);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMachine);
+
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DNS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_NAS);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_ZONE);
