@@ -68,6 +68,7 @@ type
   {collection_assign.Field(<classname>).asstring := '';  // skip }
   {no entry => embedd in parent object}
 
+  function  FREDIFF_ChangesGenerated                                    (const transport_list_obj:IFRE_DB_Object):boolean;
   function  FREDIFF_GetCollectionForObject                              (const obj:IFRE_DB_Object; const collection_assign:IFRE_DB_Object; out collectionname:string) : boolean;
   procedure FREDIFF_GenerateRelationalDiffContainersandAddToBulkObject  (const first_obj:IFRE_DB_Object;const second_obj:IFRE_DB_Object;const collection_assign:IFRE_DB_Object;const transport_list_obj:IFRE_DB_Object; const mark_deleted:boolean=true);
 
@@ -299,6 +300,11 @@ begin
     else
       raise EFRE_DB_Exception.Create('INVALID UPDATE TYPE FOR DIFF TRANSPORT');
   end;
+end;
+
+function FREDIFF_ChangesGenerated(const transport_list_obj: IFRE_DB_Object): boolean;
+begin
+ result :=((transport_list_obj.Field(CDIFF_INSERT_LIST).ValueCount>0) or (transport_list_obj.Field(CDIFF_UPDATE_LIST).ValueCount>0) or (transport_list_obj.Field(CDIFF_DELETE_LIST).ValueCount>0));
 end;
 
 function FREDIFF_GetCollectionForObject(const obj:IFRE_DB_Object; const collection_assign: IFRE_DB_Object; out collectionname: string): boolean;

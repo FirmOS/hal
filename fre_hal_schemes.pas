@@ -62,6 +62,7 @@ uses
   fosillu_hal_dbo_common,
   fosillu_hal_zonectrl,
   fosillu_hal_svcctrl,
+  fosillu_hal_dbo_zfs_dataset,
   fosillu_dladm,
   fosillu_ipadm,
   {$ENDIF}
@@ -6665,6 +6666,68 @@ end;
 
  function TFRE_DB_VMACHINE.RIF_CreateOrUpdateService: IFRE_DB_Object;
  var servicename : string;
+     pidfile     : string;
+     qemubin     : string;
+     qmbsocket   : string;
+
+     sl          : TStringList;
+
+     procedure ConfigureComponents(const obj:IFRE_DB_Object);
+     var disk_ide    : TFRE_DB_VMACHINE_DISK_IDE;
+         disk_virtio : TFRE_DB_VMACHINE_DISK_VIRTIO;
+         nic_e1000   : TFRE_DB_VMACHINE_NIC_E1000;
+         nic_virtio  : TFRE_DB_VMACHINE_NIC_VIRTIO;
+         nicvlan     : string;
+         nicname     : string;
+         zvol        : TFRE_DB_ZFS_DATASET_ZVOL;
+
+         procedure   CreateZVol(const zvol:TFRE_DB_ZFS_DATASET);
+         var
+           errs      : string;
+         begin
+          writeln('SWL CREATE ZVOL');
+          {$IFDEF SOLARIS}
+          fosillu_zfs_create_zvol(zvol.Field('fulldatasetname').asstring,zvol.Field('size_mb').AsUInt32*1024,8192,false,errs);
+          if errs<>'' then
+            begin
+              writeln('Error on creating zvol ',zvol.Field('fulldatasetname').asstring);
+//                  raise Exception.Create('error on creating '+dsname+' dataset for zone :'+errs);
+            end;
+          {$ENDIF}
+         end;
+
+     begin
+       if obj.IsA(TFRE_DB_VMACHINE_DISK_IDE,disk_ide) then
+         begin
+           writeln('SWL VM IDE');
+           if disk_ide.Field('zvol_embed').AsObject.IsA(TFRE_DB_ZFS_DATASET_ZVOL,zvol) then
+             begin
+               CreateZVol(zvol);
+               sl.add('-drive file=/dev/zvol/rdsk/'+zvol.Field('fulldatasetname').asstring+',if=ide,index='+disk_ide.Field('index').asstring+' \');
+             end;
+         end;
+       if obj.IsA(TFRE_DB_VMACHINE_DISK_VIRTIO,disk_virtio) then
+         begin
+           writeln('SWL VM VIRT');
+           if disk_virtio.Field('zvol_embed').AsObject.IsA(TFRE_DB_ZFS_DATASET_ZVOL,zvol) then
+             begin
+               CreateZVol(zvol);
+               sl.add('-drive file=/dev/zvol/rdsk/'+zvol.Field('fulldatasetname').asstring+',if=virtio,index='+disk_virtio.Field('index').asstring+' \');
+             end;
+         end;
+       if obj.IsA(TFRE_DB_VMACHINE_NIC_VIRTIO,nic_virtio) then
+         begin
+           writeln('SWL VM NIC');
+           nicvlan :=nic_virtio.Field('vm_vlan').asstring;
+           nicname :=nic_virtio.Field('nic_embed').asobject.Field('objname').asstring;
+           sl.add('-device virtio-net-pci,mac='+nic_virtio.Field('nic_embed').asobject.Field('uniquephysicalid').asstring+',tx=timer,x-txtimer=200000,x-txburst=128,vlan='+nicvlan+' \');
+           sl.add('-net vnic,name='+nicname+',vlan='+nicvlan+',ifname='+nicname+' \');
+         end;
+
+       // #-drive file=/zones/qemu-ds/isos/win7.iso,media=cdrom,if=ide,index=2 \
+       //# -drive file=/zones/qemu-ds/isos/virtio.iso,media=cdrom,if=ide,index=3
+     end;
+
  begin
    {$IFDEF SOLARIS}
      result := GFRE_DBI.NewObject;
@@ -6679,6 +6742,103 @@ end;
 
      fre_create_service(self);
      result.Field('fmri').asstring:=servicename;
+
+     // Start Script
+
+     ForceDirectories('/opt/local/etc/kvm');
+     qemubin   :='/opt/local/qemu112/bin/qemu-system-x86_64';
+     qmbsocket :='/var/run/qmp-'+UID_String;
+     pidfile   :='/var/run/qemu-'+UID_String+'.pid';
+     sl:=TStringList.Create;
+     try
+       sl.Add(qemubin+' \');
+       sl.Add('-vnc '+vncHost+':'+inttostr(vncPort-5900)+' \');
+       sl.Add('-boot cd \');      //FIXXME
+       sl.Add('-enable-kvm \');
+       sl.Add('-smp '+inttostr(CpuCores*CpuSockets)+',cores='+inttostr(CpuCores)+',threads=1,sockets='+inttostr(CpuSockets)+' \');
+       sl.add('-m '+inttostr(MemoryMB)+' \');
+       sl.add('-cpu qemu64 \');
+       sl.add('-usb -usbdevice tablet -k de \');
+       sl.add('-qmp unix:'+qmbsocket+',server,nowait \');
+       sl.add('-daemonize \');
+       sl.add('-pidfile '+pidfile+' \');
+       // #-no-acpi
+
+       ForAllObjects(@ConfigureComponents,true);
+       writeln('SWL VM COMPONENTS DONE');
+
+       sl.savetofile('/opt/local/etc/kvm/start_qemu_'+UID.AsHexString);
+
+     finally
+       sl.Free;
+     end;
+
+     // Stop Script
+
+     sl:=TStringList.Create;
+     try
+       sl.add('PIDFILE='+pidfile);
+       sl.add('QMP_SOCKET='+qmbsocket);
+       sl.add('QMP_SHUTDOWN=''{ "execute": "qmp_capabilities" }{ "execute": "system_powerdown" }''');
+       sl.add('TIMEOUT_SHUTDOWN=60');
+       sl.add('TIMEOUT_TERMINATE=30');
+       sl.add('PID=`cat "$PIDFILE"`');
+       sl.add('if [ $PID -eq "" ] ; then');
+       sl.add('  echo "no pid"');
+       sl.add('  exit 0');
+       sl.add('fi');
+       sl.add('ps -p $PID >/dev/null 2>&1');
+       sl.add('result=$?');
+       sl.add('if [ $result -ne 0 ] ; then');
+       sl.add('  echo "no process"');
+       sl.add('  exit 0');
+       sl.add('fi');
+       sl.add('echo "$QMP_SHUTDOWN" | nc -U $QMP_SOCKET');
+       sl.add('COUNTER=0');
+       sl.add('result=0');
+       sl.add('until [ $result -ne 0 ]; do');
+       sl.add('  ps -p $PID >/dev/null 2>&1');
+       sl.add('  result=$?');
+       sl.add('  sleep 1');
+       sl.add('  echo "waiting for shutdown $COUNTER $pid"');
+       sl.add('  COUNTER=`expr $COUNTER + 1`');
+       sl.add('  if [ "$COUNTER" -gt "$TIMEOUT_SHUTDOWN" ]; then');
+       sl.add('    break');
+       sl.add('  fi');
+       sl.add('done');
+       sl.add('ps -p $PID >/dev/null 2>&1');
+       sl.add('result=$?');
+       sl.add('if [ $result -ne 0 ]; then');
+       sl.add('  exit 0');
+       sl.add('fi');
+       sl.add('echo "terminating"');
+       sl.add('kill -TERM $PID');
+       sl.add('COUNTER=0');
+       sl.add('result=0');
+       sl.add('until [ $result -ne 0 ]; do');
+       sl.add('  ps -p $PID >/dev/null 2>&1');
+       sl.add('  result=$?');
+       sl.add('  sleep 1');
+       sl.add('  echo "waiting for termination $COUNTER $pid"');
+       sl.add('  COUNTER=`expr $COUNTER + 1`');
+       sl.add('  if [ "$COUNTER" -gt "$TIMEOUT_TERMINATE" ]; then');
+       sl.add('    break');
+       sl.add('  fi');
+       sl.add('done');
+       sl.add('ps -p $PID >/dev/null 2>&1');
+       sl.add(' result=$?');
+       sl.add(' if [ $result -ne 0 ]; then');
+       sl.add('   exit 0');
+       sl.add(' fi');
+       sl.add('echo "killing"');
+       sl.add('kill -KILL $PID');
+       sl.add('rm $PIDFILE');
+       sl.add('exit 0');
+
+       sl.savetoFile('/opt/local/etc/kvm/stop_qemu_'+UID.AsHexString);
+     finally
+       sl.Free;
+     end;
 
    {$ENDIF}
  end;

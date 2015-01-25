@@ -600,9 +600,14 @@ begin
  if assigned(job) then job.AddProgressLog('Zonecfg saved in System',25);
 
  // copying zone dbo dataset
+ ForceDirectories(master_dspath+'/zones/'+zone_dbo.UID.asHexstring);
  writeln('SWL: Saving zones file ',master_dspath+'/zones/'+zone_dbo.UID.asHexstring+'/zone.dbo');
- zone_dbo.SaveToFile(master_dspath+'/zones/'+zone_dbo.UID.asHexstring+'/zone.dbo');
-
+ try
+   zone_dbo.SaveToFile(master_dspath+'/zones/'+zone_dbo.UID.asHexstring+'/zone.dbo');
+ except
+   if assigned(job) then job.AddProgressLog('Error saving zone configuration file:'+master_dspath+'/zones/'+zone_dbo.UID.asHexstring);
+   raise;
+ end;
  if assigned(job) then job.AddProgressLog('Zonecfg saved to zone dbo file',30);
 
  fre_set_zonestate(zone_name,ZONE_STATE_CONFIGURED);
@@ -617,9 +622,12 @@ var
   zone_name    : string;
   err          : integer;
   msg          : string;
+  czone_lock_env  : PChar;
 begin
   writeln('SWL ZONE:',zone_dbo.DumpToString());
   zone_name     := zone_dbo.UID.AsHexString;
+
+  zonecfg_init_lock_file(PChar(zone_name),@czone_lock_env);
 
   FillByte(zarg,sizeof(zarg),0);
   StrPLCopy(Pchar(@zarg.bootbuf),'-m verbose',BOOTARGS_MAX);
