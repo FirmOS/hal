@@ -2653,9 +2653,13 @@ begin
     scheme.AddSchemeField('slaac',fdbft_Boolean).addDepField('ip_net');
     scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ipv6');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
-    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_ipv6_group'));
+    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
+    group:=scheme.AddInputGroup('route').Setup(GetTranslateableTextKey('scheme_route_group'));
+    group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
+    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
+    group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
 end;
 
 class procedure TFRE_DB_IPV6_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -2663,9 +2667,11 @@ begin
   newVersionId:='1.0';
   if currentVersionId='' then begin
     currentVersionId := '1.0';
-    StoreTranslateableText(conn,'scheme_ipv6_group','IPv6 Properties');
+    StoreTranslateableText(conn,'scheme_main_group','IPv6 Properties');
     StoreTranslateableText(conn,'scheme_slaac','Stateless Adress Autoconfiguration');
     StoreTranslateableText(conn,'scheme_ip_net','IPv6/Subnet');
+    StoreTranslateableText(conn,'scheme_gateway','Gateway');
+    StoreTranslateableText(conn,'scheme_route_group','IPv6 Route Properties');
   end;
 end;
 
@@ -2799,6 +2805,10 @@ begin
     group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
+    group:=scheme.AddInputGroup('route').Setup(GetTranslateableTextKey('scheme_route_group'));
+    group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
+    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
+    group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
 end;
 
 class procedure TFRE_DB_IPV4_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -2809,6 +2819,7 @@ begin
     StoreTranslateableText(conn,'scheme_main_group','IPv4 Properties');
     StoreTranslateableText(conn,'scheme_ip_net','IP/Subnet');
     StoreTranslateableText(conn,'scheme_dhcp','DHCP');
+    StoreTranslateableText(conn,'scheme_gateway','Gateway');
   end;
 end;
 
