@@ -480,7 +480,7 @@ type
     class procedure RegisterSystemScheme        (const scheme : IFRE_DB_SCHEMEOBJECT); override;
     procedure       InternalSetup               ; override;
   public
-    procedure       ExecuteCMD                  ;
+    procedure       ExecuteJob                  ; override;
     procedure       SetScrub                    (const poolname: string);
     procedure       SetPoolStatus               (const poolname: string; const scrub_warning_days: integer; const scrub_error_days: integer);
     procedure       SetDatasetspace             (const dataset: string; const warning_percent: integer; const error_percent: integer);
@@ -488,8 +488,6 @@ type
     procedure       SetTCPReplicate             (const sourcedataset: string; const destinationdataset:string; const snapshotkey : string; const destinationhost : string; const destinationport: integer=CFRE_FOSCMD_PORT);
     procedure       SetSnapshot                 (const dataset: string; const snapshotkey : string);
     procedure       SetSnapshotCheck            (const dataset:string; const snapshotkey : string; const warning_seconds: integer; const error_seconds: integer);
-  published
-    function        IMI_Do_the_Job              (const input: IFRE_DB_Object): IFRE_DB_Object;
   end;
 
 
@@ -2646,14 +2644,14 @@ var res                     : integer;
   begin
     result := false;
     if res<>0 then begin
-      SetStatus(statusFailure,msg+':'+error);
+      // SetStatus(statusFailure,msg+':'+error);
+      AddProgressLog(msg+' '+error);
       result := true;
     end;
   end;
 
 begin
   snapshotkey   := config.Field('snapshotkey').AsString;
-
   res           := SourceZFS.GetLastSnapShot(config.Field('sourcedataset').AsString, snapshotkey, snapshotname,source_ts,error);
   if res = 0 then begin
     snapshotname := GFRE_BT.SepRight(snapshotname,'-');
@@ -2677,7 +2675,6 @@ begin
       if ResultCheck('CAN NOT GET LAST SNAPSHOT FOR DESTINATION DATASET') then exit;
       writeln(incrementalsnapshotname);
     end;
-
     res         := SourceZFS.TCPSendSnapshot(config.Field('sourcedataset').AsString,snapshotname,config.Field('destinationhost').AsString,config.Field('destinationport').AsInt32,config.Field('destinationdataset').AsString, error, incrementalsnapshotname, zfsSendReplicated,false,config.Field('jobid').asstring);   // Send Snapshotname to Destination
     if ResultCheck('ERROR ON SENDING SNAPSHOT') then exit;
     writeln(error);
@@ -2856,7 +2853,7 @@ begin
   Field('MAX_ALLOWED_TIME').AsInt32 := 86400;
 end;
 
-procedure TFRE_DB_ZFSJob.ExecuteCMD;
+procedure TFRE_DB_ZFSJob.ExecuteJob;
 var
   cmd     : string;
   zfs     : TFRE_DB_ZFS;
@@ -2899,13 +2896,6 @@ begin
   end;
 end;
 
-function TFRE_DB_ZFSJob.IMI_Do_the_Job(const input: IFRE_DB_Object): IFRE_DB_Object;
-begin
-  writeln(DumpToString);
-  Field('starttime').AsDateTimeUTC:=GFRE_DT.Now_UTC;
-  ExecuteCMD;
-  Field('endtime').AsDateTimeUTC:=GFRE_DT.Now_UTC;
-end;
 
 
 { TFRE_DB_ZFS }

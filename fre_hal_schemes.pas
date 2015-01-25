@@ -6675,6 +6675,7 @@ end;
      procedure ConfigureComponents(const obj:IFRE_DB_Object);
      var disk_ide    : TFRE_DB_VMACHINE_DISK_IDE;
          disk_virtio : TFRE_DB_VMACHINE_DISK_VIRTIO;
+         disk_iso    : TFRE_DB_VMACHINE_DISK_ISO;
          nic_e1000   : TFRE_DB_VMACHINE_NIC_E1000;
          nic_virtio  : TFRE_DB_VMACHINE_NIC_VIRTIO;
          nicvlan     : string;
@@ -6687,7 +6688,7 @@ end;
          begin
           writeln('SWL CREATE ZVOL');
           {$IFDEF SOLARIS}
-          fosillu_zfs_create_zvol(zvol.Field('fulldatasetname').asstring,zvol.Field('size_mb').AsUInt32*1024,8192,false,errs);
+          fosillu_zfs_create_zvol(zvol.Field('fulldatasetname').asstring,zvol.Field('size_mb').AsUInt32*1024*1024,8192,false,errs);
           if errs<>'' then
             begin
               writeln('Error on creating zvol ',zvol.Field('fulldatasetname').asstring);
@@ -6715,6 +6716,11 @@ end;
                sl.add('-drive file=/dev/zvol/rdsk/'+zvol.Field('fulldatasetname').asstring+',if=virtio,index='+disk_virtio.Field('index').asstring+' \');
              end;
          end;
+       if obj.IsA(TFRE_DB_VMACHINE_DISK_ISO,disk_iso) then
+         begin
+           writeln('SWL VM ISO');
+           sl.add('-drive file='+disk_iso.Field('filename').asstring+',media=cdrom,if=ide,index='+disk_iso.Field('index').asstring+' \');
+         end;
        if obj.IsA(TFRE_DB_VMACHINE_NIC_VIRTIO,nic_virtio) then
          begin
            writeln('SWL VM NIC');
@@ -6723,9 +6729,6 @@ end;
            sl.add('-device virtio-net-pci,mac='+nic_virtio.Field('nic_embed').asobject.Field('uniquephysicalid').asstring+',tx=timer,x-txtimer=200000,x-txburst=128,vlan='+nicvlan+' \');
            sl.add('-net vnic,name='+nicname+',vlan='+nicvlan+',ifname='+nicname+' \');
          end;
-
-       // #-drive file=/zones/qemu-ds/isos/win7.iso,media=cdrom,if=ide,index=2 \
-       //# -drive file=/zones/qemu-ds/isos/virtio.iso,media=cdrom,if=ide,index=3
      end;
 
  begin

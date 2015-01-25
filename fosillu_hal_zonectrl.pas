@@ -468,6 +468,8 @@ begin
   // ignore errors here
   fosillu_zfs_create_ds(master_dataset+'/domains/'+zone_dbo.DomainID.AsHexString,errs);
   // ignore errors here
+  fosillu_zfs_create_ds(master_dataset+'/domains/'+zone_dbo.DomainID.AsHexString+'/shared',errs);
+  // ignore errors here
   fosillu_zfs_create_ds(master_dataset+'/zones',errs);
   // ignore errors here
   fosillu_zfs_create_ds(master_dataset+'/zones/'+zone_dbo.UID.AsHexString,errs);
@@ -584,6 +586,7 @@ begin
  add_filesystem(handle,'/opt/local/fre','lofs',zone_path+'/zonedata/optfre',job);
  add_filesystem(handle,'/vfiler','lofs',zone_path+'/zonedata/vfiler',job);
  add_filesystem(handle,'/zonedbo','lofs',master_dspath+'/zones/'+zone_dbo.UID.asHexstring,job);
+ add_filesystem(handle,'/shared','lofs',master_dspath+'/domains/'+zone_dbo.DomainID.AsHexString+'/shared',job);
 
  if assigned(job) then job.AddProgressLog('Added Datasets ',20);
 
