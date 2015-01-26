@@ -1706,8 +1706,12 @@ end;
 { TFRE_DB_GLOBAL_ZONE }
 
 class procedure TFRE_DB_GLOBAL_ZONE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
+  group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main'));
+  group.AddInput('objname',GetTranslateableTextKey('scheme_name'),true);
 end;
 
 class procedure TFRE_DB_GLOBAL_ZONE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
