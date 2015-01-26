@@ -2649,7 +2649,7 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
     inherited RegisterSystemScheme(scheme);
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
-    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ipv6');
+    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ipv6_subnet');
     scheme.AddSchemeField('slaac',fdbft_Boolean).addDepField('ip_net');
     scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ipv6');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
@@ -2798,7 +2798,7 @@ var group : IFRE_DB_InputGroupSchemeDefinition;
 begin
     inherited RegisterSystemScheme(scheme);
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
-    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ip');
+    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ip_subnet');
     scheme.AddSchemeField('dhcp',fdbft_Boolean).addDepField('ip_net');
     scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ip');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
