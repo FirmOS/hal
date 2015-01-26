@@ -141,8 +141,8 @@ type
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; virtual;
      function        StartService          : IFRE_DB_Object; virtual; abstract;
      function        StopService           : IFRE_DB_Object; virtual; abstract;
-     function        RIF_StartService      (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
-     function        RIF_StopService       (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
+     function        RIF_EnableService     (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
+     function        RIF_DisableService    (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
 
    end;
 
@@ -7325,15 +7325,15 @@ end;
   {$ENDIF}
  end;
 
- function TFRE_DB_SERVICE.RIF_StartService(const runnning_ctx: TObject): IFRE_DB_Object;
+ function TFRE_DB_SERVICE.RIF_EnableService(const runnning_ctx: TObject): IFRE_DB_Object;
  begin
-   writeln('RIF START SERVICE');
+   writeln('RIF ENABLE SERVICE');
    result := GFRE_DBI.NewObject;
  end;
 
- function TFRE_DB_SERVICE.RIF_StopService(const runnning_ctx: TObject): IFRE_DB_Object;
+ function TFRE_DB_SERVICE.RIF_DisableService(const runnning_ctx: TObject): IFRE_DB_Object;
  begin
-   writeln('RIF START SERVICE');
+   writeln('RIF DISABLE SERVICE');
    result := GFRE_DBI.NewObject;
  end;
 
