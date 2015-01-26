@@ -139,8 +139,11 @@ type
      function        GetFMRI                : TFRE_DB_STRING; virtual;
    published
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; virtual;
-     function        RIF_StartService          : IFRE_DB_Object; virtual; abstract;
-     function        RIF_StopService           : IFRE_DB_Object; virtual; abstract;
+     function        StartService          : IFRE_DB_Object; virtual; abstract;
+     function        StopService           : IFRE_DB_Object; virtual; abstract;
+     function        RIF_StartService      (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
+     function        RIF_StopService       (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
+
    end;
 
    { TFRE_DB_SUBSERVICE }
@@ -367,8 +370,8 @@ type
    public
      procedure       SetGatewayIP           (const value:TFRE_DB_String);
    published
-     function        RIF_StartService       : IFRE_DB_Object; override;
-     function        RIF_StopService        : IFRE_DB_Object; override;
+     function        StartService           : IFRE_DB_Object; override;
+     function        StopService            : IFRE_DB_Object; override;
    end;
 
 
@@ -382,8 +385,8 @@ type
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    public
      procedure       SetGatewayIP           (const value:TFRE_DB_String);
-     function        RIF_StartService       : IFRE_DB_Object; override;
-     function        RIF_StopService        : IFRE_DB_Object; override;
+     function        StartService           : IFRE_DB_Object; override;
+     function        StopService            : IFRE_DB_Object; override;
    end;
 
 
@@ -2680,7 +2683,7 @@ begin
   Field('gateway').asstring:=value;
 end;
 
-function TFRE_DB_IPV6_HOSTNET.RIF_StartService: IFRE_DB_Object;
+function TFRE_DB_IPV6_HOSTNET.StartService: IFRE_DB_Object;
 var linkname    : string;
     aliasname   : string;
     ip_hostnet  : string;
@@ -2739,7 +2742,7 @@ begin
   {$ENDIF}
 end;
 
-function TFRE_DB_IPV6_HOSTNET.RIF_StopService: IFRE_DB_Object;
+function TFRE_DB_IPV6_HOSTNET.StopService: IFRE_DB_Object;
 var linkname    : string;
     aliasname   : string;
     errorstring : string;
@@ -2828,7 +2831,7 @@ begin
   Field('gateway').asstring:=value;
 end;
 
-function TFRE_DB_IPV4_HOSTNET.RIF_StartService: IFRE_DB_Object;
+function TFRE_DB_IPV4_HOSTNET.StartService: IFRE_DB_Object;
 var linkname    : string;
     aliasname   : string;
     ip_hostnet  : string;
@@ -2876,7 +2879,7 @@ begin
   {$ENDIF}
 end;
 
-function TFRE_DB_IPV4_HOSTNET.RIF_StopService: IFRE_DB_Object;
+function TFRE_DB_IPV4_HOSTNET.StopService: IFRE_DB_Object;
 var linkname    : string;
     aliasname   : string;
     ip_hostnet  : string;
@@ -7320,6 +7323,18 @@ end;
     result.Field('fmri').asstring:=servicename;
 
   {$ENDIF}
+ end;
+
+ function TFRE_DB_SERVICE.RIF_StartService(const runnning_ctx: TObject): IFRE_DB_Object;
+ begin
+   writeln('RIF START SERVICE');
+   result := GFRE_DBI.NewObject;
+ end;
+
+ function TFRE_DB_SERVICE.RIF_StopService(const runnning_ctx: TObject): IFRE_DB_Object;
+ begin
+   writeln('RIF START SERVICE');
+   result := GFRE_DBI.NewObject;
  end;
 
  { TFRE_DB_VIRTUAL_FILESERVER }
