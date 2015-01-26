@@ -11,57 +11,116 @@ uses
 
 var
 
-  gsfc_handle :  Pscf_handle_t=nil;
+  globalsfc_handle :  Pscf_handle_t=nil;
+  zonehandle       :  IFRE_DB_Object;
 
 
 procedure fre_init_libsvc;
-procedure fre_create_service                               (const svcobj: IFRE_DB_Object);
-procedure fre_destroy_service                              (const svcobj: IFRE_DB_Object);
-function  fre_get_servicelist                              (const substring_filter: string=''): IFRE_DB_Object;
-procedure fre_remove_dependency                            (const service_name: string; const dependency:string);
-procedure fre_enable_or_disable_service                    (const service_name: string; const enable:boolean);
-procedure fre_refresh_service                              (const service_name: string);
 
-function  fre_get_local_service_scope                      : Pscf_scope_t;
+procedure fre_create_service                               (const svcobj: IFRE_DB_Object; const zonename:string='');
+procedure fre_destroy_service                              (const svcobj: IFRE_DB_Object; const zonename:string='');
+function  fre_get_servicelist                              (const substring_filter: string=''; const zonename:string=''): IFRE_DB_Object;
+procedure fre_remove_dependency                            (const service_name: string; const dependency:string; const zonename:string='');
+procedure fre_enable_or_disable_service                    (const service_name: string; const enable:boolean; const zonename:string='');
+procedure fre_refresh_service                              (const service_name: string; const zonename:string='');
+
+
+function  fre_get_scf_handle                               (const zonename:string):Pscf_handle_t;
+function  fre_get_local_service_scope                      (const zonename:string):Pscf_scope_t;
 procedure fre_destroy_service_scope                        (const scope: Pscf_scope_t);
-function  fre_create_service_handle                        : Pscf_service_t;
+function  fre_create_service_handle                        (const zonename:string):Pscf_service_t;
 procedure fre_destroy_service_handle                       (const service: Pscf_service_t);
-function  fre_create_add_service                           (const service_name: string; const scope: Pscf_scope_t) : Pscf_service_t;
-function  fre_get_service                                  (const service_name: string; const scope: Pscf_scope_t) : Pscf_service_t;
-function  fre_create_add_service_propertygroup             (const groupname:string;const grouptype:string; const service: Pscf_service_t): Pscf_propertygroup_t;
+function  fre_create_add_service                           (const service_name: string; const scope: Pscf_scope_t; const zonename:string) : Pscf_service_t;
+function  fre_get_service                                  (const service_name: string; const scope: Pscf_scope_t; const zonename:string) : Pscf_service_t;
+function  fre_create_add_service_propertygroup             (const groupname:string;const grouptype:string; const service: Pscf_service_t; const zonename:string): Pscf_propertygroup_t;
 procedure fre_destroy_propertgroup_handle                  (const pg : Pscf_propertygroup_t);
-function  fre_create_start_transaction                     (const pg : Pscf_propertygroup_t) : Pscf_transaction_t;
+function  fre_create_start_transaction                     (const pg : Pscf_propertygroup_t; const zonename:string) : Pscf_transaction_t;
 procedure fre_commit_destroy_transaction                   (const tx : Pscf_transaction_t);
-procedure fre_add_property_to_propertygroup_string         (const property_name:string; const property_value:string; const property_type:scf_type_t;const tx : Pscf_transaction_t);
-procedure fre_add_property_to_propertygroup_boolean        (const property_name:string; const property_value:boolean; const tx : Pscf_transaction_t);
-procedure fre_add_property_to_propertygroup_count          (const property_name:string; const property_value:Uint64; const tx : Pscf_transaction_t);
-procedure fre_add_property_to_propertygroup_integer        (const property_name:string; const property_value:int64; const tx : Pscf_transaction_t);
-function  fre_create_value_handle                          : Pscf_value_t;
+procedure fre_add_property_to_propertygroup_string         (const property_name:string; const property_value:string; const property_type:scf_type_t;const tx : Pscf_transaction_t;const zonename:string);
+procedure fre_add_property_to_propertygroup_boolean        (const property_name:string; const property_value:boolean; const tx : Pscf_transaction_t; const zonename:string);
+procedure fre_add_property_to_propertygroup_count          (const property_name:string; const property_value:Uint64; const tx : Pscf_transaction_t; const zonename:string);
+procedure fre_add_property_to_propertygroup_integer        (const property_name:string; const property_value:int64; const tx : Pscf_transaction_t; const zonename:string);
+function  fre_create_value_handle                          (const zonename:string): Pscf_value_t;
 procedure fre_add_value_to_entry                           (const value: Pscf_value_t; const entry: Pscf_transaction_entry_t);
-function  fre_create_add_entry_to_transaction              (const property_name:string; const property_type:scf_type_t;const tx : Pscf_transaction_t): Pscf_transaction_entry_t;
-function  fre_create_add_instance_to_service               (const instance_name: string; const service: Pscf_service_t) : Pscf_instance_t;
+function  fre_create_add_entry_to_transaction              (const property_name:string; const property_type:scf_type_t;const tx : Pscf_transaction_t;const zonename :string): Pscf_transaction_entry_t;
+function  fre_create_add_instance_to_service               (const instance_name: string; const service: Pscf_service_t;const zonename:string) : Pscf_instance_t;
 procedure fre_destroy_instance_handle                      (const instance : Pscf_instance_t);
-function  fre_create_get_or_add_instance_propertygroup     (const groupname:string;const grouptype:string; const instance: Pscf_instance_t): Pscf_propertygroup_t;
-function  fre_get_property_boolean                         (const property_name:string; const pg: Pscf_propertygroup_t; const exception_on_not_existing:boolean; out value:boolean): boolean;
-procedure fre_set_property_boolean                         (const property_name:string; const property_value:boolean; const tx : Pscf_transaction_t);
-function  fre_get_property_integer                         (const property_name:string; const pg: Pscf_propertygroup_t; const exception_on_not_existing:boolean; out value:int64): boolean;
-procedure fre_set_property_integer                         (const property_name:string; const property_value:int64; const tx : Pscf_transaction_t);
-function  fre_get_instance                                 (const instance_name: string; const service: Pscf_service_t) : Pscf_instance_t;
-function  fre_create_pg_handle                             : Pscf_propertygroup_t;
-function  fre_create_entry_handle                          : Pscf_transaction_entry_t;
+function  fre_create_get_or_add_instance_propertygroup     (const groupname:string;const grouptype:string; const instance: Pscf_instance_t; const zonename:string): Pscf_propertygroup_t;
+function  fre_get_property_boolean                         (const property_name:string; const pg: Pscf_propertygroup_t; const exception_on_not_existing:boolean; const zonename:string; out value:boolean): boolean;
+procedure fre_set_property_boolean                         (const property_name:string; const property_value:boolean; const tx : Pscf_transaction_t; const zonename:string);
+function  fre_get_property_integer                         (const property_name:string; const pg: Pscf_propertygroup_t; const exception_on_not_existing:boolean; const zonename:string; out value:int64): boolean;
+procedure fre_set_property_integer                         (const property_name:string; const property_value:int64; const tx : Pscf_transaction_t; const zonename:string);
+function  fre_get_instance                                 (const instance_name: string; const service: Pscf_service_t; const zonename:string) : Pscf_instance_t;
+function  fre_create_pg_handle                             (const zonename:string): Pscf_propertygroup_t;
+function  fre_create_entry_handle                          (const zonename:string): Pscf_transaction_entry_t;
 
 
 
 implementation
 
-function  fre_get_local_service_scope: Pscf_scope_t;
+function fre_get_scf_handle(const zonename: string): Pscf_handle_t;
+var zonescf_handle:Pscf_handle_t;
+    err : integer;
+    msg : string;
+    val : Pscf_value_t;
+begin
+  if zonename='' then
+    result := globalsfc_handle
+  else
+    begin
+      result := nil;
+      writeln('SWL Get Zone Handle');
+      if zonehandle.FieldExists(zonename) then
+        begin
+          writeln('SWL used cached handle ',zonename);
+          result := Pscf_handle_t(zonehandle.Field(zonename).asUInt64);
+        end
+      else
+        begin
+          writeln('SWL create handle ',zonename);
+          zonescf_handle      := scf_handle_create(SCF_VERSION);
+          if zonescf_handle=nil then
+            begin
+              msg := StrPas(scf_strerror(scf_error));
+              raise Exception.Create('could not get scf_handle:'+' '+msg);
+            end;
+          val := scf_value_create(zonescf_handle);
+          if val=nil then
+            begin
+              msg := StrPas(scf_strerror(scf_error));
+              raise Exception.Create('could not create value:'+inttostr(err)+' '+msg);
+            end;
+  	  err := scf_value_set_astring(val, PChar(zonename));
+          if err<>0 then
+            begin
+              msg := StrPas(scf_strerror(scf_error));
+              raise Exception.Create('could not set value as string:'+inttostr(err)+' '+msg);
+            end;
+          err := scf_handle_decorate(zonescf_handle, PChar('zone'), val);
+          if err<>0 then
+            begin
+              msg := StrPas(scf_strerror(scf_error));
+              raise Exception.Create('could not decorate handle with zone val:'+inttostr(err)+' '+msg);
+            end;
+          err := scf_handle_bind(zonescf_handle);
+          if err<>0 then
+            begin
+              msg := StrPas(scf_strerror(scf_error));
+              raise Exception.Create('could not bind scf_handle:'+inttostr(err)+' '+msg);
+            end;
+          zonehandle.Field(zonename).asUint64:=Uint64(zonescf_handle);
+          result := zonescf_handle;
+        end;
+    end;
+end;
+
+function  fre_get_local_service_scope(const zonename:string): Pscf_scope_t;
 var err : integer;
     msg : string;
 begin
-  if not assigned(gsfc_handle) then
-    fre_init_libsvc;
+
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create scope');
-  result:=scf_scope_create(gsfc_handle);
+  result:=scf_scope_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -69,7 +128,7 @@ begin
     end;
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create local scope');
-  err := scf_handle_get_scope(gsfc_handle,PChar(SCF_SCOPE_LOCAL),result);
+  err := scf_handle_get_scope(fre_get_scf_handle(zonename),PChar(SCF_SCOPE_LOCAL),result);
   if err<>0 then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -83,12 +142,12 @@ begin
   scf_scope_destroy(scope);
 end;
 
-function fre_create_service_handle: Pscf_service_t;
+function fre_create_service_handle(const zonename:string): Pscf_service_t;
 var err : integer;
     msg : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create service');
-  result:=scf_service_create(gsfc_handle);
+  result:=scf_service_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -101,11 +160,11 @@ begin
   scf_service_destroy(service);
 end;
 
-function fre_create_add_service(const service_name: string; const scope: Pscf_scope_t): Pscf_service_t;
+function fre_create_add_service(const service_name: string; const scope: Pscf_scope_t; const zonename: string): Pscf_service_t;
 var err : integer;
     msg : string;
 begin
-  result := fre_create_service_handle;
+  result := fre_create_service_handle(zonename);
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'add service');
   err := scf_scope_add_service(scope,PChar(service_name),result);
@@ -116,11 +175,11 @@ begin
     end;
 end;
 
-function fre_get_service(const service_name: string; const scope: Pscf_scope_t): Pscf_service_t;
+function fre_get_service(const service_name: string; const scope: Pscf_scope_t;const zonename: string): Pscf_service_t;
 var err : integer;
     msg : string;
 begin
-  result := fre_create_service_handle;
+  result := fre_create_service_handle(zonename);
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'get service ');
   err := scf_scope_get_service(scope,PChar(service_name),result);
@@ -136,11 +195,13 @@ begin
     end;
 end;
 
-function fre_create_add_service_propertygroup(const groupname: string; const grouptype: string; const service: Pscf_service_t): Pscf_propertygroup_t;
+function fre_create_add_service_propertygroup(const groupname: string;
+  const grouptype: string; const service: Pscf_service_t; const zonename: string
+  ): Pscf_propertygroup_t;
 var err : integer;
     msg : string;
 begin
-  result := fre_create_pg_handle;
+  result := fre_create_pg_handle(zonename);
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'add propertygroup');
   err := scf_service_add_pg(service,Pchar(groupname),Pchar(grouptype),0,result);
@@ -155,28 +216,52 @@ procedure fre_init_libsvc;
 var err : integer;
     msg : string;
 begin
-  if assigned(gsfc_handle) then
+  if assigned(globalsfc_handle) then
     exit;
 
 //  GFRE_DBI.LogDebug(dblc_APPLICATION,('SWL: get handle');
-  gsfc_handle      := scf_handle_create(SCF_VERSION);
-  if gsfc_handle=nil then
+  globalsfc_handle      := scf_handle_create(SCF_VERSION);
+  if globalsfc_handle=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
       raise Exception.Create('could not get scf_handle:'+' '+msg);
     end;
 
 //  GFRE_DBI.LogDebug(dblc_APPLICATION,('SWL: bind handle');
-  err := scf_handle_bind(gsfc_handle);
+  err := scf_handle_bind(globalsfc_handle);
   if err<>0 then
     begin
       msg := StrPas(scf_strerror(scf_error));
       raise Exception.Create('could not bind scf_handle:'+inttostr(err)+' '+msg);
     end;
 
+  zonehandle:= GFRE_DBI.NewObject;
+  writeln('fre_libsvc initialized');
 end;
 
-procedure fre_create_service(const svcobj: IFRE_DB_Object);
+function fre_init_service_zonehandle(const zonename: string): Pscf_handle_t;
+var err : integer;
+    msg : string;
+begin
+  result      := scf_handle_create(SCF_VERSION);
+  if result=nil then
+    begin
+      msg := StrPas(scf_strerror(scf_error));
+      raise Exception.Create('could not get scf_handle:'+' '+msg);
+    end;
+
+  err := scf_handle_bind(result);
+  if err<>0 then
+    begin
+      msg := StrPas(scf_strerror(scf_error));
+      raise Exception.Create('could not bind scf_handle:'+inttostr(err)+' '+msg);
+    end;
+
+  writeln('SWL decorate with zone');
+  abort;
+end;
+
+procedure fre_create_service(const svcobj: IFRE_DB_Object;const zonename:string='');
 var service_name : string;
 
     imp_scope     : Pscf_scope_t;
@@ -194,25 +279,26 @@ var service_name : string;
     deb_pg        : PScf_propertygroup_t;
 
 begin
+  fre_init_libsvc;
+
   service_name := svcobj.Field('svc_name').asstring;
   if svcobj.FieldExists('svc_enabled') then
     isEnabled    := svcobj.Field('svc_enabled').AsBoolean
   else
     isEnabled    := false;
 
-  fre_init_libsvc;
 
-  imp_scope    := fre_get_local_service_scope;
+  imp_scope    := fre_get_local_service_scope(zonename);
 
-  imp_service  := fre_create_add_service(service_name,imp_scope);
+  imp_service  := fre_create_add_service(service_name,imp_scope,zonename);
 
-  imp_pg       := fre_create_add_service_propertygroup('startd',SCF_GROUP_FRAMEWORK,imp_service);
+  imp_pg       := fre_create_add_service_propertygroup('startd',SCF_GROUP_FRAMEWORK,imp_service,zonename);
   try
-    current_tx := fre_create_start_transaction(imp_pg);
+    current_tx := fre_create_start_transaction(imp_pg,zonename);
     try
-      fre_add_property_to_propertygroup_string(SCF_PROPERTY_DURATION,svcobj.Field('svc_duration').asstring,SCF_TYPE_ASTRING,current_tx);
+      fre_add_property_to_propertygroup_string(SCF_PROPERTY_DURATION,svcobj.Field('svc_duration').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
       if svcobj.FieldExists('svc_ignore_error') then
-        fre_add_property_to_propertygroup_string(SCF_PROPERTY_IGNORE,svcobj.Field('svc_ignore_error').AsString,SCF_TYPE_ASTRING,current_tx);
+        fre_add_property_to_propertygroup_string(SCF_PROPERTY_IGNORE,svcobj.Field('svc_ignore_error').AsString,SCF_TYPE_ASTRING,current_tx,zonename);
     finally
       fre_commit_destroy_transaction(current_tx);
     end;
@@ -225,14 +311,14 @@ begin
       for i := 0 to svcobj.Field('svc_dependency').ValueCount-1 do
         begin
           dependency   := svcobj.Field('svc_dependency').AsObjectItem[i];
-          imp_pg       := fre_create_add_service_propertygroup(dependency.Field('name').asstring,SCF_GROUP_DEPENDENCY,imp_service);
+          imp_pg       := fre_create_add_service_propertygroup(dependency.Field('name').asstring,SCF_GROUP_DEPENDENCY,imp_service,zonename);
           try
-            current_tx := fre_create_start_transaction(imp_pg);
+            current_tx := fre_create_start_transaction(imp_pg,zonename);
             try
-              fre_add_property_to_propertygroup_string(SCF_PROPERTY_GROUPING,dependency.Field('grouping').asstring,SCF_TYPE_ASTRING,current_tx);
-              fre_add_property_to_propertygroup_string(SCF_PROPERTY_RESTART_ON,dependency.Field('restart_on').asstring,SCF_TYPE_ASTRING,current_tx);
-              fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'service',SCF_TYPE_ASTRING,current_tx);
-              fre_add_property_to_propertygroup_string(SCF_PROPERTY_ENTITIES,dependency.Field('fmri').asstring,SCF_TYPE_FMRI,current_tx);
+              fre_add_property_to_propertygroup_string(SCF_PROPERTY_GROUPING,dependency.Field('grouping').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
+              fre_add_property_to_propertygroup_string(SCF_PROPERTY_RESTART_ON,dependency.Field('restart_on').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
+              fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'service',SCF_TYPE_ASTRING,current_tx,zonename);
+              fre_add_property_to_propertygroup_string(SCF_PROPERTY_ENTITIES,dependency.Field('fmri').asstring,SCF_TYPE_FMRI,current_tx,zonename);
             finally
               fre_commit_destroy_transaction(current_tx);
             end;
@@ -248,17 +334,17 @@ begin
         begin
           dependency   := svcobj.Field('svc_dependent').AsObjectItem[i];
           writeln('SWL DEPENDENT: ',dependency.Field('fmri').asstring);
-          deb_service  := fre_get_service(Copy(dependency.Field('fmri').asstring,6,maxint),imp_scope);
+          deb_service  := fre_get_service(Copy(dependency.Field('fmri').asstring,6,maxint),imp_scope,zonename);
           try
-            deb_pg       := fre_create_add_service_propertygroup(dependency.Field('name').asstring,SCF_GROUP_DEPENDENCY,deb_service);
+            deb_pg       := fre_create_add_service_propertygroup(dependency.Field('name').asstring,SCF_GROUP_DEPENDENCY,deb_service,zonename);
             try
-              current_tx := fre_create_start_transaction(deb_pg);
+              current_tx := fre_create_start_transaction(deb_pg,zonename);
               try
-                fre_add_property_to_propertygroup_string(SCF_PROPERTY_GROUPING,dependency.Field('grouping').asstring,SCF_TYPE_ASTRING,current_tx);
-                fre_add_property_to_propertygroup_string(SCF_PROPERTY_RESTART_ON,dependency.Field('restart_on').asstring,SCF_TYPE_ASTRING,current_tx);
-                fre_add_property_to_propertygroup_string(SCF_PROPERTY_ENTITIES,'svc:/'+service_name,SCF_TYPE_FMRI,current_tx);
-                fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'service',SCF_TYPE_ASTRING,current_tx);
-                fre_add_property_to_propertygroup_boolean('external',true,current_tx);
+                fre_add_property_to_propertygroup_string(SCF_PROPERTY_GROUPING,dependency.Field('grouping').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
+                fre_add_property_to_propertygroup_string(SCF_PROPERTY_RESTART_ON,dependency.Field('restart_on').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
+                fre_add_property_to_propertygroup_string(SCF_PROPERTY_ENTITIES,'svc:/'+service_name,SCF_TYPE_FMRI,current_tx,zonename);
+                fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'service',SCF_TYPE_ASTRING,current_tx,zonename);
+                fre_add_property_to_propertygroup_boolean('external',true,current_tx,zonename);
               finally
                 fre_commit_destroy_transaction(current_tx);
               end;
@@ -275,11 +361,11 @@ begin
             fre_destroy_service_handle(deb_service);
           end;
 
-          imp_pg       := fre_create_add_service_propertygroup(SCF_PG_DEPENDENTS,SCF_GROUP_FRAMEWORK,imp_service);
+          imp_pg       := fre_create_add_service_propertygroup(SCF_PG_DEPENDENTS,SCF_GROUP_FRAMEWORK,imp_service,zonename);
           try
-            current_tx := fre_create_start_transaction(imp_pg);
+            current_tx := fre_create_start_transaction(imp_pg,zonename);
             try
-              fre_add_property_to_propertygroup_string(dependency.Field('name').asstring,dependency.Field('fmri').asstring,SCF_TYPE_FMRI,current_tx);
+              fre_add_property_to_propertygroup_string(dependency.Field('name').asstring,dependency.Field('fmri').asstring,SCF_TYPE_FMRI,current_tx,zonename);
             finally
               fre_commit_destroy_transaction(current_tx);
             end;
@@ -290,12 +376,12 @@ begin
     end;
    writeln('SWL DEPENDENT DONE');
 
-  imp_pg       := fre_create_add_service_propertygroup(SCF_PG_GENERAL,SCF_GROUP_FRAMEWORK,imp_service);
+  imp_pg       := fre_create_add_service_propertygroup(SCF_PG_GENERAL,SCF_GROUP_FRAMEWORK,imp_service,zonename);
   try
-    current_tx := fre_create_start_transaction(imp_pg);
+    current_tx := fre_create_start_transaction(imp_pg,zonename);
     try
-      fre_add_property_to_propertygroup_string('entity_stability','Evolving',SCF_TYPE_ASTRING,current_tx);
-      fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_SINGLE_INSTANCE,true,current_tx);
+      fre_add_property_to_propertygroup_string('entity_stability','Evolving',SCF_TYPE_ASTRING,current_tx,zonename);
+      fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_SINGLE_INSTANCE,true,current_tx,zonename);
     finally
       fre_commit_destroy_transaction(current_tx);
     end;
@@ -303,13 +389,13 @@ begin
     fre_destroy_propertgroup_handle(imp_pg);
   end;
 
-  imp_pg       := fre_create_add_service_propertygroup('start',SCF_GROUP_METHOD,imp_service);
+  imp_pg       := fre_create_add_service_propertygroup('start',SCF_GROUP_METHOD,imp_service,zonename);
   try
-    current_tx := fre_create_start_transaction(imp_pg);
+    current_tx := fre_create_start_transaction(imp_pg,zonename);
     try
-      fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'method',SCF_TYPE_ASTRING,current_tx);
-      fre_add_property_to_propertygroup_string(SCF_PROPERTY_EXEC,svcobj.Field('svc_start_exec').asstring,SCF_TYPE_ASTRING,current_tx);
-      fre_add_property_to_propertygroup_count(SCF_PROPERTY_TIMEOUT,svcobj.Field('svc_start_timeout').AsUInt64,current_tx);
+      fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'method',SCF_TYPE_ASTRING,current_tx,zonename);
+      fre_add_property_to_propertygroup_string(SCF_PROPERTY_EXEC,svcobj.Field('svc_start_exec').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
+      fre_add_property_to_propertygroup_count(SCF_PROPERTY_TIMEOUT,svcobj.Field('svc_start_timeout').AsUInt64,current_tx,zonename);
     finally
       fre_commit_destroy_transaction(current_tx);
     end;
@@ -317,13 +403,13 @@ begin
     fre_destroy_propertgroup_handle(imp_pg);
   end;
 
-  imp_pg       := fre_create_add_service_propertygroup('stop',SCF_GROUP_METHOD,imp_service);
+  imp_pg       := fre_create_add_service_propertygroup('stop',SCF_GROUP_METHOD,imp_service,zonename);
   try
-    current_tx := fre_create_start_transaction(imp_pg);
+    current_tx := fre_create_start_transaction(imp_pg,zonename);
     try
-      fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'method',SCF_TYPE_ASTRING,current_tx);
-      fre_add_property_to_propertygroup_string(SCF_PROPERTY_EXEC,svcobj.Field('svc_stop_exec').asstring,SCF_TYPE_ASTRING,current_tx);
-      fre_add_property_to_propertygroup_count(SCF_PROPERTY_TIMEOUT,svcobj.Field('svc_stop_timeout').AsUInt64,current_tx);
+      fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'method',SCF_TYPE_ASTRING,current_tx,zonename);
+      fre_add_property_to_propertygroup_string(SCF_PROPERTY_EXEC,svcobj.Field('svc_stop_exec').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
+      fre_add_property_to_propertygroup_count(SCF_PROPERTY_TIMEOUT,svcobj.Field('svc_stop_timeout').AsUInt64,current_tx,zonename);
     finally
       fre_commit_destroy_transaction(current_tx);
     end;
@@ -333,13 +419,13 @@ begin
 
   if svcobj.FieldExists('svc_restart_exec') then
     begin
-      imp_pg       := fre_create_add_service_propertygroup('restart',SCF_GROUP_METHOD,imp_service);
+      imp_pg       := fre_create_add_service_propertygroup('restart',SCF_GROUP_METHOD,imp_service,zonename);
       try
-        current_tx := fre_create_start_transaction(imp_pg);
+        current_tx := fre_create_start_transaction(imp_pg,zonename);
         try
-          fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'method',SCF_TYPE_ASTRING,current_tx);
-          fre_add_property_to_propertygroup_string(SCF_PROPERTY_EXEC,svcobj.Field('svc_restart_exec').asstring,SCF_TYPE_ASTRING,current_tx);
-          fre_add_property_to_propertygroup_count(SCF_PROPERTY_TIMEOUT,svcobj.Field('svc_restart_timeout').AsUInt64,current_tx);
+          fre_add_property_to_propertygroup_string(SCF_PROPERTY_TYPE_,'method',SCF_TYPE_ASTRING,current_tx,zonename);
+          fre_add_property_to_propertygroup_string(SCF_PROPERTY_EXEC,svcobj.Field('svc_restart_exec').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
+          fre_add_property_to_propertygroup_count(SCF_PROPERTY_TIMEOUT,svcobj.Field('svc_restart_timeout').AsUInt64,current_tx,zonename);
         finally
           fre_commit_destroy_transaction(current_tx);
         end;
@@ -348,21 +434,21 @@ begin
       end;
     end;
 
-  imp_pg       := fre_create_add_service_propertygroup(SCF_PG_METHOD_CONTEXT,SCF_GROUP_FRAMEWORK,imp_service);
+  imp_pg       := fre_create_add_service_propertygroup(SCF_PG_METHOD_CONTEXT,SCF_GROUP_FRAMEWORK,imp_service,zonename);
   try
-    current_tx := fre_create_start_transaction(imp_pg);
+    current_tx := fre_create_start_transaction(imp_pg,zonename);
     try
-      fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_USE_PROFILE,false,current_tx);
+      fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_USE_PROFILE,false,current_tx,zonename);
       if svcobj.FieldExists('svc_group') then
-        fre_add_property_to_propertygroup_string(SCF_PROPERTY_GROUP,svcobj.Field('svc_group').asstring,SCF_TYPE_ASTRING,current_tx);
+        fre_add_property_to_propertygroup_string(SCF_PROPERTY_GROUP,svcobj.Field('svc_group').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
       if svcobj.FieldExists('svc_user') then
-        fre_add_property_to_propertygroup_string(SCF_PROPERTY_USER,svcobj.Field('svc_user').asstring,SCF_TYPE_ASTRING,current_tx);
+        fre_add_property_to_propertygroup_string(SCF_PROPERTY_USER,svcobj.Field('svc_user').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
       if svcobj.FieldExists('svc_working_directory') then
-        fre_add_property_to_propertygroup_string(SCF_PROPERTY_WORKING_DIRECTORY,svcobj.Field('svc_working_directory').asstring,SCF_TYPE_ASTRING,current_tx);
+        fre_add_property_to_propertygroup_string(SCF_PROPERTY_WORKING_DIRECTORY,svcobj.Field('svc_working_directory').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
       if svcobj.FieldExists('svc_environment') then
-        fre_add_property_to_propertygroup_string(SCF_PROPERTY_ENVIRONMENT,svcobj.Field('svc_environment').asstring,SCF_TYPE_ASTRING,current_tx);
+        fre_add_property_to_propertygroup_string(SCF_PROPERTY_ENVIRONMENT,svcobj.Field('svc_environment').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
       if (svcobj.FieldExists('svc_privileges')) and (svcobj.Field('svc_privileges').asstring<>'') then
-        fre_add_property_to_propertygroup_string(SCF_PROPERTY_PRIVILEGES,svcobj.Field('svc_privileges').asstring,SCF_TYPE_ASTRING,current_tx);
+        fre_add_property_to_propertygroup_string(SCF_PROPERTY_PRIVILEGES,svcobj.Field('svc_privileges').asstring,SCF_TYPE_ASTRING,current_tx,zonename);
     finally
       fre_commit_destroy_transaction(current_tx);
     end;
@@ -371,11 +457,11 @@ begin
   end;
 
   if svcobj.FieldExists('svc_common_name') then
-    imp_pg       := fre_create_add_service_propertygroup(SCF_PG_TM_COMMON_NAME,SCF_GROUP_TEMPLATE,imp_service);
+    imp_pg       := fre_create_add_service_propertygroup(SCF_PG_TM_COMMON_NAME,SCF_GROUP_TEMPLATE,imp_service,zonename);
     try
-      current_tx := fre_create_start_transaction(imp_pg);
+      current_tx := fre_create_start_transaction(imp_pg,zonename);
       try
-          fre_add_property_to_propertygroup_string('C',svcobj.Field('svc_common_name').asstring,SCF_TYPE_USTRING,current_tx);
+          fre_add_property_to_propertygroup_string('C',svcobj.Field('svc_common_name').asstring,SCF_TYPE_USTRING,current_tx,zonename);
       finally
         fre_commit_destroy_transaction(current_tx);
       end;
@@ -384,13 +470,13 @@ begin
     end;
 
 
-  imp_instance := fre_create_add_instance_to_service('default',imp_service);
+  imp_instance := fre_create_add_instance_to_service('default',imp_service,zonename);
   try
-    imp_pg       := fre_create_get_or_add_instance_propertygroup(SCF_PG_GENERAL,SCF_GROUP_FRAMEWORK,imp_instance);
+    imp_pg       := fre_create_get_or_add_instance_propertygroup(SCF_PG_GENERAL,SCF_GROUP_FRAMEWORK,imp_instance,zonename);
     try
-      current_tx := fre_create_start_transaction(imp_pg);
+      current_tx := fre_create_start_transaction(imp_pg,zonename);
       try
-        fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_ENABLED,isEnabled,current_tx);
+        fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_ENABLED,isEnabled,current_tx,zonename);
       finally
         fre_commit_destroy_transaction(current_tx);
       end;
@@ -405,7 +491,7 @@ begin
   fre_destroy_service_scope(imp_scope);
 end;
 
-procedure fre_destroy_service(const svcobj: IFRE_DB_Object);
+procedure fre_destroy_service(const svcobj: IFRE_DB_Object;const zonename: string);
 var service_name  : string;
     imp_scope     : Pscf_scope_t;
     imp_service   : Pscf_service_t;
@@ -413,15 +499,15 @@ var service_name  : string;
     err           : Integer;
     msg           : string;
 begin
-  service_name := svcobj.Field('svc_name').asstring;
-
   fre_init_libsvc;
 
-  imp_scope    := fre_get_local_service_scope;
-  imp_service  := fre_get_service(service_name,imp_scope);
+  service_name := svcobj.Field('svc_name').asstring;
+
+  imp_scope    := fre_get_local_service_scope(zonename);
+  imp_service  := fre_get_service(service_name,imp_scope,zonename);
   if assigned(imp_service) then
     begin
-      imp_instance:= fre_get_instance('default',imp_service);
+      imp_instance:= fre_get_instance('default',imp_service,zonename);
       if assigned(imp_instance) then
         begin
           GFRE_DBI.LogDebug(dblc_APPLICATION,'delete instance');
@@ -445,7 +531,7 @@ begin
   fre_destroy_service_scope(imp_scope);
 end;
 
-function fre_get_servicelist(const substring_filter: string): IFRE_DB_Object;
+function fre_get_servicelist(const substring_filter: string;const zonename: string): IFRE_DB_Object;
 var scope           : Pscf_scope_t;
     sciter          : Pscf_iter_t;
     service         : Pscf_service_t;
@@ -456,15 +542,17 @@ var scope           : Pscf_scope_t;
     max_fmri_length : integer;
     svcdbo          : IFRE_DB_Object;
 begin
+  fre_init_libsvc;
+
   result := GFRE_DBI.NewObject;
 
   max_fmri_length := scf_limit(SCF_LIMIT_MAX_FMRI_LENGTH);
   service_name    := GetMem(max_fmri_length);
 
-  scope  := fre_get_local_service_scope;
+  scope  := fre_get_local_service_scope(zonename);
   try
     GFRE_DBI.LogDebug(dblc_APPLICATION,'create iter');
-    sciter:=scf_iter_create(gsfc_handle);
+    sciter:=scf_iter_create(fre_get_scf_handle(zonename));
     try
       if sciter=nil then
         begin
@@ -477,7 +565,7 @@ begin
           msg := StrPas(scf_strerror(scf_error));
           raise Exception.Create('could not iter services:'+inttostr(err)+' '+msg);
         end;
-      service := fre_create_service_handle;
+      service := fre_create_service_handle(zonename);
       try
         while (true) do
           begin
@@ -515,7 +603,7 @@ begin
   end;
 end;
 
-procedure fre_remove_dependency(const service_name: string; const dependency: string);
+procedure fre_remove_dependency(const service_name: string;const dependency: string; const zonename: string);
 var   scope     : Pscf_scope_t;
       service   : Pscf_service_t;
       pg        : Pscf_propertygroup_t;
@@ -524,11 +612,11 @@ var   scope     : Pscf_scope_t;
 begin
   fre_init_libsvc;
 
-  scope    := fre_get_local_service_scope;
+  scope    := fre_get_local_service_scope(zonename);
   try
-    service  := fre_get_service(service_name,scope);
+    service  := fre_get_service(service_name,scope,zonename);
     try
-      pg  := fre_create_pg_handle;
+      pg  := fre_create_pg_handle(zonename);
       try
         err := scf_service_get_pg(service,PChar(dependency),pg);
         if err<>0 then
@@ -555,7 +643,7 @@ begin
   end;
 end;
 
-procedure fre_enable_or_disable_service(const service_name: string; const enable:boolean);
+procedure fre_enable_or_disable_service(const service_name: string; const enable: boolean; const zonename: string);
 var scope       : Pscf_scope_t;
     service     : Pscf_service_t;
     pg          : Pscf_propertygroup_t;
@@ -564,28 +652,28 @@ var scope       : Pscf_scope_t;
     err         : integer;
     msg         : string;
     enabled_val : boolean;
+
 begin
   fre_init_libsvc;
-
-  scope    := fre_get_local_service_scope;
+  scope    := fre_get_local_service_scope(zonename);
   try
     writeln('SWL GET SERVICE '+service_name);
-    service    := fre_get_service(service_name,scope);
+    service    := fre_get_service(service_name,scope,zonename);
     writeln('SWL FOUND SERVICE');
     try
-      instance := fre_get_instance('default',service);
+      instance := fre_get_instance('default',service,zonename);
       writeln('SWL FOUND INSTANCE');
       try
         // restarter_setup
-        pg       := fre_create_get_or_add_instance_propertygroup(SCF_PG_GENERAL,SCF_GROUP_FRAMEWORK,instance);
+        pg       := fre_create_get_or_add_instance_propertygroup(SCF_PG_GENERAL,SCF_GROUP_FRAMEWORK,instance,zonename);
         try
           writeln('SWL GET PROPERTY');
-          if fre_get_property_boolean(SCF_PROPERTY_ENABLED,pg,false,enabled_val)=false then
+          if fre_get_property_boolean(SCF_PROPERTY_ENABLED,pg,false,zonename,enabled_val)=false then
             begin
               // property does not exist
-              current_tx := fre_create_start_transaction(pg);
+              current_tx := fre_create_start_transaction(pg,zonename);
               try
-                fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_ENABLED,enable,current_tx);
+                fre_add_property_to_propertygroup_boolean(SCF_PROPERTY_ENABLED,enable,current_tx,zonename);
               finally
                 fre_commit_destroy_transaction(current_tx);
               end;
@@ -602,9 +690,9 @@ begin
                 end
               else
                 begin
-                  current_tx := fre_create_start_transaction(pg);
+                  current_tx := fre_create_start_transaction(pg,zonename);
                   try
-                    fre_set_property_boolean(SCF_PROPERTY_ENABLED,enable,current_tx);
+                    fre_set_property_boolean(SCF_PROPERTY_ENABLED,enable,current_tx,zonename);
                   finally
                     fre_commit_destroy_transaction(current_tx);
                   end;
@@ -649,7 +737,7 @@ begin
   end;
 end;
 
-procedure fre_refresh_service(const service_name: string);
+procedure fre_refresh_service(const service_name: string; const zonename: string);
 var scope       : Pscf_scope_t;
     service     : Pscf_service_t;
     pg          : Pscf_propertygroup_t;
@@ -665,34 +753,34 @@ begin
   timestamp:=illu_gethrtime;
   writeln('SWL TIME:',timestamp);
 
-  scope    := fre_get_local_service_scope;
+  scope    := fre_get_local_service_scope(zonename);
   try
     writeln('SWL GET SERVICE '+service_name);
-    service    := fre_get_service(service_name,scope);
+    service    := fre_get_service(service_name,scope,zonename);
     writeln('SWL FOUND SERVICE');
     try
-      instance := fre_get_instance('default',service);
+      instance := fre_get_instance('default',service,zonename);
       writeln('SWL FOUND INSTANCE');
       try
         // restarter_setup
-        pg       := fre_create_get_or_add_instance_propertygroup(SCF_PG_RESTARTER_ACTIONS,SCF_GROUP_FRAMEWORK,instance);
+        pg       := fre_create_get_or_add_instance_propertygroup(SCF_PG_RESTARTER_ACTIONS,SCF_GROUP_FRAMEWORK,instance,zonename);
         try
           writeln('SWL GET PROPERTY');
-          if fre_get_property_integer(SCF_PROPERTY_REFRESH,pg,false,value)=false then
+          if fre_get_property_integer(SCF_PROPERTY_REFRESH,pg,false,zonename,value)=false then
             begin
               // property does not exist
-              current_tx := fre_create_start_transaction(pg);
+              current_tx := fre_create_start_transaction(pg,zonename);
               try
-                fre_add_property_to_propertygroup_integer(SCF_PROPERTY_REFRESH,timestamp,current_tx);
+                fre_add_property_to_propertygroup_integer(SCF_PROPERTY_REFRESH,timestamp,current_tx,zonename);
               finally
                 fre_commit_destroy_transaction(current_tx);
               end;
             end
           else
             begin
-              current_tx := fre_create_start_transaction(pg);
+              current_tx := fre_create_start_transaction(pg,zonename);
               try
-                fre_set_property_integer(SCF_PROPERTY_REFRESH,timestamp,current_tx);
+                fre_set_property_integer(SCF_PROPERTY_REFRESH,timestamp,current_tx,zonename);
               finally
                 fre_commit_destroy_transaction(current_tx);
               end;
@@ -723,13 +811,14 @@ begin
   scf_pg_destroy(pg);
 end;
 
-function fre_create_start_transaction(const pg: Pscf_propertygroup_t): Pscf_transaction_t;
+function fre_create_start_transaction(const pg: Pscf_propertygroup_t;
+  const zonename: string): Pscf_transaction_t;
 var err : integer;
     msg : string;
 begin
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create transaction');
-  result := scf_transaction_create(gsfc_handle);
+  result := scf_transaction_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -761,7 +850,9 @@ begin
   scf_transaction_destroy(tx);
 end;
 
-procedure fre_add_property_to_propertygroup_string(const property_name: string; const property_value: string; const property_type: scf_type_t; const tx: Pscf_transaction_t);
+procedure fre_add_property_to_propertygroup_string(const property_name: string;
+  const property_value: string; const property_type: scf_type_t;
+  const tx: Pscf_transaction_t; const zonename: string);
 var err    : integer;
     msg    : string;
     entry  : Pscf_transaction_entry_t;
@@ -769,8 +860,8 @@ var err    : integer;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'Adding Property '+property_name+' '+property_value);
 
-  entry    := fre_create_add_entry_to_transaction(property_name,property_type,tx);
-  value    := fre_create_value_handle;
+  entry    := fre_create_add_entry_to_transaction(property_name,property_type,tx,zonename);
+  value    := fre_create_value_handle(zonename);
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'value set from string');
   err := scf_value_set_from_string(value,property_type,PChar(property_value));
@@ -784,7 +875,7 @@ begin
 
 end;
 
-procedure fre_add_property_to_propertygroup_boolean( const property_name: string; const property_value: boolean; const tx: Pscf_transaction_t);
+procedure fre_add_property_to_propertygroup_boolean(const property_name: string; const property_value: boolean;const tx: Pscf_transaction_t; const zonename: string);
 var err    : integer;
     msg    : string;
     entry  : Pscf_transaction_entry_t;
@@ -798,8 +889,8 @@ begin
   else
     boolean_value:=0;
 
-  entry    := fre_create_add_entry_to_transaction(property_name,SCF_TYPE_BOOLEAN,tx);
-  value    := fre_create_value_handle;
+  entry    := fre_create_add_entry_to_transaction(property_name,SCF_TYPE_BOOLEAN,tx,zonename);
+  value    := fre_create_value_handle(zonename);
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'value set from boolean');
   scf_value_set_boolean(value,boolean_value);
@@ -807,7 +898,7 @@ begin
   fre_add_value_to_entry(value,entry);
 end;
 
-procedure fre_add_property_to_propertygroup_count(const property_name: string; const property_value: Uint64; const tx: Pscf_transaction_t);
+procedure fre_add_property_to_propertygroup_count(const property_name: string; const property_value: Uint64; const tx: Pscf_transaction_t; const zonename: string);
 var err    : integer;
     msg    : string;
     entry  : Pscf_transaction_entry_t;
@@ -815,8 +906,8 @@ var err    : integer;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'Adding Property '+property_name+' '+inttostr(property_value));
 
-  entry    := fre_create_add_entry_to_transaction(property_name,SCF_TYPE_COUNT,tx);
-  value    := fre_create_value_handle;
+  entry    := fre_create_add_entry_to_transaction(property_name,SCF_TYPE_COUNT,tx,zonename);
+  value    := fre_create_value_handle(zonename);
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'value set from count');
   scf_value_set_count(value,property_value);
@@ -824,7 +915,7 @@ begin
   fre_add_value_to_entry(value,entry);
 end;
 
-procedure fre_add_property_to_propertygroup_integer(const property_name: string; const property_value: int64; const tx: Pscf_transaction_t);
+procedure fre_add_property_to_propertygroup_integer(const property_name: string; const property_value: int64;const tx: Pscf_transaction_t; const zonename: string);
 var err    : integer;
     msg    : string;
     entry  : Pscf_transaction_entry_t;
@@ -832,8 +923,8 @@ var err    : integer;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'Adding Property '+property_name+' '+inttostr(property_value));
 
-  entry    := fre_create_add_entry_to_transaction(property_name,SCF_TYPE_INTEGER,tx);
-  value    := fre_create_value_handle;
+  entry    := fre_create_add_entry_to_transaction(property_name,SCF_TYPE_INTEGER,tx,zonename);
+  value    := fre_create_value_handle(zonename);
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'value set from count');
   scf_value_set_integer(value,property_value);
@@ -842,12 +933,12 @@ begin
 
 end;
 
-function fre_create_value_handle: Pscf_value_t;
+function fre_create_value_handle(const zonename: string): Pscf_value_t;
 var err : integer;
     msg : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create value');
-  result := scf_value_create(gsfc_handle);
+  result := scf_value_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -868,11 +959,11 @@ begin
     end;
 end;
 
-function fre_create_add_entry_to_transaction(const property_name: string; const property_type: scf_type_t; const tx: Pscf_transaction_t): Pscf_transaction_entry_t;
+function fre_create_add_entry_to_transaction(const property_name: string;const property_type: scf_type_t; const tx: Pscf_transaction_t;const zonename: string): Pscf_transaction_entry_t;
 var err : integer;
     msg : string;
 begin
-  result := fre_create_entry_handle;
+  result := fre_create_entry_handle(zonename);
 
   err := scf_transaction_property_new(tx,result,PChar(property_name),property_type);
   if err<>0 then
@@ -882,12 +973,12 @@ begin
     end;
 end;
 
-function fre_create_add_instance_to_service(const instance_name: string; const service: Pscf_service_t): Pscf_instance_t;
+function fre_create_add_instance_to_service(const instance_name: string; const service: Pscf_service_t; const zonename: string): Pscf_instance_t;
 var err : integer;
     msg : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create instance');
-  result := scf_instance_create(gsfc_handle);
+  result := scf_instance_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -908,12 +999,12 @@ begin
   scf_instance_destroy(instance);
 end;
 
-function fre_create_get_or_add_instance_propertygroup(const groupname: string; const grouptype: string; const instance: Pscf_instance_t): Pscf_propertygroup_t;
+function fre_create_get_or_add_instance_propertygroup(const groupname: string; const grouptype: string; const instance: Pscf_instance_t; const zonename: string): Pscf_propertygroup_t;
 var err : integer;
     msg : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create propertygroup');
-  result := scf_pg_create(gsfc_handle);
+  result := scf_pg_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -938,7 +1029,7 @@ begin
     end;
 end;
 
-function fre_get_property_boolean(const property_name: string; const pg: Pscf_propertygroup_t; const exception_on_not_existing:boolean; out value: boolean): boolean;
+function fre_get_property_boolean(const property_name: string; const pg: Pscf_propertygroup_t; const exception_on_not_existing: boolean; const zonename: string; out value: boolean): boolean;
 var prop          : Pscf_property_t;
     scv_val       : Pscf_value_t;
     err           : integer;
@@ -947,14 +1038,14 @@ var prop          : Pscf_property_t;
 begin
   result:=false;
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create property');
-  prop := scf_property_create(gsfc_handle);
+  prop := scf_property_create(fre_get_scf_handle(zonename));
   if prop=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
       raise Exception.Create('could not create property:'+' '+msg);
     end;
   try
-    scv_val := fre_create_value_handle;
+    scv_val := fre_create_value_handle(zonename);
     try
       GFRE_DBI.LogDebug(dblc_APPLICATION,'get property '+property_name);
       err := scf_pg_get_property(pg,Pchar(property_name),prop);
@@ -990,7 +1081,9 @@ begin
   end;
 end;
 
-procedure fre_set_property_boolean(const property_name: string; const property_value: boolean; const tx: Pscf_transaction_t);
+procedure fre_set_property_boolean(const property_name: string;
+  const property_value: boolean; const tx: Pscf_transaction_t;
+  const zonename: string);
 var scv_val       : Pscf_value_t;
     entry         : Pscf_transaction_entry_t;
     err           : integer;
@@ -1003,9 +1096,9 @@ begin
     boolean_value:=0;
 
   GFRE_DBI.LogDebug(dblc_APPLICATION,'setting property value');
-  scv_val := fre_create_value_handle;
+  scv_val := fre_create_value_handle(zonename);
   try
-    entry := fre_create_entry_handle;
+    entry := fre_create_entry_handle(zonename);
     writeln('SWL SET BOOLEAN');
     scf_value_set_boolean(scv_val,boolean_value);
     err := scf_transaction_property_change_type(tx,entry,PChar(property_name),SCF_TYPE_BOOLEAN);
@@ -1038,7 +1131,7 @@ begin
   end;
 end;
 
-function fre_get_property_integer(const property_name: string; const pg: Pscf_propertygroup_t; const exception_on_not_existing: boolean; out value: int64): boolean;
+function fre_get_property_integer(const property_name: string;const pg: Pscf_propertygroup_t; const exception_on_not_existing: boolean; const zonename: string; out value: int64): boolean;
 var prop          : Pscf_property_t;
     scv_val       : Pscf_value_t;
     err           : integer;
@@ -1047,14 +1140,14 @@ var prop          : Pscf_property_t;
 begin
   result:=false;
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create property');
-  prop := scf_property_create(gsfc_handle);
+  prop := scf_property_create(fre_get_scf_handle(zonename));
   if prop=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
       raise Exception.Create('could not create property:'+' '+msg);
     end;
   try
-    scv_val := fre_create_value_handle;
+    scv_val := fre_create_value_handle(zonename);
     try
       GFRE_DBI.LogDebug(dblc_APPLICATION,'get property '+property_name);
       err := scf_pg_get_property(pg,Pchar(property_name),prop);
@@ -1095,16 +1188,16 @@ begin
   end;
 end;
 
-procedure fre_set_property_integer(const property_name: string; const property_value: int64; const tx: Pscf_transaction_t);
+procedure fre_set_property_integer(const property_name: string; const property_value: int64; const tx: Pscf_transaction_t; const zonename: string);
 var scv_val       : Pscf_value_t;
     entry         : Pscf_transaction_entry_t;
     err           : integer;
     msg           : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'setting property value');
-  scv_val := fre_create_value_handle;
+  scv_val := fre_create_value_handle(zonename);
   try
-    entry := fre_create_entry_handle;
+    entry := fre_create_entry_handle(zonename);
     writeln('SWL SET INTEGER');
     scf_value_set_integer(scv_val,property_value);
     err := scf_transaction_property_change_type(tx,entry,PChar(property_name),SCF_TYPE_INTEGER);
@@ -1137,12 +1230,12 @@ begin
   end;
 end;
 
-function fre_get_instance(const instance_name: string;const service: Pscf_service_t): Pscf_instance_t;
+function fre_get_instance(const instance_name: string; const service: Pscf_service_t; const zonename: string): Pscf_instance_t;
 var err : integer;
     msg : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create instance handle');
-  result := scf_instance_create(gsfc_handle);
+  result := scf_instance_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -1163,12 +1256,12 @@ begin
     end;
 end;
 
-function fre_create_pg_handle: Pscf_propertygroup_t;
+function fre_create_pg_handle(const zonename: string): Pscf_propertygroup_t;
 var err : integer;
     msg : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create propertygroup');
-  result := scf_pg_create(gsfc_handle);
+  result := scf_pg_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));
@@ -1176,12 +1269,13 @@ begin
     end;
 end;
 
-function fre_create_entry_handle: Pscf_transaction_entry_t;
+function fre_create_entry_handle(const zonename: string
+  ): Pscf_transaction_entry_t;
 var err : integer;
     msg : string;
 begin
   GFRE_DBI.LogDebug(dblc_APPLICATION,'create entry');
-  result := scf_entry_create(gsfc_handle);
+  result := scf_entry_create(fre_get_scf_handle(zonename));
   if result=nil then
     begin
       msg := StrPas(scf_strerror(scf_error));

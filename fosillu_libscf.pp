@@ -433,7 +433,7 @@ const
 
 function scf_handle_create(_para1 : scf_version_t):Pscf_handle_t;cdecl;external External_library name 'scf_handle_create';
 
-function scf_handle_decorate(_para1:Pscf_handle_t; _para2:pcchar; _para3:Pscf_value_t):cint;cdecl;external External_library name 'scf_handle_decorate';
+function scf_handle_decorate(_para1:Pscf_handle_t; _para2:pchar; _para3:Pscf_value_t):cint;cdecl;external External_library name 'scf_handle_decorate';
 { was #define dname def_expr }
 function SCF_DECORATE_CLEAR : Pscf_value_t;  
 
@@ -476,7 +476,7 @@ procedure scf_value_set_count(_para1:Pscf_value_t; _para2:uint64_t);cdecl;extern
 procedure scf_value_set_integer(_para1:Pscf_value_t; _para2:int64_t);cdecl;external External_library name 'scf_value_set_integer';
 function scf_value_set_time(_para1:Pscf_value_t; _para2:int64_t; _para3:int32_t):cint;cdecl;external External_library name 'scf_value_set_time';
 
-function scf_value_set_astring(_para1:Pscf_value_t; _para2:pcchar):cint;cdecl;external External_library name 'scf_value_set_astring';
+function scf_value_set_astring(_para1:Pscf_value_t; _para2:pchar):cint;cdecl;external External_library name 'scf_value_set_astring';
 
 function scf_value_set_ustring(_para1:Pscf_value_t; _para2:pcchar):cint;cdecl;external External_library name 'scf_value_set_ustring';
 

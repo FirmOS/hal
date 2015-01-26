@@ -7330,14 +7330,20 @@ end;
  end;
 
  function TFRE_DB_SERVICE.RIF_EnableService(const runnning_ctx: TObject): IFRE_DB_Object;
+ var servicename:string;
  begin
-   writeln('RIF ENABLE SERVICE');
+   writeln('RIF ENABLE SERVICE ',Field('zone').asstring,' ',GetFMRI);
+   servicename := Copy(GetFMRI,6,maxint);
+   fre_enable_or_disable_service(servicename,true,Field('zone').asstring);
    result := GFRE_DBI.NewObject;
  end;
 
  function TFRE_DB_SERVICE.RIF_DisableService(const runnning_ctx: TObject): IFRE_DB_Object;
+ var servicename:string;
  begin
-   writeln('RIF DISABLE SERVICE');
+   writeln('RIF DISABLE SERVICE ',Field('zone').asstring,' ',GetFMRI);
+   servicename := Copy(GetFMRI,6,maxint);
+   fre_enable_or_disable_service(servicename,false,Field('zone').asstring);
    result := GFRE_DBI.NewObject;
  end;
 
