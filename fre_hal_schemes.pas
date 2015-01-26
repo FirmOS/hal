@@ -639,7 +639,7 @@ type
      class procedure RegisterSystemScheme                (const scheme : IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects                    (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
 
-     procedure       SetZoneState         (const zonestatename:string; const zonestate_num:UInt32);
+     procedure       SetZoneState         (const zonestatename:string; const zonestate_num:Int32);
      procedure       SetZoneID            (const zid:int64);
    end;
 
@@ -1689,10 +1689,10 @@ begin
   end;
 end;
 
-procedure TFRE_DB_ZONESTATUS_PLUGIN.SetZoneState(const zonestatename: string;const zonestate_num: UInt32);
+procedure TFRE_DB_ZONESTATUS_PLUGIN.SetZoneState(const zonestatename: string;const zonestate_num: Int32);
 begin
   Field('zstate').asstring     := zonestatename;
-  Field('zstate_num').AsUInt32 := zonestate_num;
+  Field('zstate_num').AsInt32  := zonestate_num;
 end;
 
 procedure TFRE_DB_ZONESTATUS_PLUGIN.SetZoneID(const zid: int64);
