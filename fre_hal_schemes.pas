@@ -2664,7 +2664,6 @@ begin
     group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
     group:=scheme.AddInputGroup('route').Setup(GetTranslateableTextKey('scheme_route_group'));
-    group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
     group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
 end;
@@ -2813,7 +2812,6 @@ begin
     group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
     group:=scheme.AddInputGroup('route').Setup(GetTranslateableTextKey('scheme_route_group'));
-    group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
     group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
     group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
 end;
