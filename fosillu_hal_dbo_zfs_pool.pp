@@ -81,6 +81,7 @@ var zp         : Pzpool_handle_t;
     begin
       result := elementname;
       result := StringReplace(result,'.','_',[rfReplaceAll]);
+      result := StringReplace(result,':','_',[rfReplaceAll]);
       if (elementname= ZPOOL_CONFIG_GUID) or (elementname= ZPOOL_CONFIG_POOL_GUID) then result := 'zfs_guid';
       if (elementname= ZPOOL_CONFIG_POOL_NAME) then result := 'objname';
       if (uppercase(result)='COM_DELPHIX:EMPTY_BPOBJ') then result :='';  //skip
@@ -520,10 +521,10 @@ end;
 
 
 function fosillu_zfs_GetActivePoolsDBO(out error: string; out pools: IFRE_DB_Object): integer;
-var res: cint;
 begin
   pools := GFRE_DBI.NewObject;
-  res   := zpool_iter(GILLUMOS_LIBZFS_HANDLE,@_zpoolGetActiveIterator,pools);
+  result   := zpool_iter(GILLUMOS_LIBZFS_HANDLE,@_zpoolGetActiveIterator,pools);
+  result   := 0;  //FIXXME
 end;
 
 
