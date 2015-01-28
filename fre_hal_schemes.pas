@@ -7396,7 +7396,7 @@ begin
   {$IFDEF SOLARIS}
     result := GFRE_DBI.NewObject;
     servicename := Copy(GetFMRI,6,maxint);
-    SetSvcNameandType(servicename,'FirmOS Samba Service ','child','core,signal',true);
+    SetSvcNameandType(servicename,'FirmOS Samba Service ','transient','core,signal',true);
     SetSvcEnvironment('/','root','root','LANG=C');
     SetSvcStart('/opt/local/samba4/sbin/samba --daemon',180);
     SetSvcStop(':kill',60);

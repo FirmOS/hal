@@ -1186,7 +1186,10 @@ end;
 
 function TFRE_DB_ZFS_OBJ.GetPoolId: TFRE_DB_GUID;
 begin
-  Result:=Field('pool_uid').AsObjectLink;
+  if FieldExists('pool_uid') then
+    Result:=Field('pool_uid').AsObjectLink
+  else
+    Result:=CFRE_DB_NullGUID;
 end;
 
 function TFRE_DB_ZFS_OBJ.GetTransferRead: TFRE_DB_String;

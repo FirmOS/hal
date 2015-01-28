@@ -190,7 +190,7 @@ begin
           writeln('UNHANDLED SUBFEEDMODULE ',subfeedmodule);
 
   // SAVE TO FILE
-  writeln('SWL SUBFEEDMODULE:',subfeedmodule);
+//  writeln('SWL SUBFEEDMODULE:',subfeedmodule);
 
   hdata_lock.Acquire;
   try
@@ -256,19 +256,19 @@ var
               begin
                 if assigned(pools) then
                   begin
-    //                writeln('SWL: FIND ZFS GUID FOR ',feed_disk.DeviceName);
+                    writeln('SWL: FIND ZFS GUID FOR ',feed_disk.DeviceName);
                     if pools.FetchObjWithStringFieldValue('devicename',feed_disk.DeviceName,zfs_obj,uppercase(TFRE_DB_ZFS_BLOCKDEVICE.ClassName)) then
                       begin
-    //                    writeln('SWL: FOUND ZFS GUID ',(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
+                        writeln('SWL: FOUND ZFS GUID ',(zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
                         new_disk.setZFSGuid((zfs_obj.Implementor_HC as TFRE_DB_ZFS_OBJ).getZFSGuid);
                         new_disk.parentInZFSId := zfs_obj.UID;
                       end
                     else
                       begin
-    //                    writeln('SWL: NO ZFS GUID ');
+                        writeln('SWL: NO ZFS GUID ');
                         if pools.FetchObjWithStringFieldValue('zfs_guid',mdata.UID_String+'_'+GFRE_BT.HashString_MD5_HEX('UNASSIGNED'),zfs_obj,uppercase(TFRE_DB_ZFS_UNASSIGNED.ClassName)) then
                           begin
-    //                        writeln('SWL: SET TO UNASSIGNED ');
+                            writeln('SWL: SET TO UNASSIGNED ');
                             if zfs_obj.IsA(TFRE_DB_ZFS_UNASSIGNED,ua) then
                               begin
                                 ua.addBlockdevice(new_disk);
@@ -588,9 +588,23 @@ var mdata    : IFRE_DB_Object;
           end;
       end;
 
+      procedure update_objectfields;
+      begin
+        zfs_obj.SetAllSimpleObjectFieldsFromObject(new_obj);  // copy all new fields to old zfs obj
+        new_obj.SetAllSimpleObjectFieldsFromObject(zfs_obj);  // copy merged fields back (including db fields)
+        new_obj.Field('UID').AsGUID := zfs_obj.UID;
+        if assigned(zpool_iostat) then
+          begin
+            zpool_iostat.Field('statuid').AsGUID := zfs_obj.UID;
+            statcallback(zpool_iostat);
+          end;
+        new_obj.ForAllFields(@_UpdateObjectLinks);
+      end;
+
     begin
       halt :=false;
       zpool_iostat := nil;
+//      writeln('SWL UPDATE HIERARCHIC ',new_obj.SchemeClass);
       new_obj.SetDomainID(mdata.DomainID);
       new_obj.Field('MACHINEID').AsObjectLink := mdata.UID;
       if not (new_obj.Implementor_HC is TFRE_DB_ZFS_OBJ) then
@@ -616,22 +630,21 @@ var mdata    : IFRE_DB_Object;
             end;
           if old_pool.FetchObjWithStringFieldValue('ZFS_GUID',zfs_guid,zfs_obj,'') then
             begin
-//              writeln('SWL: FOUND ZFS OBJECT');
-              zfs_obj.SetAllSimpleObjectFieldsFromObject(new_obj);  // copy all new fields to old zfs obj
-              new_obj.SetAllSimpleObjectFieldsFromObject(zfs_obj);  // copy merged fields back (including db fields)
-              new_obj.Field('UID').AsGUID := zfs_obj.UID;
-              if assigned(zpool_iostat) then
-                begin
-                  zpool_iostat.Field('statuid').AsGUID := zfs_obj.UID;
-                  statcallback(zpool_iostat);
-                end;
-              new_obj.ForAllFields(@_UpdateObjectLinks);
+//              writeln('SWL: FOUND ZFS OBJECT WITH ZFS_GUID');
+              update_objectfields;
             end
           else
-            begin
-              new_obj.ForAllFields(@_UpdateObjectLinks);
-//              GFRE_DBI.LogInfo(dblc_APPLICATION,'OBJECT WITH ZFS GUID [%s] NOT IN LAST POOL STATUS [%s]',[zfs_guid,feed_pool.Field('pool').asstring]);
-            end;
+            if new_obj.IsA(TFRE_DB_ZFS_POOL) then  // new pool without zfs_guid
+              begin
+//                writeln('SWL: FOUND ZPOOL OBJECT WITHOUT ZFS_GUID');
+                zfs_obj := old_pool;
+                update_objectfields;
+              end
+            else
+              begin
+                new_obj.ForAllFields(@_UpdateObjectLinks);
+//                GFRE_DBI.LogInfo(dblc_APPLICATION,'OBJECT WITH ZFS GUID [%s] NOT IN LAST POOL STATUS [%s]',[zfs_guid,feed_pool.Field('pool').asstring]);
+              end;
         end
       else
         GFRE_DBI.LogError(dblc_APPLICATION,'OBJECT HAS NO ZFS GUID [%s]',[new_obj.DumpToString()]);
@@ -644,10 +657,17 @@ var mdata    : IFRE_DB_Object;
     feed_pool   := obj.Implementor_HC as TFRE_DB_ZFS_POOL;
     new_pool    := (feed_pool.CloneToNewObject.Implementor_HC as TFRE_DB_ZFS_POOL);
 //    writeln('SWL: INCOMING POOL ',new_pool.DumpToString());
-    if mdata.FetchObjWithStringFieldValue('objname',feed_pool.Field('objname').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
+    if not mdata.FetchObjWithStringFieldValue('zfs_guid',feed_pool.Field('zfs_guid').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
       begin
-        new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
-      end;
+        if mdata.FetchObjWithStringFieldValue('objname',feed_pool.Field('objname').asstring,old_pool,'TFRE_DB_ZFS_POOL') then
+          begin
+//            writeln('SWL FOUND POOL WITH POOLNAME');
+            new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
+          end;
+      end
+    else
+      new_pool.ForAllObjectsBreakHierarchic(@_updateHierarchic);
+
     new_pool.MachineID := mdata.UID;
     new_pool.SetDomainID(mdata.DomainID);
     new_pool.parentInZFSId := mdata.UID;
