@@ -81,6 +81,7 @@ const
   CFRE_DB_IP_COLLECTION                = 'ip';
   CFRE_DB_ROUTING_COLLECTION           = 'routing';
   CFRE_DB_VM_COMPONENTS_COLLECTION     = 'vmcomponents';
+  CFRE_DB_IMAGEFILE_COLLECTION         = 'imagefiles';
 
 type
 
@@ -464,6 +465,14 @@ type
    end;
 
 
+   { TFRE_DB_IMAGE_FILE }
+
+   TFRE_DB_IMAGE_FILE=class(TFRE_DB_ObjectEx)
+   protected
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
    { TFRE_DB_VHOST }
 
    TFRE_DB_VHOST=class(TFRE_DB_SERVICE)
@@ -489,39 +498,8 @@ type
    protected
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-     procedure       EmbedZVol              (const conn: IFRE_DB_CONNECTION);
    public
      procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
-   end;
-
-   { TFRE_DB_VMACHINE_DISK_IDE }
-
-   TFRE_DB_VMACHINE_DISK_IDE=class(TFRE_DB_VMACHINE_DISK)
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   public
-     procedure       Embed                     (const conn: IFRE_DB_CONNECTION); override;
-   end;
-
-   { TFRE_DB_VMACHINE_DISK_VIRTIO }
-
-   TFRE_DB_VMACHINE_DISK_VIRTIO=class(TFRE_DB_VMACHINE_DISK)
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   public
-     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); override;
-   end;
-
-   { TFRE_DB_VMACHINE_DISK_ISO }
-
-   TFRE_DB_VMACHINE_DISK_ISO=class(TFRE_DB_VMACHINE_DISK)
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   public
-     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); override;
    end;
 
    { TFRE_DB_VMACHINE_NIC }
@@ -533,26 +511,6 @@ type
      procedure       EmbedDatalink          (const conn: IFRE_DB_CONNECTION);
    public
      procedure       Embed                  (const conn: IFRE_DB_CONNECTION); virtual;
-   end;
-
-   { TFRE_DB_VMACHINE_NIC_E1000 }
-
-   TFRE_DB_VMACHINE_NIC_E1000=class(TFRE_DB_VMACHINE_NIC)
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   public
-     procedure       Embed                  (const conn: IFRE_DB_CONNECTION); override;
-   end;
-
-   { TFRE_DB_VMACHINE_NIC_VIRTIO }
-
-   TFRE_DB_VMACHINE_NIC_VIRTIO=class(TFRE_DB_VMACHINE_NIC)
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-   public
-     procedure       Embed                     (const conn: IFRE_DB_CONNECTION); override;
    end;
 
    { TFRE_DB_VMACHINE }
@@ -1460,46 +1418,22 @@ implementation
    result   := gresult;
   end;
 
-{ TFRE_DB_VMACHINE_NIC_VIRTIO }
+{ TFRE_DB_IMAGE_FILE }
 
-class procedure TFRE_DB_VMACHINE_NIC_VIRTIO.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+class procedure TFRE_DB_IMAGE_FILE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 begin
   inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_NIC.ClassName);
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+
+  scheme.AddSchemeField('filename',fdbft_String).required:=true;
 end;
 
-class procedure TFRE_DB_VMACHINE_NIC_VIRTIO.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+class procedure TFRE_DB_IMAGE_FILE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
 begin
   newVersionId:='0.1';
   if (currentVersionId='') then begin
     currentVersionId:='0.1';
   end;
-end;
-
-procedure TFRE_DB_VMACHINE_NIC_VIRTIO.Embed(const conn: IFRE_DB_CONNECTION);
-begin
-  inherited Embed(conn);
-end;
-
-{ TFRE_DB_VMACHINE_NIC_E1000 }
-
-class procedure TFRE_DB_VMACHINE_NIC_E1000.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_NIC.ClassName);
-end;
-
-class procedure TFRE_DB_VMACHINE_NIC_E1000.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionId:='0.1';
-  if (currentVersionId='') then begin
-    currentVersionId:='0.1';
-  end;
-end;
-
-procedure TFRE_DB_VMACHINE_NIC_E1000.Embed(const conn: IFRE_DB_CONNECTION);
-begin
-  EmbedDatalink(conn);
 end;
 
 { TFRE_DB_VMACHINE_NIC }
@@ -1508,6 +1442,25 @@ class procedure TFRE_DB_VMACHINE_NIC.RegisterSystemScheme(const scheme: IFRE_DB_
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+
+  scheme.AddSchemeField('model',fdbft_String).required:=true;     // enum
+  scheme.AddSchemeField('vnic',fdbft_ObjLink).required:=true;
+  scheme.AddSchemeField('vm_vlan',fdbft_Int16).required:=true;
+
+  //  https://wiki.firmos.at/display/FBX/Qemu+Parameters
+  //-net
+  //model (enum)
+  //
+  //Auswahl VNIC (reflink)
+  //
+  //vlan (vm_vlan)
+  //  (default every vmachine nic in an other vm_vlan)
+  //-ip assignment (ja/nein) (aufklappbar, extra configuration)
+  //ip= IPV4HOSTNET
+  //gateway_ip= IPV4HOSTNET
+  //hostname=
+  //dns_ip0=  IPV4HOSTNET
+  //dns_ip1=  IPV4HOSTNET
 end;
 
 class procedure TFRE_DB_VMACHINE_NIC.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1539,68 +1492,6 @@ begin
   EmbedDatalink(conn);
 end;
 
-{ TFRE_DB_VMACHINE_DISK_ISO }
-
-class procedure TFRE_DB_VMACHINE_DISK_ISO.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_DISK.ClassName);
-end;
-
-class procedure TFRE_DB_VMACHINE_DISK_ISO.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionId:='0.1';
-  if (currentVersionId='') then begin
-    currentVersionId:='0.1';
-  end;
-end;
-
-procedure TFRE_DB_VMACHINE_DISK_ISO.Embed(const conn: IFRE_DB_CONNECTION);
-begin
-  inherited Embed(conn);
-end;
-
-{ TFRE_DB_VMACHINE_DISK_VIRTIO }
-
-class procedure TFRE_DB_VMACHINE_DISK_VIRTIO.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_DISK.ClassName);
-end;
-
-class procedure TFRE_DB_VMACHINE_DISK_VIRTIO.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionId:='0.1';
-  if (currentVersionId='') then begin
-    currentVersionId:='0.1';
-  end;
-end;
-
-procedure TFRE_DB_VMACHINE_DISK_VIRTIO.Embed(const conn: IFRE_DB_CONNECTION);
-begin
-  EmbedZvol(conn);
-end;
-
-{ TFRE_DB_VMACHINE_DISK_IDE }
-
-class procedure TFRE_DB_VMACHINE_DISK_IDE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-begin
-  inherited RegisterSystemScheme(scheme);
-  scheme.SetParentSchemeByName(TFRE_DB_VMACHINE_DISK.ClassName);
-end;
-
-class procedure TFRE_DB_VMACHINE_DISK_IDE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
-begin
-  newVersionId:='0.1';
-  if (currentVersionId='') then begin
-    currentVersionId:='0.1';
-  end;
-end;
-
-procedure TFRE_DB_VMACHINE_DISK_IDE.Embed(const conn: IFRE_DB_CONNECTION);
-begin
-  EmbedZvol(conn);
-end;
 
 { TFRE_DB_VMACHINE_DISK }
 
@@ -1608,6 +1499,35 @@ class procedure TFRE_DB_VMACHINE_DISK.RegisterSystemScheme(const scheme: IFRE_DB
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+
+  scheme.AddSchemeField('drive_if',fdbft_String).required:=true;  // enum
+  scheme.AddSchemeField('index',fdbft_Int16).required:=true;
+  scheme.AddSchemeField('media',fdbft_String).required:=true;     // enum
+  scheme.AddSchemeField('file',fdbft_ObjLink).required:=true;      // zvol or file
+
+  //  https://wiki.firmos.at/display/FBX/Qemu+Parameters
+  //  Parameters to configure
+  //  -drive
+  //  if (enum)
+  //     ide, scsi, sd, mtd, floppy, virtio.
+  //  index=i (select order of devices)
+  //  file (objlink)
+  //    select zvol (ide, scsi, virtio) or uploaded file (all if options)
+  //  media (enum)
+  //    set if to ide if media cdrom
+
+  // Expert:
+  //cache=            (enum)
+  //S writethrough
+  //S writeback
+  //S none
+  //S directsync (only 1.1.2)
+  //S unsafe
+  //
+  //snapshot=on|off
+  //readonly=on|off
+  //copy-on-read=on|off
+
 end;
 
 class procedure TFRE_DB_VMACHINE_DISK.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -1618,26 +1538,28 @@ begin
   end;
 end;
 
-procedure TFRE_DB_VMACHINE_DISK.EmbedZVol(const conn: IFRE_DB_CONNECTION);
+procedure TFRE_DB_VMACHINE_DISK.Embed(const conn: IFRE_DB_CONNECTION);
 var obj  : IFRE_DB_Object;
     zvol : TFRE_DB_ZFS_DATASET_ZVOL;
+    img  : TFRE_DB_IMAGE_FILE;
 begin
-  if FieldExists('zvol') then
+  if FieldExists('file') then
     begin
-      CheckDbResult(conn.Fetch(Field('zvol').AsGUID,obj));
+      CheckDbResult(conn.Fetch(Field('file').AsGUID,obj));
       if obj.IsA(TFRE_DB_ZFS_DATASET_ZVOL,zvol) then
         begin
           zvol.Field('FULLDATASETNAME').AsString := zvol.GetFullDatasetname(conn);
           Field('ZVOL_EMBED').asobject:=zvol;
         end
       else
-        raise EFRE_DB_Exception.Create(edb_ERROR,'TFRE_DB_VMACHINE_DISK %s LINKS A NON ZVOL OBJ %s',[self.UID_String,zvol.UID_String]);
+        if obj.IsA(TFRE_DB_IMAGE_FILE,img) then
+          begin
+            img.Field('FULLFILENAME').AsString := '/shared/'+img.Field('filename').asstring;
+            Field('IMGFILE').asobject:=img;
+          end
+        else
+          raise EFRE_DB_Exception.Create(edb_ERROR,'TFRE_DB_VMACHINE_DISK %s LINKS A NON ZVOL OR IMAGEFILE OBJ %s',[self.UID_String,zvol.UID_String]);
     end;
-end;
-
-procedure TFRE_DB_VMACHINE_DISK.Embed(const conn: IFRE_DB_CONNECTION);
-begin
-
 end;
 
 { TFRE_DB_VHOST }
@@ -6651,6 +6573,32 @@ end;
    scheme.AddSchemeField('state',fdbft_String).SetupFieldDef(true,false,'vmachine_state');
    scheme.AddSchemeField('vnc_port',fdbft_UInt32);
    scheme.AddSchemeField('vnc_host',fdbft_String).SetupFieldDef(false,false,'','ip');
+
+//   https://wiki.firmos.at/display/FBX/Qemu+Parameters
+//  Parameters to configure
+// -name (set default to servicename)
+// -cpu  (enum)
+// -smp
+// -m
+// -balloon (enum)
+// -k     (enum)
+// -vga   (enum)
+// -usbdevice, possible to add one ore more
+// -boot  (enum)
+// -snapshot   (boolean)
+
+// Expert Configuration:
+//-no-acpi        disable ACPI
+//-no-hpet        disable HPET
+//-no-kvm         disable KVM hardware virtualization
+//-no-kvm-irqchip disable KVM kernel mode PIC/IOAPIC/LAPIC
+//-no-kvm-pit     disable KVM kernel mode PIT
+//-no-kvm-pit-reinjection
+//(all default false)
+//emulator (enum)
+//0.14.1
+//1.1.2  (default
+
  end;
 
  class procedure TFRE_DB_VMACHINE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -6689,11 +6637,8 @@ end;
      sl          : TStringList;
 
      procedure ConfigureComponents(const obj:IFRE_DB_Object);
-     var disk_ide    : TFRE_DB_VMACHINE_DISK_IDE;
-         disk_virtio : TFRE_DB_VMACHINE_DISK_VIRTIO;
-         disk_iso    : TFRE_DB_VMACHINE_DISK_ISO;
-         nic_e1000   : TFRE_DB_VMACHINE_NIC_E1000;
-         nic_virtio  : TFRE_DB_VMACHINE_NIC_VIRTIO;
+     var disk        : TFRE_DB_VMACHINE_DISK;
+         nic         : TFRE_DB_VMACHINE_NIC;
          nicvlan     : string;
          nicname     : string;
          zvol        : TFRE_DB_ZFS_DATASET_ZVOL;
@@ -6714,35 +6659,26 @@ end;
          end;
 
      begin
-       if obj.IsA(TFRE_DB_VMACHINE_DISK_IDE,disk_ide) then
+       if obj.IsA(TFRE_DB_VMACHINE_DISK,disk) then
          begin
-           writeln('SWL VM IDE');
-           if disk_ide.Field('zvol_embed').AsObject.IsA(TFRE_DB_ZFS_DATASET_ZVOL,zvol) then
+           writeln('SWL VM DISK');
+           if disk.Field('zvol_embed').AsObject.IsA(TFRE_DB_ZFS_DATASET_ZVOL,zvol) then
              begin
                CreateZVol(zvol);
-               sl.add('-drive file=/dev/zvol/rdsk/'+zvol.Field('fulldatasetname').asstring+',if=ide,index='+disk_ide.Field('index').asstring+' \');
+               sl.add('-drive file=/dev/zvol/rdsk/'+zvol.Field('fulldatasetname').asstring+',if=ide,index='+disk.Field('index').asstring+' \');
              end;
          end;
-       if obj.IsA(TFRE_DB_VMACHINE_DISK_VIRTIO,disk_virtio) then
-         begin
-           writeln('SWL VM VIRT');
-           if disk_virtio.Field('zvol_embed').AsObject.IsA(TFRE_DB_ZFS_DATASET_ZVOL,zvol) then
-             begin
-               CreateZVol(zvol);
-               sl.add('-drive file=/dev/zvol/rdsk/'+zvol.Field('fulldatasetname').asstring+',if=virtio,index='+disk_virtio.Field('index').asstring+' \');
-             end;
-         end;
-       if obj.IsA(TFRE_DB_VMACHINE_DISK_ISO,disk_iso) then
-         begin
-           writeln('SWL VM ISO');
-           sl.add('-drive file='+disk_iso.Field('filename').asstring+',media=cdrom,if=ide,index='+disk_iso.Field('index').asstring+' \');
-         end;
-       if obj.IsA(TFRE_DB_VMACHINE_NIC_VIRTIO,nic_virtio) then
+       //if obj.IsA(TFRE_DB_VMACHINE_DISK_ISO,disk_iso) then
+       //  begin
+       //    writeln('SWL VM ISO');
+       //    sl.add('-drive file='+disk_iso.Field('filename').asstring+',media=cdrom,if=ide,index='+disk_iso.Field('index').asstring+' \');
+       //  end;
+       if obj.IsA(TFRE_DB_VMACHINE_NIC,nic) then
          begin
            writeln('SWL VM NIC');
-           nicvlan :=nic_virtio.Field('vm_vlan').asstring;
-           nicname :=nic_virtio.Field('nic_embed').asobject.Field('objname').asstring;
-           sl.add('-device virtio-net-pci,mac='+nic_virtio.Field('nic_embed').asobject.Field('uniquephysicalid').asstring+',tx=timer,x-txtimer=200000,x-txburst=128,vlan='+nicvlan+' \');
+           nicvlan :=nic.Field('vm_vlan').asstring;
+           nicname :=nic.Field('nic_embed').asobject.Field('objname').asstring;
+           sl.add('-device virtio-net-pci,mac='+nic.Field('nic_embed').asobject.Field('uniquephysicalid').asstring+',tx=timer,x-txtimer=200000,x-txburst=128,vlan='+nicvlan+' \');
            sl.add('-net vnic,name='+nicname+',vlan='+nicvlan+',ifname='+nicname+' \');
          end;
      end;
@@ -7602,14 +7538,9 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_Machine);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VHOST);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VROOTSERVER);
-
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IMAGE_FILE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK_IDE);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK_VIRTIO);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_DISK_ISO);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_NIC);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_NIC_E1000);
-   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE_NIC_VIRTIO);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_VMACHINE);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_DNS);
@@ -7738,6 +7669,11 @@ begin
     collection  := conn.CreateCollection(CFRE_DB_VM_COMPONENTS_COLLECTION);
     collection.DefineIndexOnField('uniquephysicalid',fdbft_String,true,true,'def',false);
   end;
+
+  if not conn.CollectionExists(CFRE_DB_IMAGEFILE_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_VM_COMPONENTS_COLLECTION);
+  end;
+
 end;
 
 
