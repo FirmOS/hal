@@ -6578,9 +6578,8 @@ end;
 //  Parameters to configure
 // -name (set default to servicename)
 // -cpu  (enum)
-// -smp
-// -m
-// -balloon (enum)
+// -smp   (3 Felder)
+// -m     (Ram in MB)
 // -k     (enum)
 // -vga   (enum)
 // -usbdevice, possible to add one ore more
@@ -6594,6 +6593,7 @@ end;
 //-no-kvm-irqchip disable KVM kernel mode PIC/IOAPIC/LAPIC
 //-no-kvm-pit     disable KVM kernel mode PIT
 //-no-kvm-pit-reinjection
+// -balloon (enum)
 //(all default false)
 //emulator (enum)
 //0.14.1
