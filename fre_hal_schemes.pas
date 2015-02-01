@@ -6556,6 +6556,14 @@ end;
    enum.addEntry('dc',GetTranslateableTextKey('enum_boot_dc'));
    enum.addEntry('acd',GetTranslateableTextKey('enum_boot_acd'));
    GFRE_DBI.RegisterSysEnum(enum);
+   enum:=GFRE_DBI.NewEnum('qemu_balloon').Setup(GFRE_DBI.CreateText('$enum_qemu_balloon','Balloon'));
+   enum.addEntry('none',GetTranslateableTextKey('enum_balloon_none'));
+   enum.addEntry('virtio',GetTranslateableTextKey('enum_balloon_virtio'));
+   GFRE_DBI.RegisterSysEnum(enum);
+   enum:=GFRE_DBI.NewEnum('qemu_emulator').Setup(GFRE_DBI.CreateText('$enum_qemu_emulator','Emulator'));
+   enum.addEntry('1.1.2',GetTranslateableTextKey('enum_emulator_1_1_2'));
+   enum.addEntry('0.14.1',GetTranslateableTextKey('enum_emulator_0_14_1'));
+   GFRE_DBI.RegisterSysEnum(enum);
 
    scheme.AddSchemeField('cpu',fdbft_String).SetupFieldDef(true,false,'qemu_cpu');
    scheme.AddSchemeField('cores',fdbft_Int16).SetupFieldDefNum(true,1,64);
@@ -6567,6 +6575,14 @@ end;
    scheme.AddSchemeField('usbdevice',fdbft_String).SetupFieldDef(false,true,'qemu_usbdevice');
    scheme.AddSchemeField('boot',fdbft_String).SetupFieldDef(true,false,'qemu_boot');
    scheme.AddSchemeField('snapshot',fdbft_Boolean);
+   scheme.AddSchemeField('no_acpi',fdbft_Boolean);
+   scheme.AddSchemeField('no_hpet',fdbft_Boolean);
+   scheme.AddSchemeField('no_kvm',fdbft_Boolean);
+   scheme.AddSchemeField('no_kvm_irqchip',fdbft_Boolean);
+   scheme.AddSchemeField('no_kvm_pit',fdbft_Boolean);
+   scheme.AddSchemeField('no_kvm_pit_reinjection',fdbft_Boolean);
+   scheme.AddSchemeField('balloon',fdbft_String).SetupFieldDef(true,false,'qemu_balloon');
+   scheme.AddSchemeField('emulator',fdbft_String).SetupFieldDef(true,false,'qemu_emulator');
 
    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
    group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
@@ -6581,7 +6597,17 @@ end;
    group.AddInput('boot',GetTranslateableTextKey('scheme_boot'));
    group.AddInput('snapshot',GetTranslateableTextKey('scheme_snapshot'));
 
-//   https://wiki.firmos.at/display/FBX/Qemu+Parameters
+   group:=scheme.AddInputGroup('advanced').Setup(GetTranslateableTextKey('scheme_advanced_group'));
+   group.AddInput('no_acpi',GetTranslateableTextKey('scheme_no_acpi'));
+   group.AddInput('no_hpet',GetTranslateableTextKey('scheme_no_hpet'));
+   group.AddInput('no_kvm',GetTranslateableTextKey('scheme_no_kvm'));
+   group.AddInput('no_kvm_irqchip',GetTranslateableTextKey('scheme_no_kvm_irqchip'));
+   group.AddInput('no_kvm_pit',GetTranslateableTextKey('scheme_no_kvm_pit'));
+   group.AddInput('no_kvm_pit_reinjection',GetTranslateableTextKey('scheme_no_kvm_pit_reinjection'));
+   group.AddInput('balloon',GetTranslateableTextKey('scheme_balloon'));
+   group.AddInput('emulator',GetTranslateableTextKey('scheme_emulator'));
+
+   //   https://wiki.firmos.at/display/FBX/Qemu+Parameters
 //  Parameters to configure
 // -name (set default to servicename)
 // -cpu  (enum)
@@ -6633,6 +6659,7 @@ end;
      StoreTranslateableText(conn,'caption','Virtual Machine');
 
      StoreTranslateableText(conn,'scheme_main_group','General Information');
+     StoreTranslateableText(conn,'scheme_advanced_group','Advanced Information');
      StoreTranslateableText(conn,'scheme_objname','Name');
      StoreTranslateableText(conn,'scheme_cpu','CPU');
      StoreTranslateableText(conn,'scheme_cores','Cores');
@@ -6644,6 +6671,15 @@ end;
      StoreTranslateableText(conn,'scheme_usbdevice','USB Device');
      StoreTranslateableText(conn,'scheme_boot','Boot Order');
      StoreTranslateableText(conn,'scheme_snapshot','Snapshot');
+
+     StoreTranslateableText(conn,'scheme_no_acpi','No ACPI');
+     StoreTranslateableText(conn,'scheme_no_hpet','No HPET');
+     StoreTranslateableText(conn,'scheme_no_kvm','No KVM');
+     StoreTranslateableText(conn,'scheme_no_kvm_irqchip','No KVM IRQChip');
+     StoreTranslateableText(conn,'scheme_no_kvm_pit','No KVM PIT');
+     StoreTranslateableText(conn,'scheme_no_kvm_pit_reinjection','No KVM PIT Reinjection');
+     StoreTranslateableText(conn,'scheme_balloon','Balloon');
+     StoreTranslateableText(conn,'scheme_emulator','Emulator');
 
      StoreTranslateableText(conn,'enum_cpu_qemu64','qemu64');
      StoreTranslateableText(conn,'enum_cpu_Opteron_G3','Opteron_G3');
@@ -6713,6 +6749,12 @@ end;
      StoreTranslateableText(conn,'enum_usbdevice_disk-file','Disk:File');
      StoreTranslateableText(conn,'enum_usbdevice_wacom-tablet','Wacom-Tablet');
      StoreTranslateableText(conn,'enum_usbdevice_keyboard','Keyboard');
+
+     StoreTranslateableText(conn,'enum_balloon_none','None');
+     StoreTranslateableText(conn,'enum_balloon_virtio','VirtIO');
+
+     StoreTranslateableText(conn,'enum_emulator_1_1_2','1.1.2');
+     StoreTranslateableText(conn,'enum_emulator_0_14_1','0.14.1');
    end;
  end;
 
