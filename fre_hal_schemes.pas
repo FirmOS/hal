@@ -517,41 +517,22 @@ type
 
    TFRE_DB_VMACHINE=class(TFRE_DB_VHOST)
    private
-     function  getCPUCores: Byte;
-     function  getCPUSockets: Byte;
-     function  getKey    : TFRE_DB_String;
-     function  getMemoryMB: Uint32;
-     function  getMType   : TFRE_DB_String;
-     function  getState  : TFRE_DB_String;
      function  getVNCHost: TFRE_DB_String;
      function  getVNCPort: UInt32;
-     procedure setCPUCores(AValue: Byte);
-     procedure setCPUSockets(AValue: Byte);
-     procedure setKey    (AValue: TFRE_DB_String);
-     procedure setMemoryMB(AValue: Uint32);
-     procedure setMType  (AValue: TFRE_DB_String);
-     procedure setState  (AValue: TFRE_DB_String);
      procedure setVNCHost(AValue: TFRE_DB_String);
      procedure setVNCPort(AValue: UInt32);
-   protected
-     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
-     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
    published
      procedure       CALC_GetDisplayName       (const setter: IFRE_DB_CALCFIELD_SETTER); override;
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
      class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
    public
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
      procedure       Embed                     (const conn: IFRE_DB_CONNECTION); override;
      function        GetFMRI                   : TFRE_DB_STRING; override;
 
-     property  key        : TFRE_DB_String read getKey     write setKey;
-     property  state      : TFRE_DB_String read getState   write setState;
-     property  mtype      : TFRE_DB_String read getMType   write setMType;
      property  vncHost    : TFRE_DB_String read getVNCHost write setVNCHost;
      property  vncPort    : UInt32         read getVNCPort write setVNCPort;
-     property  MemoryMB   : Uint32         read getMemoryMB write setMemoryMB;
-     property  CpuCores   : Byte           read getCPUCores write setCPUCores;
-     property  CpuSockets : Byte           read getCPUSockets write setCPUSockets;
    end;
 
 
@@ -6472,36 +6453,6 @@ end;
    end;
  end;
 
-function TFRE_DB_VMACHINE.getCPUCores: Byte;
-begin
-  Result:=Field('cpucores').AsByte;
-end;
-
-function TFRE_DB_VMACHINE.getCPUSockets: Byte;
-begin
-  Result:=Field('cpusockets').AsByte;
-end;
-
-function TFRE_DB_VMACHINE.getKey: TFRE_DB_String;
-begin
-  Result:=Field('key').AsString;
-end;
-
-function TFRE_DB_VMACHINE.getMemoryMB: Uint32;
-begin
-  Result:=Field('memorymb').AsUint32;
-end;
-
-function TFRE_DB_VMACHINE.getMType: TFRE_DB_String;
-begin
-  Result:=Field('mtype').AsString;
-end;
-
-function TFRE_DB_VMACHINE.getState: TFRE_DB_String;
-begin
-  Result:=Field('state').AsString;
-end;
-
 function TFRE_DB_VMACHINE.getVNCHost: TFRE_DB_String;
 begin
   Result:=Field('vnc_host').AsString;
@@ -6510,36 +6461,6 @@ end;
 function TFRE_DB_VMACHINE.getVNCPort: UInt32;
 begin
   Result:=Field('vnc_port').AsUInt32;
-end;
-
-procedure TFRE_DB_VMACHINE.setCPUCores(AValue: Byte);
-begin
-  Field('cpucores').AsByte:=AValue;
-end;
-
-procedure TFRE_DB_VMACHINE.setCPUSockets(AValue: Byte);
-begin
-  Field('cpusockets').AsByte:=AValue;
-end;
-
-procedure TFRE_DB_VMACHINE.setKey(AValue: TFRE_DB_String);
-begin
-  Field('key').AsString:=AValue;
-end;
-
-procedure TFRE_DB_VMACHINE.setMemoryMB(AValue: Uint32);
-begin
-  Field('memorymb').AsUint32:=AValue;
-end;
-
-procedure TFRE_DB_VMACHINE.setMType(AValue: TFRE_DB_String);
-begin
-  Field('mtype').AsString:=AValue;
-end;
-
-procedure TFRE_DB_VMACHINE.setState(AValue: TFRE_DB_String);
-begin
-  Field('state').AsString:=AValue;
 end;
 
 procedure TFRE_DB_VMACHINE.setVNCHost(AValue: TFRE_DB_String);
@@ -6554,25 +6475,111 @@ end;
 
  class procedure TFRE_DB_VMACHINE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
  var
-   enum: IFRE_DB_Enum;
+   enum : IFRE_DB_Enum;
+   group: IFRE_DB_InputGroupSchemeDefinition;
  begin
    inherited RegisterSystemScheme(scheme);
    scheme.SetParentSchemeByName(TFRE_DB_VHOST.ClassName);
 
-   enum:=GFRE_DBI.NewEnum('vmachine_state').Setup(GFRE_DBI.CreateText('$enum_vmachine_state','State'));
-   enum.addEntry('STOPPED',GetTranslateableTextKey('enum_state_stopped'));
-   enum.addEntry('RUNNING',GetTranslateableTextKey('enum_state_running'));
-   enum.addEntry('STOPPING',GetTranslateableTextKey('enum_state_stopping'));
+   enum:=GFRE_DBI.NewEnum('qemu_cpu').Setup(GFRE_DBI.CreateText('$enum_qemu_cpu','CPU'));
+   enum.addEntry('qemu64',GetTranslateableTextKey('enum_cpu_qemu64'));
+   enum.addEntry('Opteron_G3',GetTranslateableTextKey('enum_cpu_Opteron_G3'));
+   enum.addEntry('Opteron_G2',GetTranslateableTextKey('enum_cpu_Opteron_G2'));
+   enum.addEntry('Opteron_G1',GetTranslateableTextKey('enum_cpu_Opteron_G1'));
+   enum.addEntry('SandyBridge',GetTranslateableTextKey('enum_cpu_SandyBridge'));
+   enum.addEntry('Westmere',GetTranslateableTextKey('enum_cpu_Westmere'));
+   enum.addEntry('Nehalem',GetTranslateableTextKey('enum_cpu_Nehalem'));
+   enum.addEntry('Penryn',GetTranslateableTextKey('enum_cpu_Penryn'));
+   enum.addEntry('Conroe',GetTranslateableTextKey('enum_cpu_Conroe'));
+   enum.addEntry('n270',GetTranslateableTextKey('enum_cpu_n270'));
+   enum.addEntry('athlon',GetTranslateableTextKey('enum_cpu_athlon'));
+   enum.addEntry('pentium3',GetTranslateableTextKey('enum_cpu_pentium3'));
+   enum.addEntry('pentium2',GetTranslateableTextKey('enum_cpu_pentium2'));
+   enum.addEntry('pentium',GetTranslateableTextKey('enum_cpu_pentium'));
+   enum.addEntry('coreduo',GetTranslateableTextKey('enum_cpu_coreduo'));
+   enum.addEntry('kvm32',GetTranslateableTextKey('enum_cpu_kvm32'));
+   enum.addEntry('qemu32',GetTranslateableTextKey('enum_cpu_qemu32'));
+   enum.addEntry('kvm64',GetTranslateableTextKey('enum_cpu_kvm64'));
+   enum.addEntry('core2duo',GetTranslateableTextKey('enum_cpu_core2duo'));
+   enum.addEntry('phenom',GetTranslateableTextKey('enum_cpu_phenom'));
+   enum.addEntry('host',GetTranslateableTextKey('enum_cpu_host'));
+
+   GFRE_DBI.RegisterSysEnum(enum);
+   enum:=GFRE_DBI.NewEnum('qemu_language').Setup(GFRE_DBI.CreateText('$enum_qemu_language','Language'));
+   GFRE_DBI.RegisterSysEnum(enum);
+   enum.addEntry('de',GetTranslateableTextKey('enum_language_de'));
+   enum.addEntry('de-ch',GetTranslateableTextKey('enum_language_de-ch'));
+   enum.addEntry('en-gb',GetTranslateableTextKey('enum_language_en-gb'));
+   enum.addEntry('en-us',GetTranslateableTextKey('enum_language_en-us'));
+   enum.addEntry('it',GetTranslateableTextKey('enum_language_it'));
+   enum.addEntry('es',GetTranslateableTextKey('enum_language_es'));
+   enum.addEntry('fr',GetTranslateableTextKey('enum_language_fr'));
+   enum.addEntry('fr-ch',GetTranslateableTextKey('enum_language_fr-ch'));
+   enum.addEntry('fr-ca',GetTranslateableTextKey('enum_language_fr-ca'));
+   enum.addEntry('ar',GetTranslateableTextKey('enum_language_ar'));
+   enum.addEntry('fo',GetTranslateableTextKey('enum_language_fo'));
+   enum.addEntry('hu',GetTranslateableTextKey('enum_language_hu'));
+   enum.addEntry('ja',GetTranslateableTextKey('enum_language_ja'));
+   enum.addEntry('mk',GetTranslateableTextKey('enum_language_mk'));
+   enum.addEntry('no',GetTranslateableTextKey('enum_language_no'));
+   enum.addEntry('pt-br',GetTranslateableTextKey('enum_language_pt-br'));
+   enum.addEntry('sv',GetTranslateableTextKey('enum_language_sv'));
+   enum.addEntry('da',GetTranslateableTextKey('enum_language_da'));
+   enum.addEntry('et',GetTranslateableTextKey('enum_language_et'));
+   enum.addEntry('is',GetTranslateableTextKey('enum_language_is'));
+   enum.addEntry('lt',GetTranslateableTextKey('enum_language_lt'));
+   enum.addEntry('nl',GetTranslateableTextKey('enum_language_nl'));
+   enum.addEntry('pl',GetTranslateableTextKey('enum_language_pl'));
+   enum.addEntry('ru',GetTranslateableTextKey('enum_language_ru'));
+   enum.addEntry('th',GetTranslateableTextKey('enum_language_th'));
+   enum.addEntry('fi',GetTranslateableTextKey('enum_language_fi'));
+   enum.addEntry('fr-be',GetTranslateableTextKey('enum_language_fr-be'));
+   enum.addEntry('hr',GetTranslateableTextKey('enum_language_hr'));
+   enum.addEntry('lv',GetTranslateableTextKey('enum_language_lv'));
+   enum.addEntry('nl-be',GetTranslateableTextKey('enum_language_nl-be'));
+   enum.addEntry('pt',GetTranslateableTextKey('enum_language_pt'));
+   enum.addEntry('sl',GetTranslateableTextKey('enum_language_sl'));
+   enum.addEntry('tr',GetTranslateableTextKey('enum_language_tr'));
+   enum:=GFRE_DBI.NewEnum('qemu_vga').Setup(GFRE_DBI.CreateText('$enum_qemu_vga','VGA'));
+   enum.addEntry('cirrus',GetTranslateableTextKey('enum_vga_cirrus'));
+   enum.addEntry('qxl',GetTranslateableTextKey('enum_vga_qxl'));
+   GFRE_DBI.RegisterSysEnum(enum);
+   enum:=GFRE_DBI.NewEnum('qemu_usbdevice').Setup(GFRE_DBI.CreateText('$enum_qemu_usbdevice','USB-Device'));
+   enum.addEntry('mouse',GetTranslateableTextKey('enum_usbdevice_mouse'));
+   enum.addEntry('tablet',GetTranslateableTextKey('enum_usbdevice_tablet'));
+   enum.addEntry('disk-file',GetTranslateableTextKey('enum_usbdevice_disk-file'));
+   enum.addEntry('wacom-tablet',GetTranslateableTextKey('enum_usbdevice_wacom-tablet'));
+   enum.addEntry('keyboard',GetTranslateableTextKey('enum_usbdevice_keyboard'));
+   GFRE_DBI.RegisterSysEnum(enum);
+   enum:=GFRE_DBI.NewEnum('qemu_boot').Setup(GFRE_DBI.CreateText('$enum_qemu_boot','Boot'));
+   enum.addEntry('cd',GetTranslateableTextKey('enum_boot_cd'));
+   enum.addEntry('dc',GetTranslateableTextKey('enum_boot_dc'));
+   enum.addEntry('acd',GetTranslateableTextKey('enum_boot_acd'));
    GFRE_DBI.RegisterSysEnum(enum);
 
-   enum:=GFRE_DBI.NewEnum('vmachine_type').Setup(GFRE_DBI.CreateText('$enum_vmachine_type','Type'));
-   enum.addEntry('KVM',GetTranslateableTextKey('enum_type_kvm'));
-   enum.addEntry('OS',GetTranslateableTextKey('enum_type_os'));
+   scheme.AddSchemeField('cpu',fdbft_String).SetupFieldDef(true,false,'qemu_cpu');
+   scheme.AddSchemeField('cores',fdbft_Int16).SetupFieldDefNum(true,1,64);
+   scheme.AddSchemeField('threads',fdbft_Int16).SetupFieldDefNum(true,1,64);
+   scheme.AddSchemeField('sockets',fdbft_Int16).SetupFieldDefNum(true,1,64);
+   scheme.AddSchemeField('ram',fdbft_Int32).SetupFieldDef(true);
+   scheme.AddSchemeField('language',fdbft_String).SetupFieldDef(true,false,'qemu_language');
+   scheme.AddSchemeField('vga',fdbft_String).SetupFieldDef(true,false,'qemu_vga');
+   scheme.AddSchemeField('usbdevice',fdbft_String).SetupFieldDef(false,true,'qemu_usbdevice');
+   scheme.AddSchemeField('boot',fdbft_String).SetupFieldDef(true,false,'qemu_boot');
+   scheme.AddSchemeField('snapshot',fdbft_Boolean);
 
-   scheme.AddSchemeField('key',fdbft_String).required:=true;
-   scheme.AddSchemeField('state',fdbft_String).SetupFieldDef(true,false,'vmachine_state');
-   scheme.AddSchemeField('vnc_port',fdbft_UInt32);
-   scheme.AddSchemeField('vnc_host',fdbft_String).SetupFieldDef(false,false,'','ip');
+   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+   group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
+   group.AddInput('cpu',GetTranslateableTextKey('scheme_cpu'));
+   group.AddInput('cores',GetTranslateableTextKey('scheme_cores'));
+   group.AddInput('threads',GetTranslateableTextKey('scheme_threads'));
+   group.AddInput('sockets',GetTranslateableTextKey('scheme_sockets'));
+   group.AddInput('ram',GetTranslateableTextKey('scheme_ram'));
+   group.AddInput('language',GetTranslateableTextKey('scheme_language'));
+   group.AddInput('vga',GetTranslateableTextKey('scheme_vga'));
+   group.AddInput('usbdevice',GetTranslateableTextKey('scheme_usbdevice'),false,false,'','',false,dh_chooser_check);
+   group.AddInput('boot',GetTranslateableTextKey('scheme_boot'));
+   group.AddInput('snapshot',GetTranslateableTextKey('scheme_snapshot'));
 
 //   https://wiki.firmos.at/display/FBX/Qemu+Parameters
 //  Parameters to configure
@@ -6616,10 +6623,96 @@ end;
    end;
    if currentVersionId='1.0' then begin
      currentVersionId := '1.1';
+     DeleteTranslateableText(conn,'enum_state_stopped');
+     DeleteTranslateableText(conn,'enum_state_running');
+     DeleteTranslateableText(conn,'enum_state_stopping');
+
+     DeleteTranslateableText(conn,'enum_type_kvm');
+     DeleteTranslateableText(conn,'enum_type_os');
+
      StoreTranslateableText(conn,'caption','Virtual Machine');
 
      StoreTranslateableText(conn,'scheme_main_group','General Information');
      StoreTranslateableText(conn,'scheme_objname','Name');
+     StoreTranslateableText(conn,'scheme_cpu','CPU');
+     StoreTranslateableText(conn,'scheme_cores','Cores');
+     StoreTranslateableText(conn,'scheme_threads','Threads');
+     StoreTranslateableText(conn,'scheme_sockets','Sockets');
+     StoreTranslateableText(conn,'scheme_ram','RAM (MB)');
+     StoreTranslateableText(conn,'scheme_language','Language');
+     StoreTranslateableText(conn,'scheme_vga','VGA');
+     StoreTranslateableText(conn,'scheme_usbdevice','USB Device');
+     StoreTranslateableText(conn,'scheme_boot','Boot Order');
+     StoreTranslateableText(conn,'scheme_snapshot','Snapshot');
+
+     StoreTranslateableText(conn,'enum_cpu_qemu64','qemu64');
+     StoreTranslateableText(conn,'enum_cpu_Opteron_G3','Opteron_G3');
+     StoreTranslateableText(conn,'enum_cpu_Opteron_G2','Opteron_G2');
+     StoreTranslateableText(conn,'enum_cpu_Opteron_G1','Opteron_G1');
+     StoreTranslateableText(conn,'enum_cpu_SandyBridge','SandyBridge');
+     StoreTranslateableText(conn,'enum_cpu_Westmere','Westmere');
+     StoreTranslateableText(conn,'enum_cpu_Nehalem','Nehalem');
+     StoreTranslateableText(conn,'enum_cpu_Penryn','Penryn');
+     StoreTranslateableText(conn,'enum_cpu_Conroe','Conroe');
+     StoreTranslateableText(conn,'enum_cpu_n270','n270');
+     StoreTranslateableText(conn,'enum_cpu_athlon','athlon');
+     StoreTranslateableText(conn,'enum_cpu_pentium3','pentium3');
+     StoreTranslateableText(conn,'enum_cpu_pentium2','pentium2');
+     StoreTranslateableText(conn,'enum_cpu_pentium','pentium');
+     StoreTranslateableText(conn,'enum_cpu_coreduo','coreduo');
+     StoreTranslateableText(conn,'enum_cpu_kvm32','kvm32');
+     StoreTranslateableText(conn,'enum_cpu_qemu32','qemu32');
+     StoreTranslateableText(conn,'enum_cpu_kvm64','kvm64');
+     StoreTranslateableText(conn,'enum_cpu_core2duo','core2duo');
+     StoreTranslateableText(conn,'enum_cpu_phenom','phenom');
+     StoreTranslateableText(conn,'enum_cpu_host','host');
+
+     StoreTranslateableText(conn,'enum_language_ar','ar');
+     StoreTranslateableText(conn,'enum_language_de-ch','de-ch');
+     StoreTranslateableText(conn,'enum_language_es','es');
+     StoreTranslateableText(conn,'enum_language_fo','fo');
+     StoreTranslateableText(conn,'enum_language_fr','fr');
+     StoreTranslateableText(conn,'enum_language_fr-ca','fr-ca');
+     StoreTranslateableText(conn,'enum_language_hu','hu');
+     StoreTranslateableText(conn,'enum_language_ja','ja');
+     StoreTranslateableText(conn,'enum_language_mk','mk');
+     StoreTranslateableText(conn,'enum_language_no','no');
+     StoreTranslateableText(conn,'enum_language_pt-br','pt-br');
+     StoreTranslateableText(conn,'enum_language_sv','sv');
+     StoreTranslateableText(conn,'enum_language_da','da');
+     StoreTranslateableText(conn,'enum_language_en-gb','en-gb');
+     StoreTranslateableText(conn,'enum_language_et','et');
+     StoreTranslateableText(conn,'enum_language_fr-ch','fr-ch');
+     StoreTranslateableText(conn,'enum_language_is','is');
+     StoreTranslateableText(conn,'enum_language_lt','lt');
+     StoreTranslateableText(conn,'enum_language_nl','nl');
+     StoreTranslateableText(conn,'enum_language_pl','pl');
+     StoreTranslateableText(conn,'enum_language_ru','ru');
+     StoreTranslateableText(conn,'enum_language_th','th');
+     StoreTranslateableText(conn,'enum_language_de','de');
+     StoreTranslateableText(conn,'enum_language_en-us','en-us');
+     StoreTranslateableText(conn,'enum_language_fi','fi');
+     StoreTranslateableText(conn,'enum_language_fr-be','fr-be');
+     StoreTranslateableText(conn,'enum_language_hr','hr');
+     StoreTranslateableText(conn,'enum_language_it','it');
+     StoreTranslateableText(conn,'enum_language_lv','lv');
+     StoreTranslateableText(conn,'enum_language_nl-be','nl-be');
+     StoreTranslateableText(conn,'enum_language_pt','pt');
+     StoreTranslateableText(conn,'enum_language_sl','sl');
+     StoreTranslateableText(conn,'enum_language_tr','tr');
+
+     StoreTranslateableText(conn,'enum_vga_cirrus','cirrus');
+     StoreTranslateableText(conn,'enum_vga_qxl','qxl');
+
+     StoreTranslateableText(conn,'enum_boot_acd','Floppy First');
+     StoreTranslateableText(conn,'enum_boot_cd','HD First');
+     StoreTranslateableText(conn,'enum_boot_dc','CD First');
+
+     StoreTranslateableText(conn,'enum_usbdevice_mouse','Mouse');
+     StoreTranslateableText(conn,'enum_usbdevice_tablet','Tablet');
+     StoreTranslateableText(conn,'enum_usbdevice_disk-file','Disk:File');
+     StoreTranslateableText(conn,'enum_usbdevice_wacom-tablet','Wacom-Tablet');
+     StoreTranslateableText(conn,'enum_usbdevice_keyboard','Keyboard');
    end;
  end;
 
