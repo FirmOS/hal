@@ -7671,7 +7671,7 @@ begin
   end;
 
   if not conn.CollectionExists(CFRE_DB_IMAGEFILE_COLLECTION) then begin
-    collection  := conn.CreateCollection(CFRE_DB_VM_COMPONENTS_COLLECTION);
+    collection  := conn.CreateCollection(CFRE_DB_IMAGEFILE_COLLECTION);
   end;
 
 end;
