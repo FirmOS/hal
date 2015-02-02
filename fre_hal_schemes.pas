@@ -1432,7 +1432,7 @@ begin
   //-net
   //model (enum)
   //
-  //Auswahl VNIC (reflink)
+  //Auswahl VNIC (reflink) without HOSTNET / 4 per VM / VNIC usable only once
   //
   //vlan (vm_vlan)
   //  (default every vmachine nic in an other vm_vlan)
@@ -6544,12 +6544,15 @@ end;
    enum.addEntry('cirrus',GetTranslateableTextKey('enum_vga_cirrus'));
    enum.addEntry('qxl',GetTranslateableTextKey('enum_vga_qxl'));
    GFRE_DBI.RegisterSysEnum(enum);
-   enum:=GFRE_DBI.NewEnum('qemu_usbdevice').Setup(GFRE_DBI.CreateText('$enum_qemu_usbdevice','USB-Device'));
-   enum.addEntry('mouse',GetTranslateableTextKey('enum_usbdevice_mouse'));
-   enum.addEntry('tablet',GetTranslateableTextKey('enum_usbdevice_tablet'));
-   enum.addEntry('disk-file',GetTranslateableTextKey('enum_usbdevice_disk-file'));
-   enum.addEntry('wacom-tablet',GetTranslateableTextKey('enum_usbdevice_wacom-tablet'));
-   enum.addEntry('keyboard',GetTranslateableTextKey('enum_usbdevice_keyboard'));
+   enum:=GFRE_DBI.NewEnum('qemu_mouse').Setup(GFRE_DBI.CreateText('$enum_qemu_mouse','Mouse'));
+   enum.addEntry('tablet',GetTranslateableTextKey('enum_mouse_tablet'));
+   enum.addEntry('usb',GetTranslateableTextKey('enum_mouse_usb'));
+   enum.addEntry('ps2',GetTranslateableTextKey('enum_mouse_ps2'));
+   enum.addEntry('wacom_tablet',GetTranslateableTextKey('enum_mouse_wacom_tablet'));
+   GFRE_DBI.RegisterSysEnum(enum);
+   enum:=GFRE_DBI.NewEnum('qemu_keyboard').Setup(GFRE_DBI.CreateText('$enum_qemu_keyboard','Keyboard'));
+   enum.addEntry('ps2',GetTranslateableTextKey('enum_keyboard_ps2'));
+   enum.addEntry('usb',GetTranslateableTextKey('enum_keyboard_usb'));
    GFRE_DBI.RegisterSysEnum(enum);
    enum:=GFRE_DBI.NewEnum('qemu_boot').Setup(GFRE_DBI.CreateText('$enum_qemu_boot','Boot'));
    enum.addEntry('cd',GetTranslateableTextKey('enum_boot_cd'));
@@ -6572,7 +6575,8 @@ end;
    scheme.AddSchemeField('ram',fdbft_Int32).SetupFieldDef(true);
    scheme.AddSchemeField('language',fdbft_String).SetupFieldDef(true,false,'qemu_language');
    scheme.AddSchemeField('vga',fdbft_String).SetupFieldDef(true,false,'qemu_vga');
-   scheme.AddSchemeField('usbdevice',fdbft_String).SetupFieldDef(false,true,'qemu_usbdevice');
+   scheme.AddSchemeField('mouse',fdbft_String).SetupFieldDef(true,true,'qemu_mouse');
+   scheme.AddSchemeField('keyboard',fdbft_String).SetupFieldDef(true,true,'qemu_keyboard');
    scheme.AddSchemeField('boot',fdbft_String).SetupFieldDef(true,false,'qemu_boot');
    scheme.AddSchemeField('snapshot',fdbft_Boolean);
    scheme.AddSchemeField('no_acpi',fdbft_Boolean);
@@ -6584,20 +6588,25 @@ end;
    scheme.AddSchemeField('balloon',fdbft_String).SetupFieldDef(true,false,'qemu_balloon');
    scheme.AddSchemeField('emulator',fdbft_String).SetupFieldDef(true,false,'qemu_emulator');
 
-   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
-   group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
-   group.AddInput('cpu',GetTranslateableTextKey('scheme_cpu'));
+   group:=scheme.AddInputGroup('cpu_config').Setup(GetTranslateableTextKey('scheme_cpu_config_group'));
    group.AddInput('cores',GetTranslateableTextKey('scheme_cores'));
    group.AddInput('threads',GetTranslateableTextKey('scheme_threads'));
    group.AddInput('sockets',GetTranslateableTextKey('scheme_sockets'));
+
+   group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+   group.AddInput('objname',GetTranslateableTextKey('scheme_objname'));
+   group.UseInputGroupAsBlock(scheme.DefinedSchemeName,'cpu_config');
    group.AddInput('ram',GetTranslateableTextKey('scheme_ram'));
    group.AddInput('language',GetTranslateableTextKey('scheme_language'));
-   group.AddInput('vga',GetTranslateableTextKey('scheme_vga'));
-   group.AddInput('usbdevice',GetTranslateableTextKey('scheme_usbdevice'),false,false,'','',false,dh_chooser_check);
    group.AddInput('boot',GetTranslateableTextKey('scheme_boot'));
-   group.AddInput('snapshot',GetTranslateableTextKey('scheme_snapshot'));
+   //group.AddInput('snapshot',GetTranslateableTextKey('scheme_snapshot'));
 
    group:=scheme.AddInputGroup('advanced').Setup(GetTranslateableTextKey('scheme_advanced_group'));
+
+   group.AddInput('cpu',GetTranslateableTextKey('scheme_cpu'));
+   group.AddInput('vga',GetTranslateableTextKey('scheme_vga'));
+   group.AddInput('mouse',GetTranslateableTextKey('scheme_mouse'));
+   group.AddInput('keyboard',GetTranslateableTextKey('scheme_keyboard'));
    group.AddInput('no_acpi',GetTranslateableTextKey('scheme_no_acpi'));
    group.AddInput('no_hpet',GetTranslateableTextKey('scheme_no_hpet'));
    group.AddInput('no_kvm',GetTranslateableTextKey('scheme_no_kvm'));
@@ -6659,6 +6668,7 @@ end;
      StoreTranslateableText(conn,'caption','Virtual Machine');
 
      StoreTranslateableText(conn,'scheme_main_group','General Information');
+     StoreTranslateableText(conn,'scheme_cpu_config_group','CPU');
      StoreTranslateableText(conn,'scheme_advanced_group','Advanced Information');
      StoreTranslateableText(conn,'scheme_objname','Name');
      StoreTranslateableText(conn,'scheme_cpu','CPU');
@@ -6668,7 +6678,8 @@ end;
      StoreTranslateableText(conn,'scheme_ram','RAM (MB)');
      StoreTranslateableText(conn,'scheme_language','Language');
      StoreTranslateableText(conn,'scheme_vga','VGA');
-     StoreTranslateableText(conn,'scheme_usbdevice','USB Device');
+     StoreTranslateableText(conn,'scheme_mouse','Mouse');
+     StoreTranslateableText(conn,'scheme_keyboard','Keyboard');
      StoreTranslateableText(conn,'scheme_boot','Boot Order');
      StoreTranslateableText(conn,'scheme_snapshot','Snapshot');
 
@@ -6744,11 +6755,13 @@ end;
      StoreTranslateableText(conn,'enum_boot_cd','HD First');
      StoreTranslateableText(conn,'enum_boot_dc','CD First');
 
-     StoreTranslateableText(conn,'enum_usbdevice_mouse','Mouse');
-     StoreTranslateableText(conn,'enum_usbdevice_tablet','Tablet');
-     StoreTranslateableText(conn,'enum_usbdevice_disk-file','Disk:File');
-     StoreTranslateableText(conn,'enum_usbdevice_wacom-tablet','Wacom-Tablet');
-     StoreTranslateableText(conn,'enum_usbdevice_keyboard','Keyboard');
+     StoreTranslateableText(conn,'enum_mouse_ps2','PS/2');
+     StoreTranslateableText(conn,'enum_mouse_usb','USB');
+     StoreTranslateableText(conn,'enum_mouse_tablet','Tablet');
+     StoreTranslateableText(conn,'enum_mouse_wacom_tablet','Wacom-Tablet');
+
+     StoreTranslateableText(conn,'enum_keyboard_ps2','PS/2');
+     StoreTranslateableText(conn,'enum_keyboard_usb','USB');
 
      StoreTranslateableText(conn,'enum_balloon_none','None');
      StoreTranslateableText(conn,'enum_balloon_virtio','VirtIO');
