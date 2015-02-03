@@ -6781,6 +6781,9 @@ end;
      pidfile     : string;
      qemubin     : string;
      qmbsocket   : string;
+     cpucores    : int16;
+     cpusockets  : int16;
+     cputhreads  : int16;
 
      sl          : TStringList;
 
@@ -6790,6 +6793,7 @@ end;
          nicvlan     : string;
          nicname     : string;
          zvol        : TFRE_DB_ZFS_DATASET_ZVOL;
+         img         : TFRE_DB_IMAGE_FILE;
 
          procedure   CreateZVol(const zvol:TFRE_DB_ZFS_DATASET);
          var
@@ -6814,6 +6818,10 @@ end;
              begin
                CreateZVol(zvol);
                sl.add('-drive file=/dev/zvol/rdsk/'+zvol.Field('fulldatasetname').asstring+',if=ide,index='+disk.Field('index').asstring+' \');
+             end;
+           if disk.Field('imgfile').AsObject.IsA(TFRE_DB_IMAGE_FILE,img) then
+             begin
+               sl.add('-drive file='+img.Field('fullfilename').asstring+',if='+disk.Field('drive_if').asstring+',media='+disk.field('media').asstring+',index='+disk.Field('index').asstring+' \');
              end;
          end;
        //if obj.IsA(TFRE_DB_VMACHINE_DISK_ISO,disk_iso) then
@@ -6858,8 +6866,21 @@ end;
        sl.Add('-vnc '+vncHost+':'+inttostr(vncPort-5900)+' \');
        sl.Add('-boot cd \');      //FIXXME
        sl.Add('-enable-kvm \');
-       sl.Add('-smp '+inttostr(CpuCores*CpuSockets)+',cores='+inttostr(CpuCores)+',threads=1,sockets='+inttostr(CpuSockets)+' \');
-       sl.add('-m '+inttostr(MemoryMB)+' \');
+       if FieldExists('cores') then
+         cpucores:=Field('cores').asint16
+       else
+         cpucores:=1;
+       if FieldExists('threads') then
+         cputhreads:=Field('threads').asint16
+       else
+         cputhreads:=1;
+       if FieldExists('sockets') then
+         cpusockets:=Field('sockets').asint16
+       else
+         cpusockets:=1;
+
+       sl.Add('-smp '+inttostr(CpuCores*CpuSockets*cputhreads)+',cores='+inttostr(CpuCores)+',threads=1,sockets='+inttostr(CpuSockets)+' \');
+       sl.add('-m '+Field('ram').asstring+' \');
        sl.add('-cpu qemu64 \');
        sl.add('-usb -usbdevice tablet -k de \');
        sl.add('-qmp unix:'+qmbsocket+',server,nowait \');
