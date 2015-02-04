@@ -84,6 +84,8 @@ const
   CFRE_DB_VM_COMPONENTS_COLLECTION     = 'vmcomponents';
   CFRE_DB_IMAGEFILE_COLLECTION         = 'imagefiles';
 
+  CFRE_DB_VMACHINE_VNIC_CHOOSER_DC     = 'VMACHINE_VNIC_CHOOSER_DC';
+
 type
 
 
@@ -1423,13 +1425,32 @@ end;
 { TFRE_DB_VMACHINE_NIC }
 
 class procedure TFRE_DB_VMACHINE_NIC.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  group: IFRE_DB_InputGroupSchemeDefinition;
+  enum : IFRE_DB_Enum;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
 
-  scheme.AddSchemeField('model',fdbft_String).required:=true;     // enum
-  scheme.AddSchemeField('vnic',fdbft_ObjLink).required:=true;
-  scheme.AddSchemeField('vm_vlan',fdbft_Int16).required:=true;
+  enum:=GFRE_DBI.NewEnum('qemu_net_model').Setup(GFRE_DBI.CreateText('$enum_qemu_net_model','Emulator'));
+  enum.addEntry('virtio',GetTranslateableTextKey('net_model_virtio'));
+  enum.addEntry('e1000',GetTranslateableTextKey('net_model_e1000'));
+  enum.addEntry('i82551',GetTranslateableTextKey('net_model_i82551'));
+  enum.addEntry('i82557b',GetTranslateableTextKey('net_model_i82557b'));
+  enum.addEntry('i82559er',GetTranslateableTextKey('net_model_i82559er'));
+  enum.addEntry('ne2k_pci',GetTranslateableTextKey('net_model_ne2k_pci'));
+  enum.addEntry('ne2k_is',GetTranslateableTextKey('net_model_ne2k_is'));
+  enum.addEntry('pcnet',GetTranslateableTextKey('net_model_pcnet'));
+  enum.addEntry('rtl8139',GetTranslateableTextKey('net_model_rtl8139'));
+  GFRE_DBI.RegisterSysEnum(enum);
+
+  scheme.AddSchemeField('model',fdbft_String).SetupFieldDef(true,false,'qemu_net_model');
+  scheme.AddSchemeField('nic',fdbft_ObjLink).required:=true;
+  scheme.AddSchemeField('vm_vlan',fdbft_Int16);
+
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('nic',GetTranslateableTextKey('scheme_nic'),false,false,'',CFRE_DB_VMACHINE_VNIC_CHOOSER_DC,true);
+  group.AddInput('model',GetTranslateableTextKey('scheme_model'));
 
   //  https://wiki.firmos.at/display/FBX/Qemu+Parameters
   //-net
@@ -1452,6 +1473,20 @@ begin
   newVersionId:='0.1';
   if (currentVersionId='') then begin
     currentVersionId:='0.1';
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_nic','VNIC');
+    StoreTranslateableText(conn,'scheme_model','Model');
+
+    StoreTranslateableText(conn,'net_model_virtio','VirtIO');
+    StoreTranslateableText(conn,'net_model_e1000','e1000');
+    StoreTranslateableText(conn,'net_model_i82551','i82551');
+    StoreTranslateableText(conn,'net_model_i82557b','i82557b');
+    StoreTranslateableText(conn,'net_model_i82559er','i82559er');
+    StoreTranslateableText(conn,'net_model_ne2k_pci','PCI');
+    StoreTranslateableText(conn,'net_model_ne2k_is','NE2000');
+    StoreTranslateableText(conn,'net_model_pcnet','PCNet');
+    StoreTranslateableText(conn,'net_model_rtl8139','RTL8139');
   end;
 end;
 
