@@ -65,6 +65,7 @@ uses
   fosillu_hal_dbo_zfs_dataset,
   fosillu_dladm,
   fosillu_ipadm,
+  fosillu_vndadm,
   {$ENDIF}
   fre_process;
 
@@ -328,6 +329,7 @@ type
      function        IMI_Menu               (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        IMI_Delete             (const input:IFRE_DB_Object): IFRE_DB_Object;
      function        RIF_CreateVNIC         : IFRE_DB_Object;
+     function        RIF_CreateVNDforVNIC   : IFRE_DB_Object;
      class function  GetCaption             (const conn: IFRE_DB_CONNECTION): String; override;
    end;
 
@@ -524,6 +526,7 @@ type
    published
      procedure       CALC_GetDisplayName       (const setter: IFRE_DB_CALCFIELD_SETTER); override;
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
+     function        RIF_CreateVNDforVNics     : IFRE_DB_Object;
      class function  GetCaption                (const conn: IFRE_DB_CONNECTION): String; override;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
@@ -5762,7 +5765,7 @@ end;
 
  procedure TFRE_DB_ZONE.BootingHookConfigure;
 
-   procedure _objIterator(const obj:IFRE_DB_Object);
+   procedure _vnicIterator(const obj:IFRE_DB_Object);
    var dl_vnic : TFRE_DB_DATALINK_VNIC;
    begin
      if obj.IsA(TFRE_DB_DATALINK_VNIC,dl_vnic) then
@@ -5773,8 +5776,19 @@ end;
        end;
    end;
 
+   procedure _vmIterator(const obj:IFRE_DB_Object);
+   var vm      : TFRE_DB_VMACHINE;
+   begin
+     if obj.isA(TFRE_DB_VMACHINE,vm) then
+       begin
+         vm.Field('zonename').asstring := UID.AsHexString;
+         vm.RIF_CreateVNDforVNics;
+       end;
+   end;
+
  begin
-   ForAllObjects(@_objIterator,true);
+   ForAllObjects(@_vnicIterator,true);
+   ForAllObjects(@_vmIterator,true);
  end;
 
  procedure TFRE_DB_ZONE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
@@ -6226,6 +6240,22 @@ end;
         writeln('CREATE VNIC ',mac.GetAsString,' ',create_vnic(ObjectName,parent_if,mac,err,'',vlan),' ',err);
       end;
    writeln('CREATE VNIC DONE');
+   {$ENDIF}
+ end;
+
+ function TFRE_DB_DATALINK_VNIC.RIF_CreateVNDforVNIC: IFRE_DB_Object;
+ var
+     zonename   : string;
+     err        : string;
+ begin
+   {$IFDEF SOLARIS}
+     writeln('SWL CREATE VND ',Field('zonename').asstring+' '+ObjectName);
+     if FieldExists('zonename') then
+       zonename  := Field('zonename').asstring
+     else
+       zonename  := '';
+
+     writeln('CREATE VND ',create_vnd(ObjectName,zonename,Objectname,err),' ',err);
    {$ENDIF}
  end;
 
@@ -6857,7 +6887,7 @@ end;
      // Start Script
 
      ForceDirectories('/opt/local/etc/kvm');
-     qemubin   :='/opt/local/qemu112/bin/qemu-system-x86_64';
+     qemubin   :='/smartdc/bin/qemu-system-x86_64';
      qmbsocket :='/var/run/qmp-'+UID_String;
      pidfile   :='/var/run/qemu-'+UID_String+'.pid';
      sl:=TStringList.Create;
@@ -6879,7 +6909,7 @@ end;
        else
          cpusockets:=1;
 
-       sl.Add('-smp '+inttostr(CpuCores*CpuSockets*cputhreads)+',cores='+inttostr(CpuCores)+',threads=1,sockets='+inttostr(CpuSockets)+' \');
+       sl.Add('-smp '+inttostr(CpuCores*CpuSockets*cputhreads)+',cores='+inttostr(CpuCores)+',threads='+inttostr(cputhreads)+',sockets='+inttostr(CpuSockets)+' \');
        sl.add('-m '+Field('ram').asstring+' \');
        sl.add('-cpu qemu64 \');
        sl.add('-usb -usbdevice tablet -k de \');
@@ -6965,6 +6995,29 @@ end;
      end;
 
    {$ENDIF}
+ end;
+
+ function TFRE_DB_VMACHINE.RIF_CreateVNDforVNics: IFRE_DB_Object;
+     procedure ConfigureVND(const obj:IFRE_DB_Object);
+     var nic         : TFRE_DB_VMACHINE_NIC;
+         dl_vnic     : TFRE_DB_DATALINK_VNIC;
+     begin
+       if obj.IsA(TFRE_DB_VMACHINE_NIC,nic) then
+         begin
+           writeln('SWL VM NIC');
+           if nic.Field('nic_embed').AsObject.IsA(TFRE_DB_DATALINK_VNIC,dl_vnic) then
+             begin
+               dl_vnic.Field('zonename').asstring := Field('zonename').asstring;
+               dl_vnic.RIF_CreateVNDforVNIC;
+             end
+           else
+             raise EFRE_DB_Exception.Create('EMBEDDED VNIC IS NOT A TFRE_DB_DATALINK_VNIC'+nic.DumpToString);
+         end;
+     end;
+
+
+ begin
+   ForAllObjects(@ConfigureVND,true);
  end;
 
 class function TFRE_DB_VMACHINE.GetCaption(const conn: IFRE_DB_CONNECTION): String;
