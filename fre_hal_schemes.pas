@@ -357,17 +357,12 @@ type
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
    end;
 
-
-
    { TFRE_DB_IPV4_HOSTNET }
 
    TFRE_DB_IPV4_HOSTNET=class(TFRE_DB_IP_HOSTNET)
-   protected
-     procedure       InternalSetIPCIDR      (const value:TFRE_DB_String); override;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-     procedure       SetGatewayIP           (const value:TFRE_DB_String);
    published
      function        StartService           : IFRE_DB_Object; override;
      function        StopService            : IFRE_DB_Object; override;
@@ -377,17 +372,30 @@ type
    { TFRE_DB_IPV6_HOSTNET }
 
    TFRE_DB_IPV6_HOSTNET=class(TFRE_DB_IP_HOSTNET)
-   protected
-     procedure       InternalSetIPCIDR      (const value:TFRE_DB_String); override;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
-     procedure       SetGatewayIP           (const value:TFRE_DB_String);
    published
      function        StartService           : IFRE_DB_Object; override;
      function        StopService            : IFRE_DB_Object; override;
    end;
 
+   { TFRE_DB_IPV4_ROUTE }
+
+   TFRE_DB_IPV4_ROUTE=class(TFRE_DB_IP_HOSTNET)
+   public
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
+
+
+   { TFRE_DB_IPV6_ROUTE }
+
+   TFRE_DB_IPV6_ROUTE=class(TFRE_DB_IP_HOSTNET)
+   public
+     class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+     class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+   end;
 
    { TFRE_DB_DATALINK_STUB }
 
@@ -1374,6 +1382,74 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_IPV6_ROUTE }
+
+class procedure TFRE_DB_IPV6_ROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+    inherited RegisterSystemScheme(scheme);
+    scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
+    scheme.AddSchemeField('ip',fdbft_String).SetupFieldDef(true,false,'','ipv6');
+    scheme.AddSchemeField('subnet',fdbft_String).SetupFieldDefNum(false,0,128);
+    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(true,false,'','ipv6');
+    scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
+
+    group:=scheme.AddInputGroup('ip_net').Setup(GetTranslateableTextKey('scheme_ip_net_group'));
+    group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
+    group.AddInput('subnet',GetTranslateableTextKey('scheme_subnet'));
+
+    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+    group.UseInputGroupAsBlock(TFRE_DB_IPV6_HOSTNET.Classname,'ip_net');
+    group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
+end;
+
+class procedure TFRE_DB_IPV6_ROUTE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_main_group','IPv6 Route Properties');
+    StoreTranslateableText(conn,'scheme_ip','IPv6');
+    StoreTranslateableText(conn,'scheme_subnet','Subnet');
+    StoreTranslateableText(conn,'scheme_gateway','Gateway');
+    StoreTranslateableText(conn,'scheme_ip_net_group','IPv6/Subnet');
+  end;
+end;
+
+{ TFRE_DB_IPV4_ROUTE }
+
+class procedure TFRE_DB_IPV4_ROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var group : IFRE_DB_InputGroupSchemeDefinition;
+begin
+    inherited RegisterSystemScheme(scheme);
+    scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
+    scheme.AddSchemeField('ip',fdbft_String).SetupFieldDef(true,false,'','ip');
+    scheme.AddSchemeField('subnet',fdbft_Int16).SetupFieldDefNum(false,0,32);
+    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(true,false,'','ip');
+    scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
+
+    group:=scheme.AddInputGroup('ip_net').Setup(GetTranslateableTextKey('scheme_ip_net_group'));
+    group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
+    group.AddInput('subnet',GetTranslateableTextKey('scheme_subnet'));
+
+    group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+    group.UseInputGroupAsBlock(TFRE_DB_IPV4_HOSTNET.Classname,'ip_net');
+    group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
+end;
+
+class procedure TFRE_DB_IPV4_ROUTE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='1.0';
+  if currentVersionId='' then begin
+    currentVersionId := '1.0';
+    StoreTranslateableText(conn,'scheme_main_group','IPv4 Route Properties');
+    StoreTranslateableText(conn,'scheme_ip','IP');
+    StoreTranslateableText(conn,'scheme_subnet','Subnet');
+    StoreTranslateableText(conn,'scheme_gateway','Gateway');
+    StoreTranslateableText(conn,'scheme_ip_net_group','IP/Subnet');
+  end;
+end;
+
 { TFRE_DB_IMAGE_FILE }
 
 class procedure TFRE_DB_IMAGE_FILE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
@@ -1417,6 +1493,11 @@ begin
   scheme.AddSchemeField('model',fdbft_String).SetupFieldDef(true,false,'qemu_net_model');
   scheme.AddSchemeField('nic',fdbft_ObjLink).required:=true;
   scheme.AddSchemeField('vm_vlan',fdbft_Int16);
+
+  scheme.AddSchemeField('ip',fdbft_ObjLink);           //   TFRE_DB_IPV4_HOSTNET incl gateway;
+  scheme.AddSchemeField('hostname',fdbft_String);
+  scheme.AddSchemeField('dns_ip0',fdbft_ObjLink);      //   IPV4HOSTNET
+  scheme.AddSchemeField('dns_ip1',fdbft_ObjLink);      //   IPV4HOSTNET
 
   group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
   group.AddInput('nic',GetTranslateableTextKey('scheme_nic'),false,false,'',CFRE_DB_VMACHINE_VNIC_CHOOSER_DC,true);
@@ -2557,26 +2638,27 @@ end;
 
 { TFRE_DB_IPV6_ADDRESS }
 
-procedure TFRE_DB_IPV6_HOSTNET.InternalSetIPCIDR(const value: TFRE_DB_String);
-begin
-  Field('ip_net').asstring:=value;
-end;
-
 class procedure TFRE_DB_IPV6_HOSTNET.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-var group : IFRE_DB_InputGroupSchemeDefinition;
+var
+  group : IFRE_DB_InputGroupSchemeDefinition;
+  fld   : IFRE_DB_FieldSchemeDefinition;
 begin
     inherited RegisterSystemScheme(scheme);
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
-    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ipv6_subnet');
-    scheme.AddSchemeField('slaac',fdbft_Boolean).addDepField('ip_net');
-    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ipv6');
+    scheme.AddSchemeField('ip',fdbft_String).SetupFieldDef(true,false,'','ipv6');
+    scheme.AddSchemeField('subnet',fdbft_String).SetupFieldDefNum(false,0,128);
+    fld:=scheme.AddSchemeField('slaac',fdbft_Boolean);
+    fld.addDepField('ip');
+    fld.addDepField('subnet');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
+
+    group:=scheme.AddInputGroup('ip_net').Setup(GetTranslateableTextKey('scheme_ip_net_group'));
+    group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
+    group.AddInput('subnet',GetTranslateableTextKey('scheme_subnet'));
+
     group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
-    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
-    group:=scheme.AddInputGroup('route').Setup(GetTranslateableTextKey('scheme_route_group'));
-    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
-    group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
+    group.UseInputGroupAsBlock(TFRE_DB_IPV6_HOSTNET.Classname,'ip_net');
 end;
 
 class procedure TFRE_DB_IPV6_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -2585,16 +2667,11 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_main_group','IPv6 Properties');
-    StoreTranslateableText(conn,'scheme_slaac','Stateless Adress Autoconfiguration');
-    StoreTranslateableText(conn,'scheme_ip_net','IPv6/Subnet');
-    StoreTranslateableText(conn,'scheme_gateway','Gateway');
-    StoreTranslateableText(conn,'scheme_route_group','IPv6 Route Properties');
+    StoreTranslateableText(conn,'scheme_slaac','SLAAC');
+    StoreTranslateableText(conn,'scheme_ip','IPv6');
+    StoreTranslateableText(conn,'scheme_subnet','Subnet');
+    StoreTranslateableText(conn,'scheme_ip_net_group','IPv6/Subnet');
   end;
-end;
-
-procedure TFRE_DB_IPV6_HOSTNET.SetGatewayIP(const value: TFRE_DB_String);
-begin
-  Field('gateway').asstring:=value;
 end;
 
 function TFRE_DB_IPV6_HOSTNET.StartService: IFRE_DB_Object;
@@ -2705,26 +2782,26 @@ end;
 
 { TFRE_DB_IPV4 }
 
-procedure TFRE_DB_IPV4_HOSTNET.InternalSetIPCIDR(const value: TFRE_DB_String);
-begin
-  Field('ip_net').asstring:=value;
-end;
-
 class procedure TFRE_DB_IPV4_HOSTNET.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
-var group : IFRE_DB_InputGroupSchemeDefinition;
+var
+  group : IFRE_DB_InputGroupSchemeDefinition;
+  fld   : IFRE_DB_FieldSchemeDefinition;
 begin
     inherited RegisterSystemScheme(scheme);
     scheme.SetParentSchemeByName(TFRE_DB_IP_HOSTNET.Classname);
-    scheme.AddSchemeField('ip_net',fdbft_String).SetupFieldDef(true,false,'','ip_subnet');
-    scheme.AddSchemeField('dhcp',fdbft_Boolean).addDepField('ip_net');
-    scheme.AddSchemeField('gateway',fdbft_String).SetupFieldDef(false,false,'','ip');
+    scheme.AddSchemeField('ip',fdbft_String).SetupFieldDef(true,false,'','ip');
+    scheme.AddSchemeField('subnet',fdbft_Int16).SetupFieldDefNum(false,0,32);
+    fld:=scheme.AddSchemeField('dhcp',fdbft_Boolean);
+    fld.addDepField('ip');
+    fld.addDepField('subnet');
     scheme.AddSchemeField('zoneid',fdbft_ObjLink).multiValues:=false;
+    group:=scheme.AddInputGroup('ip_net').Setup(GetTranslateableTextKey('scheme_ip_net_group'));
+    group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
+    group.AddInput('subnet',GetTranslateableTextKey('scheme_subnet'));
+
     group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
-    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
-    group:=scheme.AddInputGroup('route').Setup(GetTranslateableTextKey('scheme_route_group'));
-    group.AddInput('ip_net',GetTranslateableTextKey('scheme_ip_net'));
-    group.AddInput('gateway',GetTranslateableTextKey('scheme_gateway'));
+    group.UseInputGroupAsBlock(TFRE_DB_IPV4_HOSTNET.Classname,'ip_net');
 end;
 
 class procedure TFRE_DB_IPV4_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -2733,15 +2810,11 @@ begin
   if currentVersionId='' then begin
     currentVersionId := '1.0';
     StoreTranslateableText(conn,'scheme_main_group','IPv4 Properties');
-    StoreTranslateableText(conn,'scheme_ip_net','IP/Subnet');
+    StoreTranslateableText(conn,'scheme_ip','IP');
+    StoreTranslateableText(conn,'scheme_subnet','Subnet');
     StoreTranslateableText(conn,'scheme_dhcp','DHCP');
-    StoreTranslateableText(conn,'scheme_gateway','Gateway');
+    StoreTranslateableText(conn,'scheme_ip_net_group','IP/Subnet');
   end;
-end;
-
-procedure TFRE_DB_IPV4_HOSTNET.SetGatewayIP(const value: TFRE_DB_String);
-begin
-  Field('gateway').asstring:=value;
 end;
 
 function TFRE_DB_IPV4_HOSTNET.StartService: IFRE_DB_Object;
@@ -7832,6 +7905,8 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IP_HOSTNET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV4_HOSTNET);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_HOSTNET);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV4_ROUTE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_IPV6_ROUTE);
 
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FS_ENTRY);
 
