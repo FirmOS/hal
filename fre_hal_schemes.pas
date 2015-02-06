@@ -90,6 +90,7 @@ const
 
 
   CFRE_DB_VMACHINE_VNIC_CHOOSER_DC     = 'VMACHINE_VNIC_CHOOSER_DC';
+  CFRE_DB_VMACHINE_HDD_CHOOSER_DC      = 'VMACHINE_HDD_CHOOSER_DC';
 
 type
 
@@ -2614,6 +2615,7 @@ begin
   scheme.AddSchemeField('vm_vlan',fdbft_Int16);
 
   scheme.AddSchemeField('ip',fdbft_ObjLink);           //   TFRE_DB_IPV4_HOSTNET incl gateway;
+  scheme.AddSchemeField('gateway',fdbft_ObjLink);           //   TFRE_DB_IPV4_HOSTNET incl gateway;
   scheme.AddSchemeField('hostname',fdbft_String);
   scheme.AddSchemeField('dns_ip0',fdbft_ObjLink);      //   IPV4HOSTNET
   scheme.AddSchemeField('dns_ip1',fdbft_ObjLink);      //   IPV4HOSTNET
@@ -2685,24 +2687,47 @@ end;
 { TFRE_DB_VMACHINE_DISK }
 
 class procedure TFRE_DB_VMACHINE_DISK.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+var
+  enum : IFRE_DB_Enum;
+  group: IFRE_DB_InputGroupSchemeDefinition;
 begin
   inherited RegisterSystemScheme(scheme);
   scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
 
-  scheme.AddSchemeField('drive_if',fdbft_String).required:=true;  // enum
+  enum:=GFRE_DBI.NewEnum('qemu_hdd_type').Setup(GFRE_DBI.CreateText('$enum_qemu_hdd_type','HDD Type'));
+  enum.addEntry('ide',GetTranslateableTextKey('hdd_type_ide'));
+  enum.addEntry('virtio',GetTranslateableTextKey('hdd_type_virtio'));
+  enum.addEntry('scsi',GetTranslateableTextKey('hdd_type_scsi'));
+  GFRE_DBI.RegisterSysEnum(enum);
+
+  enum:=GFRE_DBI.NewEnum('qemu_media_type').Setup(GFRE_DBI.CreateText('$enum_qemu_media_type','Media Type'));
+  enum.addEntry('disk',GetTranslateableTextKey('media_type_disk'));
+  enum.addEntry('cdrom',GetTranslateableTextKey('media_type_cdrom'));
+  enum.addEntry('usb',GetTranslateableTextKey('media_type_usb'));
+  enum.addEntry('floppy',GetTranslateableTextKey('media_type_floppy'));
+  GFRE_DBI.RegisterSysEnum(enum);
+
+  scheme.AddSchemeField('hdd_type',fdbft_String).SetupFieldDef(false,false,'qemu_hdd_type');
   scheme.AddSchemeField('index',fdbft_Int16).required:=true;
-  scheme.AddSchemeField('media',fdbft_String).required:=true;     // enum
-  scheme.AddSchemeField('file',fdbft_ObjLink).required:=true;      // zvol or file
+  scheme.AddSchemeField('media',fdbft_String).SetupFieldDef(true,false,'qemu_media_type');
+  scheme.AddSchemeField('file',fdbft_ObjLink).required:=true;
+
+  group:=scheme.AddInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
+  group.AddInput('file',GetTranslateableTextKey('scheme_file'),false,false,'',CFRE_DB_VMACHINE_HDD_CHOOSER_DC,true);
+
+  group:=scheme.AddInputGroup('main_hdd').Setup(GetTranslateableTextKey('scheme_main_hdd_group'));
+  group.AddInput('file',GetTranslateableTextKey('scheme_hdd_file'),false,false,'',CFRE_DB_VMACHINE_HDD_CHOOSER_DC,true);
+  group.AddInput('hdd_type',GetTranslateableTextKey('scheme_hdd_type'));
 
   //  https://wiki.firmos.at/display/FBX/Qemu+Parameters
   //  Parameters to configure
   //  -drive
   //  if (enum)
-  //     ide, scsi, sd, mtd, floppy, virtio.
+  //     ide, scsi, virtio.
   //  index=i (select order of devices)
   //  file (objlink)
   //    select zvol (ide, scsi, virtio) or uploaded file (all if options)
-  //  media (enum)
+  //  media (enum)  disk / cdrom / usb / floppy
   //    set if to ide if media cdrom
 
   // Expert:
@@ -2724,6 +2749,22 @@ begin
   newVersionId:='0.1';
   if (currentVersionId='') then begin
     currentVersionId:='0.1';
+
+    StoreTranslateableText(conn,'scheme_main_group','General Information');
+    StoreTranslateableText(conn,'scheme_main_hdd_group','General Information');
+
+    StoreTranslateableText(conn,'scheme_file','File');
+    StoreTranslateableText(conn,'scheme_hdd_file','Zvol/File');
+    StoreTranslateableText(conn,'scheme_hdd_type','Type');
+
+    StoreTranslateableText(conn,'hdd_type_ide','IDE');
+    StoreTranslateableText(conn,'hdd_type_virtio','VirtIO');
+    StoreTranslateableText(conn,'hdd_type_scsi','SCSI');
+
+    StoreTranslateableText(conn,'media_type_disk','HDD');
+    StoreTranslateableText(conn,'media_type_cdrom','CD');
+    StoreTranslateableText(conn,'media_type_usb','USB');
+    StoreTranslateableText(conn,'media_type_floppy','Floppy');
   end;
 end;
 
@@ -3833,6 +3874,9 @@ begin
     group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('slaac',GetTranslateableTextKey('scheme_slaac'));
     group.UseInputGroupAsBlock(TFRE_DB_IPV6_HOSTNET.Classname,'ip_net');
+
+    group:=scheme.AddInputGroup('ip').Setup(GetTranslateableTextKey('scheme_ip_group'));
+    group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
 end;
 
 class procedure TFRE_DB_IPV6_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3845,6 +3889,7 @@ begin
     StoreTranslateableText(conn,'scheme_ip','IPv6');
     StoreTranslateableText(conn,'scheme_subnet','Subnet');
     StoreTranslateableText(conn,'scheme_ip_net_group','IPv6/Subnet');
+    StoreTranslateableText(conn,'scheme_ip_group','IPv6');
   end;
 end;
 
@@ -3987,6 +4032,9 @@ begin
     group:=scheme.ReplaceInputGroup('main').Setup(GetTranslateableTextKey('scheme_main_group'));
     group.AddInput('dhcp',GetTranslateableTextKey('scheme_dhcp'));
     group.UseInputGroupAsBlock(TFRE_DB_IPV4_HOSTNET.Classname,'ip_net');
+
+    group:=scheme.AddInputGroup('ip').Setup(GetTranslateableTextKey('scheme_ip_group'));
+    group.AddInput('ip',GetTranslateableTextKey('scheme_ip'));
 end;
 
 class procedure TFRE_DB_IPV4_HOSTNET.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
@@ -3999,6 +4047,7 @@ begin
     StoreTranslateableText(conn,'scheme_subnet','Subnet');
     StoreTranslateableText(conn,'scheme_dhcp','DHCP');
     StoreTranslateableText(conn,'scheme_ip_net_group','IP/Subnet');
+    StoreTranslateableText(conn,'scheme_ip_group','IP');
   end;
 end;
 
