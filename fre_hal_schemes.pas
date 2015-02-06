@@ -83,6 +83,11 @@ const
   CFRE_DB_ROUTING_COLLECTION           = 'routing';
   CFRE_DB_VM_COMPONENTS_COLLECTION     = 'vmcomponents';
   CFRE_DB_IMAGEFILE_COLLECTION         = 'imagefiles';
+  CFRE_DB_FIREWALL_RULE_COLLECTION     = 'fwrule';
+  CFRE_DB_FIREWALL_POOL_COLLECTION     = 'fwpool';
+  CFRE_DB_FIREWALL_POOLENTRY_COLLECTION= 'fwpoolentry';
+  CFRE_DB_FIREWALL_NAT_COLLECTION      = 'fwnat';
+
 
   CFRE_DB_VMACHINE_VNIC_CHOOSER_DC     = 'VMACHINE_VNIC_CHOOSER_DC';
 
@@ -345,7 +350,10 @@ type
 
    TFRE_DB_IP_HOSTNET=class(TFRE_DB_SERVICE)
    protected
-     procedure       InternalSetIPCIDR      (const value:TFRE_DB_String); virtual; abstract;
+     procedure       InternalSetIPCIDR      (const value:TFRE_DB_String); virtual;
+     function        InternalGetNetbasewithSubnetIPV4: string;
+     function        InternalGetNetbasewithSubnetIPV6: string;
+     function        GetHostOnlySubnetBits  : int16; virtual; abstract;
      function        GetAddrObjAlias        : string; virtual;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
@@ -353,6 +361,9 @@ type
      class function  getAllHostnetClasses   : TFRE_DB_StringArray;
      function        GetFMRI                : TFRE_DB_String; override;
      procedure       SetIPCIDR              (const value:TFRE_DB_String);
+     function        GetIPWithoutSubnet     : TFRE_DB_String; virtual;
+     function        GetIPWithSubnet        : TFRE_DB_String; virtual;
+     function        GetNetbaseIPWithSubnet : TFRE_DB_String; virtual; abstract;
    published
      function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
    end;
@@ -360,9 +371,12 @@ type
    { TFRE_DB_IPV4_HOSTNET }
 
    TFRE_DB_IPV4_HOSTNET=class(TFRE_DB_IP_HOSTNET)
+   protected
+     function        GetHostOnlySubnetBits  : int16; override;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     function        GetNetbaseIPWithSubnet : TFRE_DB_String; override;
    published
      function        StartService           : IFRE_DB_Object; override;
      function        StopService            : IFRE_DB_Object; override;
@@ -372,9 +386,12 @@ type
    { TFRE_DB_IPV6_HOSTNET }
 
    TFRE_DB_IPV6_HOSTNET=class(TFRE_DB_IP_HOSTNET)
+   protected
+     function        GetHostOnlySubnetBits  : int16; override;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     function        GetNetbaseIPWithSubnet : TFRE_DB_String; override;
    published
      function        StartService           : IFRE_DB_Object; override;
      function        StopService            : IFRE_DB_Object; override;
@@ -383,18 +400,24 @@ type
    { TFRE_DB_IPV4_ROUTE }
 
    TFRE_DB_IPV4_ROUTE=class(TFRE_DB_IP_HOSTNET)
+   protected
+     function        GetHostOnlySubnetBits  : int16; override;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     function        GetNetbaseIPWithSubnet : TFRE_DB_String; override;
    end;
 
 
    { TFRE_DB_IPV6_ROUTE }
 
    TFRE_DB_IPV6_ROUTE=class(TFRE_DB_IP_HOSTNET)
+   protected
+     function        GetHostOnlySubnetBits  : int16; override;
    public
      class procedure RegisterSystemScheme   (const scheme: IFRE_DB_SCHEMEOBJECT); override;
      class procedure InstallDBObjects       (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+     function        GetNetbaseIPWithSubnet: TFRE_DB_String; override;
    end;
 
    { TFRE_DB_DATALINK_STUB }
@@ -539,6 +562,7 @@ type
      property  vncHost    : TFRE_DB_String read getVNCHost write setVNCHost;
      property  vncPort    : UInt32         read getVNCPort write setVNCPort;
    end;
+
 
 
    { TFRE_DB_DNS }
@@ -1125,6 +1149,86 @@ type
     function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
   end;
 
+  { TFRE_DB_FIREWALL_SERVICE }
+
+  TFRE_DB_FIREWALL_SERVICE=class(TFRE_DB_SERVICE)
+  private
+    procedure       WriteIPFRulesIPv4    (const filename:string);
+    procedure       WriteIPFRulesIPv6    (const filename:string);
+    procedure       WriteIPFPools        (const filename:string);
+    procedure       WriteIPFNatRules     (const filename:string);
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    function        GetFMRI              : TFRE_DB_STRING; override;
+    procedure       Embed                (const conn: IFRE_DB_CONNECTION); override;
+  published
+    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
+  end;
+
+  { TFRE_DB_FIREWALL_RULE }
+
+  TFRE_DB_FIREWALL_RULE=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    procedure       Embed                (const conn: IFRE_DB_CONNECTION);
+    function        GetIPFLineText       : string;
+  end;
+
+  { TFRE_DB_FIREWALL_POOL }
+
+  TFRE_DB_FIREWALL_POOL=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme       (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects           (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    procedure       Embed                         (const conn: IFRE_DB_CONNECTION);
+    procedure       AddIPFPoolandEntryDefinition  (const sl:TStringList);
+  end;
+
+  { TFRE_DB_FIREWALL_POOLENTRY }
+
+  TFRE_DB_FIREWALL_POOLENTRY=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    procedure       Embed                   (const conn: IFRE_DB_CONNECTION);
+    function        GetIPFPoolEntryString   :string;
+  end;
+
+  { TFRE_DB_FIREWALL_POOLENTRY_TABLE }
+
+  TFRE_DB_FIREWALL_POOLENTRY_TABLE=class(TFRE_DB_FIREWALL_POOLENTRY)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_FIREWALL_POOLENTRY_GROUP }
+
+  TFRE_DB_FIREWALL_POOLENTRY_GROUP=class(TFRE_DB_FIREWALL_POOLENTRY)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  end;
+
+  { TFRE_DB_FIREWALL_NAT }
+
+  TFRE_DB_FIREWALL_NAT=class(TFRE_DB_ObjectEx)
+  protected
+    class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
+    class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
+  public
+    procedure       Embed                (const conn: IFRE_DB_CONNECTION);
+    function        GetIPFLineText       : string;
+  end;
+
+
+
 
   { TFRE_DB_CPE_NETWORK_SERVICE }
 
@@ -1382,7 +1486,1007 @@ implementation
    result   := gresult;
   end;
 
+{ TFRE_DB_FIREWALL_NAT }
+
+class procedure TFRE_DB_FIREWALL_NAT.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+  inherited RegisterSystemScheme(scheme);
+
+  scheme.AddSchemeField('firewall_id',fdbft_ObjLink).Required:=true;
+  scheme.AddSchemeField('number',fdbft_UInt32).Required:=true;
+  scheme.AddSchemeField('command',fdbft_String).Required:=true;       // enum
+
+  scheme.AddSchemeField('interface',fdbft_ObjLink).Required:=true;    // datalink of the zone
+  scheme.AddSchemeField('protocol',fdbft_String);                     // enum
+
+  scheme.AddSchemeField('src_addr',fdbft_ObjLink).Required:=true;
+  scheme.AddSchemeField('src_addr_host',fdbft_boolean);
+  scheme.AddSchemeField('src_port',fdbft_UInt16);                     // show only with command rdr
+
+  scheme.AddSchemeField('dst_addr',fdbft_ObjLink).Required:=true;
+  scheme.AddSchemeField('dst_addr_host',fdbft_boolean);
+  scheme.AddSchemeField('dst_port_1',fdbft_UInt16);
+  scheme.AddSchemeField('dst_port_mode',fdbft_String);                // enum, default ":"
+  scheme.AddSchemeField('dst_port_2',fdbft_UInt16);                   // show only if dst_port_mode is ":"
+
+  // expert mode
+
+  scheme.AddSchemeField('src_to_addr',fdbft_ObjLink);                 // show only with command map,bimap
+  scheme.AddSchemeField('scr_to_addr_host',fdbft_boolean);
+  scheme.AddSchemeField('option_frag',fdbft_Boolean);
+  scheme.AddSchemeField('option_age',fdbft_Uint32);
+  scheme.AddSchemeField('option_clamp',fdbft_Uint32);
+  scheme.AddSchemeField('option_roundrobin',fdbft_Boolean);           // show only with command rdr
+  scheme.AddSchemeField('proxy_name',fdbft_string);                   // show only with command map,bimap
+  scheme.AddSchemeField('proxy_port',fdbft_Uint16);                   // show only with command map,bimap
+
+end;
+
+class procedure TFRE_DB_FIREWALL_NAT.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if currentVersionId='' then begin
+    currentVersionId := '0.1';
+  end;
+end;
+
+procedure TFRE_DB_FIREWALL_NAT.Embed(const conn: IFRE_DB_CONNECTION);
+var
+  obj       : IFRE_DB_Object;
+
+  procedure EmbedObject(const fieldname:string);
+  begin
+    if FieldExists(fieldname) then
+      begin
+        CheckDbResult(conn.Fetch(Field(fieldname).AsObjectLink,obj));
+        field(fieldname+'_embed').asobject:=obj;
+        DeleteField(fieldname);
+      end;
+  end;
+
+begin
+  EmbedObject('src_addr');
+  EmbedObject('dst_addr');
+  EmbedObject('interface');
+  EmbedObject('src_to_addr');
+end;
+
+function TFRE_DB_FIREWALL_NAT.GetIPFLineText: string;
+var cmd    : string;
+    natcmd : string;
+    intf   : TFRE_DB_DATALINK;
+    ip     : TFRE_DB_IP_HOSTNET;
+begin
+  natcmd := Field('command').asstring;
+  cmd    := natcmd;
+  if Field('interface_embed').asobject.IsA(TFRE_DB_DATALINK,intf) then
+    cmd := cmd +' '+intf.ObjectName
+  else
+    raise EFRE_DB_Exception.Create('INTERFACE OBJECT IS NOT A TFRE_DB_DATALINK '+Field('interface_embed').asobject.DumpToString);
+
+  if FieldExists('src_addr_embed') then
+    begin
+      if natcmd<>'rdr' then
+        if FieldExists('src_to_addr_embed') then
+          cmd := cmd +' from';
+      if Field('src_addr_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+        begin
+          if FieldExists('src_addr_host') and Field('src_addr_host').asboolean then
+            cmd:=cmd+' '+ip.GetIPWithoutSubnet+'/'+inttostr(ip.GetHostOnlySubnetBits)
+          else
+            cmd:=cmd+' '+ip.GetNetbaseIPWithSubnet;
+        end
+      else
+        raise EFRE_DB_Exception.Create('SRC_ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('src_addr_embed').asobject.DumpToString);
+    end
+  else
+    raise EFRE_DB_Exception.Create('NO SOURCE ADDR EMBED'+DumpToString);
+
+  if FieldExists('src_to_addr_embed') then
+    begin
+      if Field('src_to_addr_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+        begin
+          if FieldExists('src_to_addr_host') and Field('src_to_addr_host').asboolean then
+            cmd:=cmd+' to '+ip.GetIPWithoutSubnet+'/'+inttostr(ip.GetHostOnlySubnetBits)
+          else
+            cmd:=cmd+' to '+ip.GetNetbaseIPWithSubnet;
+        end
+      else
+        raise EFRE_DB_Exception.Create('SRC_TO_ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('src_to_addr_embed').asobject.DumpToString);
+    end;
+
+  if natcmd = 'rdr' then
+    if FieldExists('src_port') then
+      cmd := cmd+' port '+Field('src_port').asstring
+    else
+      raise EFRE_DB_Exception.Create('NO SRC PORT FOR REDIRECTION DEFINED '+DumpToString);
+
+  cmd := cmd+' ->';
+
+  if FieldExists('dst_addr_embed') then
+    begin
+      if Field('dst_addr_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+        begin
+          if (natcmd='rdr') then
+            cmd:=cmd+' '+ip.GetIPWithoutSubnet
+          else
+            begin
+              if FieldExists('dst_addr_host') and Field('dst_addr_host').asboolean then
+                cmd:=cmd+' '+ip.GetIPWithoutSubnet+'/'+inttostr(ip.GetHostOnlySubnetBits)
+              else
+                cmd:=cmd+' '+ip.GetNetbaseIPWithSubnet;
+            end;
+        end
+      else
+        raise EFRE_DB_Exception.Create('DST_ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('dst_addr_embed').asobject.DumpToString);
+    end
+  else
+    raise EFRE_DB_Exception.Create('NO DST ADDR EMBED'+DumpToString);
+
+
+  if (natcmd='map') or (natcmd='bimap') then
+    begin
+      if FieldExists('dst_port_mode') then
+        begin
+          if(Field('dst_port_mode').asstring='auto') then
+            cmd := cmd + ' portmap '+Field('protocol').asstring+' auto'
+          else
+            cmd := cmd + ' portmap '+Field('protocol').asstring+' '+ Field('dst_port_1').asstring+Field('dst_port_mode').asstring+Field('dst_port_2').asstring;
+        end;
+    end;
+  if (natcmd='rdr') then
+    begin
+      if FieldExists('dst_port_1') then
+        cmd := cmd+' port '+Field('dst_port_1').asstring
+      else
+        raise EFRE_DB_Exception.Create('NO DST PORT FOR REDIRECTION DEFINED '+DumpToString);
+      cmd := cmd+' '+Field('protocol').asstring;
+    end;
+
+  if (natcmd='map-block') then
+    begin
+      if FieldExists('dst_port_1') then
+        cmd := cmd+' ports '+Field('dst_port_1').asstring
+      else
+        cmd := cmd+' ports auto';
+      cmd := cmd+' '+Field('protocol').asstring;
+    end;
+
+  if natcmd='rdr' then
+   if FieldExists('option_roundrobin') and Field('option_roundrobin').asboolean then
+    cmd := cmd +' round-robin';
+
+  if FieldExists('option_frag') and Field('option_frag').asboolean then
+    cmd := cmd +' frag';
+
+  if FieldExists('option_age') then
+    cmd := cmd +' age '+Field('option_age').asstring;
+
+  if FieldExists('option_clamp') then
+    cmd := cmd +' mssclamp '+Field('option_clamp').asstring;
+
+  if (natcmd='map') or (natcmd='bimap') then
+    if FieldExists('proxy_name') then
+      cmd := cmd +' proxy port '+field('proxy_port').asstring+' '+Field('proxy_name').asstring;
+
+  if (natcmd='rdr') then
+    if FieldExists('proxy_name') then
+      cmd := cmd +' proxy '+Field('proxy_name').asstring;
+
+  writeln('SWL NAT:',cmd);
+  result :=cmd;
+end;
+
+{ TFRE_DB_FIREWALL_POOLENTRY_GROUP }
+
+class procedure TFRE_DB_FIREWALL_POOLENTRY_GROUP.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_FIREWALL_POOLENTRY.ClassName);
+  inherited RegisterSystemScheme(scheme);
+
+  scheme.AddSchemeField('group',fdbft_UInt32);
+
+end;
+
+class procedure TFRE_DB_FIREWALL_POOLENTRY_GROUP.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if currentVersionId='' then begin
+    currentVersionId := '0.1';
+  end;
+end;
+
+{ TFRE_DB_FIREWALL_POOLENTRY_TABLE }
+
+class procedure TFRE_DB_FIREWALL_POOLENTRY_TABLE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_FIREWALL_POOLENTRY.ClassName);
+  inherited RegisterSystemScheme(scheme);
+
+  scheme.AddSchemeField('ip_not',fdbft_boolean);
+end;
+
+class procedure TFRE_DB_FIREWALL_POOLENTRY_TABLE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if currentVersionId='' then begin
+    currentVersionId := '0.1';
+  end;
+end;
+
+{ TFRE_DB_FIREWALL_POOLENTRY }
+
+class procedure TFRE_DB_FIREWALL_POOLENTRY.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+  inherited RegisterSystemScheme(scheme);
+
+  scheme.AddSchemeField('firewallpool_id',fdbft_ObjLink).Required:=true;
+  scheme.AddSchemeField('ip',fdbft_ObjLink).Required:=true;
+  scheme.AddSchemeField('ip_host',fdbft_Boolean);
+end;
+
+class procedure TFRE_DB_FIREWALL_POOLENTRY.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if currentVersionId='' then begin
+    currentVersionId := '0.1';
+  end;
+end;
+
+procedure TFRE_DB_FIREWALL_POOLENTRY.Embed(const conn: IFRE_DB_CONNECTION);
+var
+  obj       : IFRE_DB_Object;
+
+  procedure EmbedObject(const fieldname:string);
+  begin
+    if FieldExists(fieldname) then
+      begin
+        CheckDbResult(conn.Fetch(Field(fieldname).AsObjectLink,obj));
+        field(fieldname+'_embed').asobject:=obj;
+        DeleteField(fieldname);
+      end;
+  end;
+
+begin
+  EmbedObject('ip');
+end;
+
+function TFRE_DB_FIREWALL_POOLENTRY.GetIPFPoolEntryString: string;
+var
+  ip : TFRE_DB_IP_HOSTNET;
+
+begin
+  result :='';
+  if FieldExists('ip_embed') then
+    begin
+      if Field('ip_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+        begin
+          if FieldExists('ip_not') and Field('ip_not').asboolean then
+            result:=' !'
+          else
+            result:=' ';
+          if FieldExists('ip_host') and Field('ip_host').asboolean then
+            result:=result+ip.GetIPWithoutSubnet+'/'+inttostr(ip.GetHostOnlySubnetBits)
+          else
+            result:=result+ip.GetNetbaseIPWithSubnet;
+          if FieldExists('group') then
+            result := result+', group = '+field('group').asstring;
+          result:=result+';';
+        end
+      else
+        raise EFRE_DB_Exception.Create('SRC_ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('src_addr_embed').asobject.DumpToString);
+    end;
+end;
+
+{ TFRE_DB_FIREWALL_POOL }
+
+class procedure TFRE_DB_FIREWALL_POOL.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+  inherited RegisterSystemScheme(scheme);
+
+  scheme.AddSchemeField('firewall_id',fdbft_ObjLink).Required:=true;
+  scheme.AddSchemeField('number',fdbft_UInt32).Required:=true;
+  scheme.AddSchemeField('mapping',fdbft_String).Required:=true;       // enum
+  scheme.AddSchemeField('type',fdbft_String).Required:=true;         // enum, show only with mapping group-map
+  scheme.AddSchemeField('direction',fdbft_String).Required:=true;          // enum, show only with mapping group-map
+  scheme.AddSchemeField('default_group',fdbft_UInt32);                     // show only with mapping group-map
+
+  // expert mode
+  scheme.AddSchemeField('hash_size',fdbft_Uint32);                         // show only with type hash
+  scheme.AddSchemeField('hash_seed',fdbft_Uint32);                         // show only with type hash
+
+end;
+
+class procedure TFRE_DB_FIREWALL_POOL.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if currentVersionId='' then begin
+    currentVersionId := '0.1';
+  end;
+end;
+
+procedure TFRE_DB_FIREWALL_POOL.Embed(const conn: IFRE_DB_CONNECTION);
+var
+  refs      : TFRE_DB_ObjectReferences;
+  obj       : IFRE_DB_Object;
+  i         : integer;
+  poolentry : TFRE_DB_FIREWALL_POOLENTRY;
+begin
+  refs := conn.GetReferencesDetailed(UID,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+refs[i].linked_uid.AsHexString);
+      if obj.IsA(TFRE_DB_FIREWALL_POOLENTRY,poolentry) then
+        begin
+          poolentry.Embed(conn);
+          Field(poolentry.UID_String).AsObject:=poolentry;
+        end
+      else
+        obj.Finalize;
+    end;
+end;
+
+procedure TFRE_DB_FIREWALL_POOL.AddIPFPoolandEntryDefinition(const sl: TStringList);
+var line : string;
+
+  procedure _poolEntryIterator(const obj:IFRE_DB_Object);
+  var
+    poolentry : TFRE_DB_FIREWALL_POOLENTRY;
+  begin
+    if obj.IsA(TFRE_DB_FIREWALL_POOLENTRY,poolentry) then
+      begin
+        line:=line+poolentry.GetIPFPoolEntryString;
+      end;
+  end;
+
+begin
+  writeln('SWL ADD POOL');
+  line := Field('mapping').asstring;
+  if Field('mapping').asstring='group-map' then
+    line := line +' '+Field('direction').asstring;
+  line := line +' role = ipf';
+  if field('mapping').AsString='table' then
+    line := line +' type = '+Field('type').asstring;
+  line := line +' number = '+field('number').asstring;
+  if Field('type').asstring='hash' then
+    begin
+      if FieldExists('hash_size') then
+        line := line +' size = '+Field('hash_size').asstring;
+      if FieldExists('hash_seed') then
+        line := line +' seed = '+Field('hash_seed').asstring;
+    end;
+
+  if FieldExists('default_group') then
+    line := line+' group = '+Field('default_group').asstring;
+
+  writeln('SWL POOL:'+line);
+  sl.add(line);
+
+  line := '    {';
+
+  ForAllObjects(@_poolentryiterator,true);
+
+  line := line +' };';
+
+
+
+  writeln('SWL POOL ENTRYS:'+line);
+
+  sl.add(line);
+
+end;
+
+{ TFRE_DB_FIREWALL_RULE }
+
+class procedure TFRE_DB_FIREWALL_RULE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_ObjectEx.ClassName);
+  inherited RegisterSystemScheme(scheme);
+
+//  https://wiki.firmos.at/pages/editpage.action?pageId=5144810
+
+  scheme.AddSchemeField('firewall_id',fdbft_ObjLink).Required:=true;
+  scheme.AddSchemeField('number',fdbft_UInt32).Required:=true;
+  scheme.AddSchemeField('action',fdbft_String).Required:=true;        // enum
+  scheme.AddSchemeField('direction',fdbft_String).Required:=true;     // enum
+  scheme.AddSchemeField('ipversion',fdbft_String).Required:=true;     // enum
+
+  scheme.AddSchemeField('interface',fdbft_ObjLink);                   // datalink of the zone
+
+  scheme.AddSchemeField('option_log',fdbft_Boolean);
+  scheme.AddSchemeField('option_quick',fdbft_Boolean);
+
+  scheme.AddSchemeField('protocol',fdbft_String);              //enum
+
+  scheme.AddSchemeField('src_addr',fdbft_ObjLink);
+  scheme.AddSchemeField('src_addr_not',fdbft_Boolean);
+  scheme.AddSchemeField('src_addr_host',fdbft_Boolean);
+  scheme.AddSchemeField('src_port_1',fdbft_UInt16);
+  scheme.AddSchemeField('src_port_comparator',fdbft_String);          //enum
+  scheme.AddSchemeField('src_port_2',fdbft_UInt16);                   //show only if src_port_comparator is "range"
+
+  scheme.AddSchemeField('dst_addr',fdbft_ObjLink);
+  scheme.AddSchemeField('dst_addr_not',fdbft_Boolean);
+  scheme.AddSchemeField('dst_addr_host',fdbft_Boolean);
+  scheme.AddSchemeField('dst_port_1',fdbft_UInt16);
+  scheme.AddSchemeField('dst_port_comparator',fdbft_String);          //enum
+  scheme.AddSchemeField('dst_port_2',fdbft_UInt16);                   //show only if dst_port_comparator is "range"
+
+  scheme.AddSchemeField('keep_state',fdbft_Boolean);
+  scheme.AddSchemeField('keep_frags',fdbft_Boolean);
+
+  // Description
+
+  // Expert Mode
+
+  scheme.AddSchemeField('option_log_body',fdbft_Boolean);
+  scheme.AddSchemeField('option_log_first',fdbft_Boolean);
+  scheme.AddSchemeField('option_log_or_block',fdbft_Boolean);
+  scheme.AddSchemeField('option_log_loglevel',fdbft_String);          // enum
+
+  scheme.AddSchemeField('option_to_interface',fdbft_ObjLink);
+  scheme.AddSchemeField('option_to_ip',fdbft_ObjLink);
+  scheme.AddSchemeField('option_dup_to_interface',fdbft_ObjLink);
+  scheme.AddSchemeField('option_dup_to_ip',fdbft_ObjLink);            // show only if option_dup_to_interface is set
+  scheme.AddSchemeField('option_reply_to_interface',fdbft_ObjLink);
+  scheme.AddSchemeField('option_reply_to_ip',fdbft_ObjLink);          // show only if option_reply_to_interface is set
+
+  scheme.AddSchemeField('head',fdbft_int32);
+  scheme.AddSchemeField('group',fdbft_int32);
+  scheme.AddSchemeField('pool',fdbft_ObjLink);
+
+  scheme.AddSchemeField('tos',fdbft_Byte);
+  scheme.AddSchemeField('ttl',fdbft_Byte);
+
+  scheme.AddSchemeField('skip_count',fdbft_uint32);                   // show only if action skip
+
+  scheme.AddSchemeField('tcp_flag_fin',fdbft_boolean);                // show if protocol tcp
+  scheme.AddSchemeField('tcp_flag_syn',fdbft_boolean);
+  scheme.AddSchemeField('tcp_flag_rst',fdbft_boolean);
+  scheme.AddSchemeField('tcp_flag_push',fdbft_boolean);
+  scheme.AddSchemeField('tcp_flag_ack',fdbft_boolean);
+  scheme.AddSchemeField('tcp_flag_urg',fdbft_boolean);
+
+  scheme.AddSchemeField('icmp_type',fdbft_string);                  // enum, show if protocol icmp
+  scheme.AddSchemeField('block_option',fdbft_string);               // enum, show if action is block
+  scheme.AddSchemeField('block_option_icmp',fdbft_string);          // enum
+
+  scheme.AddSchemeField('with_option',fdbft_string).MultiValues:=true;
+  scheme.AddSchemeField('with_option_not',fdbft_string).MultiValues:=true;
+  scheme.AddSchemeField('with_extra_opts',fdbft_string).MultiValues:=true;
+  scheme.AddSchemeField('ipv6hdr',fdbft_string);                    // enum, show if ipversion is ipv6
+
+  scheme.AddSchemeField('match_tag_nat',fdbft_string);
+  scheme.AddSchemeField('set_tag_nat',fdbft_string);
+  scheme.AddSchemeField('set_tag_log',fdbft_int32);
+
+end;
+
+class procedure TFRE_DB_FIREWALL_RULE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if currentVersionId='' then begin
+    currentVersionId := '0.1';
+  end;
+end;
+
+procedure TFRE_DB_FIREWALL_RULE.Embed(const conn: IFRE_DB_CONNECTION);
+var
+  obj       : IFRE_DB_Object;
+
+  procedure EmbedObject(const fieldname:string);
+  begin
+    if FieldExists(fieldname) then
+      begin
+        CheckDbResult(conn.Fetch(Field(fieldname).AsObjectLink,obj));
+        field(fieldname+'_embed').asobject:=obj;
+        DeleteField(fieldname);
+      end;
+  end;
+
+begin
+  EmbedObject('src_addr');
+  EmbedObject('dst_addr');
+  EmbedObject('interface');
+  EmbedObject('option_to_interface');
+  EmbedObject('option_to_ip');
+  EmbedObject('option_dup_to_interface');
+  EmbedObject('option_dup_to_ip');
+  EmbedObject('option_reply_to_interface');
+  EmbedObject('option_reply_to_ip');
+  EmbedObject('pool_in');
+  EmbedObject('pool_out');
+end;
+
+function TFRE_DB_FIREWALL_RULE.GetIPFLineText: string;
+var cmd    : string;
+    fromto : string;
+    ftto   : string;
+    ftfrom : string;
+    comp   : string;
+    intf   : TFRE_DB_DATALINK;
+    ip     : TFRE_DB_IP_HOSTNET;
+    flags  : string;
+    w      : string;
+    i      : integer;
+
+begin
+  cmd := Field('action').asstring;
+  if Field('action').asstring='block' then
+    begin
+      if FieldExists('block_option') then
+        begin
+          cmd:= cmd +' '+field('block_option').asstring;
+          if Pos('return-icmp',Field('block_option').asstring)=1 then
+            begin
+              if FieldExists('block_option_icmp') then
+                cmd:=cmd+'('+Field('block_option_icmp').asstring+')'
+              else
+                cmd:=cmd+'(net-unr)';
+            end;
+        end;
+    end;
+  if Field('action').asstring='skip' then
+    begin
+      if FieldExists('skip_count') then
+        cmd := cmd+' '+inttostr(field('skip_count').asuint32)
+      else
+        cmd := cmd+' 1';
+    end;
+
+  if Field('action').asstring='call' then
+    begin
+      if Field('direction').asstring='in' then
+        if FieldExists('pool_in_embed') then
+          cmd := cmd+' now fr_srcgrpmap/'+Field('pool_in_embed').AsObject.Field('number').asstring;
+
+      if Field('direction').asstring='out' then
+        if FieldExists('pool_out_embed') then
+          cmd := cmd+' now fr_dstgrpmap/'+Field('pool_out_embed').AsObject.Field('number').asstring;
+    end;
+
+  cmd := cmd+' '+field('direction').asstring;
+  if FieldExists('option_log') and Field('option_log').asboolean then
+    begin
+      cmd := cmd +' log';
+      if FieldExists('option_log_body') and Field('option_log_body').asboolean then
+        cmd := cmd+' body';
+      if FieldExists('option_log_first') and Field('option_log_first').asboolean then
+        cmd := cmd+' first';
+      if FieldExists('option_log_or_block') and Field('option_log_or_block').asboolean then
+        cmd := cmd+' or-block';
+      if FieldExists('option_log_loglevel')  then
+        cmd := cmd+' level '+Field('option_log_loglevel').asstring;
+    end;
+  if FieldExists('option_quick') and Field('option_quick').asboolean then
+    begin
+      cmd := cmd +' quick';
+    end;
+  if FieldExists('interface_embed') then
+    begin
+      if Field('interface_embed').asobject.IsA(TFRE_DB_DATALINK,intf) then
+        cmd := cmd +' on '+intf.ObjectName
+      else
+        raise EFRE_DB_Exception.Create('INTERFACE OBJECT IS NOT A TFRE_DB_DATALINK '+Field('interface_embed').asobject.DumpToString);
+    end;
+
+  if FieldExists('option_dup_to_interface_embed') then
+    begin
+      if Field('option_dup_to_interface_embed').asobject.IsA(TFRE_DB_DATALINK,intf) then
+        begin
+          cmd := cmd +' dup-to '+intf.ObjectName;
+          if FieldExists('option_dup_to_ip_embed') then
+            begin
+              if Field('option_dup_to_ip_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+                cmd:= cmd +' : '+ip.GetIPWithoutSubnet
+              else
+                raise EFRE_DB_Exception.Create('DUP-TO ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('option_dup_to_interface_embed').asobject.DumpToString);
+            end;
+        end
+      else
+        raise EFRE_DB_Exception.Create('INTERFACE OBJECT IS NOT A TFRE_DB_DATALINK '+Field('option_dup_to_interface_embed').asobject.DumpToString);
+    end;
+
+  if FieldExists('option_to_interface_embed') then
+    begin
+      if Field('option_to_interface_embed').asobject.IsA(TFRE_DB_DATALINK,intf) then
+        begin
+          cmd := cmd +' to '+intf.ObjectName;
+          if FieldExists('option_to_ip_embed') then
+            begin
+              if Field('option_to_ip_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+                cmd:= cmd +' : '+ip.GetIPWithoutSubnet
+              else
+                raise EFRE_DB_Exception.Create('TO ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('option_to_interface_embed').asobject.DumpToString);
+            end;
+        end
+      else
+        raise EFRE_DB_Exception.Create('INTERFACE OBJECT IS NOT A TFRE_DB_DATALINK '+Field('option_to_interface_embed').asobject.DumpToString);
+    end;
+
+  if FieldExists('option_reply_to_interface_embed') then
+    begin
+      if Field('option_reply_to_interface_embed').asobject.IsA(TFRE_DB_DATALINK,intf) then
+        begin
+          cmd := cmd +' reply-to '+intf.ObjectName;
+          if FieldExists('option_reply_to_ip_embed') then
+            begin
+              if Field('option_reply_to_ip_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+                cmd:= cmd +' : '+ip.GetIPWithoutSubnet
+              else
+                raise EFRE_DB_Exception.Create('REPLY_TO ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('option_reply_to_interface_embed').asobject.DumpToString);
+            end;
+        end
+      else
+        raise EFRE_DB_Exception.Create('INTERFACE OBJECT IS NOT A TFRE_DB_DATALINK '+Field('option_reply_to_interface_embed').asobject.DumpToString);
+    end;
+
+
+
+  if FieldExists('tos') then
+    begin
+      cmd := cmd +' tos '+inttostr(field('tos').asbyte);
+    end;
+
+  if FieldExists('ttl') then
+    begin
+      cmd := cmd +' ttl '+inttostr(field('ttl').asbyte);
+    end;
+
+  if FieldExists('protocol') then
+    begin
+      cmd := cmd +' proto '+Field('protocol').asstring;
+    end;
+
+  fromto :='all';
+  ftto   :='any';
+  ftfrom :='any';
+
+  if FieldExists('src_addr_embed') then
+    begin
+      if Field('src_addr_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+        begin
+          if FieldExists('src_addr_not') and Field('src_addr_not').asboolean then
+            ftfrom:='!'
+          else
+            ftfrom:='';
+          if FieldExists('src_addr_host') and Field('src_addr_host').asboolean then
+            ftfrom:=ftfrom+ip.GetIPWithoutSubnet
+          else
+            ftfrom:=ftfrom+ip.GetIPWithSubnet;
+        end
+      else
+        raise EFRE_DB_Exception.Create('SRC_ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('src_addr_embed').asobject.DumpToString);
+    end;
+
+  if FieldExists('src_port_1') then
+    begin
+      comp   := '=';
+      if FieldExists('src_port_comparator') then
+        comp := Field('src_port_comparator').asstring;
+
+      ftfrom := ftfrom+' port';
+      if FieldExists('src_port_2') then
+        ftfrom := ftfrom+' '+Field('src_port_1').asstring+' '+comp+' '+Field('src_port_2').asstring
+      else
+        ftfrom := ftfrom+' '+comp+' '+Field('src_port_1').AsString;
+    end;
+
+  if FieldExists('dst_addr_embed') then
+    begin
+      if Field('dst_addr_embed').asobject.IsA(TFRE_DB_IP_HOSTNET,ip) then
+        begin
+          if FieldExists('dst_addr_not') and Field('dst_addr_not').asboolean then
+            ftto:='!'
+          else
+            ftto:='';
+          if FieldExists('dst_addr_host') and Field('dst_addr_host').asboolean then
+            ftto:=ftto+ip.GetIPWithoutSubnet
+          else
+            ftto:=ftto+ip.GetIPWithSubnet;
+        end
+      else
+        raise EFRE_DB_Exception.Create('DST_ADDR OBJECT IS NOT A TFRE_DB_IP_HOSTNET '+Field('dst_addr_embed').asobject.DumpToString);
+    end;
+
+  if FieldExists('dst_port_1') then
+    begin
+      comp   := '=';
+      if FieldExists('dst_port_comparator') then
+        comp := Field('dst_port_comparator').asstring;
+
+      ftto := ftto+' port';
+      if FieldExists('dst_port_2') then
+        ftto := ftto+' '+Field('dst_port_1').asstring+' '+comp+' '+Field('dst_port_2').asstring
+      else
+        ftto := ftto+' '+comp+' '+Field('dst_port_1').AsString;
+    end;
+
+  if Field('action').asstring<>'call' then   // overload from and to with pools, if action is not call
+    begin
+      if FieldExists('pool_in_embed') then
+        ftfrom :='pool/'+Field('pool_in_embed').AsObject.Field('number').asstring;
+
+      if FieldExists('pool_out_embed') then
+        ftto :='pool/'+Field('pool_out_embed').AsObject.Field('number').asstring;
+    end;
+
+  if (ftto<>'any') or (ftfrom<>'any') then
+    fromto := 'from '+ftfrom+' to '+ftto;
+
+  cmd := cmd+' '+fromto;
+
+  flags := '';
+
+  if FieldExists('protocol') then
+    if Field('protocol').asstring='tcp' then
+      begin
+        if FieldExists('tcp_flag_fin') and Field('tcp_flag_fin').AsBoolean   then flags := flags +'F';
+        if FieldExists('tcp_flag_syn') and Field('tcp_flag_syn').AsBoolean   then flags := flags +'S';
+        if FieldExists('tcp_flag_rst') and Field('tcp_flag_rst').AsBoolean   then flags := flags +'R';
+        if FieldExists('tcp_flag_push') and Field('tcp_flag_push').AsBoolean then flags := flags +'P';
+        if FieldExists('tcp_flag_ack') and Field('tcp_flag_ack').AsBoolean   then flags := flags +'A';
+        if FieldExists('tcp_flag_urg') and Field('tcp_flag_urg').AsBoolean   then flags := flags +'U';
+      end;
+  if flags<>'' then
+    cmd := cmd+' flags '+flags;
+
+  if FieldExists('icmp_type') then
+    begin
+      cmd := cmd +' icmp-type '+field('icmp_type').asstring;
+    end;
+
+  w := '';
+
+  if FieldExists('with_option') then
+    begin
+      for i := 0 to Field('with_option').ValueCount-1 do
+        w := w+' '+field('with_option').AsStringItem[i];
+    end;
+
+  if FieldExists('with_extra_opts') then
+    begin
+      for i := 0 to Field('with_extra_opts').ValueCount-1 do
+        w := w+' opt '+field('with_extra_opts').AsStringItem[i];
+    end;
+
+  if FieldExists('with_option_not') then
+    begin
+      for i := 0 to Field('with_option_not').ValueCount-1 do
+        w := w+' not '+field('with_option_not').AsStringItem[i];
+    end;
+
+  if FieldExists('ipv6hdr') then
+    w := w +' v6hdrs '+Field('ipv6hdr').asstring;
+
+  if w<>'' then
+    cmd := cmd +' with'+w;
+
+
+  if FieldExists('keep_state') and Field('keep_state').asboolean then
+    begin
+      cmd := cmd +' keep state';
+    end;
+
+  if FieldExists('keep_frags') and Field('keep_frags').asboolean then
+    begin
+      cmd := cmd +' keep frags';
+    end;
+
+  if FieldExists('head') then
+    begin
+      cmd := cmd +' head '+field('head').asstring;
+    end;
+
+  if FieldExists('group') then
+    begin
+      cmd := cmd +' group '+field('group').asstring;
+    end;
+
+
+  if FieldExists('set_tag_nat') then
+    cmd := cmd +' set-tag(nat='+field('set_tag_nat').asstring+')';
+
+  if FieldExists('match_tag_nat') then
+    cmd := cmd +' match-tag(nat='+field('match_tag_nat').asstring+')';
+
+  if FieldExists('set_tag_log') then
+    cmd := cmd +' set-tag(log='+field('set_tag_log').asstring+')';
+
+
+  writeln('SWL RULE:',cmd);
+  result := cmd;
+end;
+
+{ TFRE_DB_FIREWALL_SERVICE }
+
+procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFRulesIPv4(const filename: string);
+var sl : TStringList;
+
+  procedure _ForAllRules(const obj:IFRE_DB_Object);
+  var
+    rule: TFRE_DB_FIREWALL_RULE;
+  begin
+    if obj.isA(TFRE_DB_FIREWALL_RULE,rule) then
+      sl.Add (rule.GetIPFLineText)
+    else
+      raise EFRE_DB_Exception.Create('INVALID OBJECT IN IPV4 FIREWALL RULESET '+obj.DumpToString);
+  end;
+
+begin
+  writeln('SWL WRITE IPV4');
+  sl:=TStringList.Create;
+  try
+    if fieldExists('ipv4') then
+      field('ipv4').AsObject.ForAllObjects(@_ForAllRules,true);
+    sl.SaveToFile(filename);
+  finally
+    sl.Free;
+  end;
+end;
+
+procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFRulesIPv6(const filename: string);
+var sl : TStringList;
+
+  procedure _ForAllRules(const obj:IFRE_DB_Object);
+  var
+    rule: TFRE_DB_FIREWALL_RULE;
+  begin
+    if obj.isA(TFRE_DB_FIREWALL_RULE,rule) then
+      sl.Add (rule.GetIPFLineText)
+    else
+      raise EFRE_DB_Exception.Create('INVALID OBJECT IN IPV6 FIREWALL RULESET '+obj.DumpToString);
+  end;
+
+begin
+  writeln('SWL WRITE IPV6');
+  sl:=TStringList.Create;
+  try
+    if fieldExists('ipv6') then
+      field('ipv6').AsObject.ForAllObjects(@_ForAllRules,true);
+    sl.SaveToFile(filename);
+  finally
+    sl.Free;
+  end;
+end;
+
+procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFPools(const filename: string);
+var sl : TStringList;
+
+  procedure _ForAllPools(const obj:IFRE_DB_Object);
+  var
+    pool: TFRE_DB_FIREWALL_POOL;
+  begin
+    if obj.isA(TFRE_DB_FIREWALL_POOL,pool) then
+      pool.AddIPFPoolandEntryDefinition(sl)
+    else
+      raise EFRE_DB_Exception.Create('INVALID OBJECT IN FIREWALL POOLS '+obj.DumpToString);
+  end;
+
+begin
+  writeln('SWL WRITE POOLS');
+  sl:=TStringList.Create;
+  try
+    if fieldExists('pools') then
+      field('pools').AsObject.ForAllObjects(@_ForAllPools,true);
+    sl.SaveToFile(filename);
+  finally
+    sl.Free;
+  end;
+end;
+
+procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFNatRules(const filename: string);
+var sl : TStringList;
+
+  procedure _ForAllNAT(const obj:IFRE_DB_Object);
+  var
+    nat: TFRE_DB_FIREWALL_NAT;
+  begin
+    if obj.isA(TFRE_DB_FIREWALL_NAT,nat) then
+      sl.Add (nat.GetIPFLineText)
+    else
+      raise EFRE_DB_Exception.Create('INVALID OBJECT IN NAT FIREWALL RULESET '+obj.DumpToString);
+  end;
+
+begin
+  writeln('SWL WRITE NAT');
+  sl:=TStringList.Create;
+  try
+    if fieldExists('nat') then
+      field('nat').AsObject.ForAllObjects(@_ForAllNAT,true);
+    sl.SaveToFile(filename);
+  finally
+    sl.Free;
+  end;
+end;
+
+class procedure TFRE_DB_FIREWALL_SERVICE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
+begin
+  scheme.SetParentSchemeByName(TFRE_DB_SERVICE.ClassName);
+  inherited RegisterSystemScheme(scheme);
+end;
+
+class procedure TFRE_DB_FIREWALL_SERVICE.InstallDBObjects(const conn: IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType);
+begin
+  newVersionId:='0.1';
+  if currentVersionId='' then begin
+    currentVersionId := '0.1';
+  end;
+end;
+
+function TFRE_DB_FIREWALL_SERVICE.GetFMRI: TFRE_DB_STRING;
+begin
+  result := 'svc:/fos/fos_firewall';
+end;
+
+procedure TFRE_DB_FIREWALL_SERVICE.Embed(const conn: IFRE_DB_CONNECTION);
+var
+  refs      : TFRE_DB_ObjectReferences;
+  obj       : IFRE_DB_Object;
+  i         : integer;
+  rule      : TFRE_DB_FIREWALL_RULE;
+  pool      : TFRE_DB_FIREWALL_POOL;
+  nat       : TFRE_DB_FIREWALL_NAT;
+  ipv4,ipv6 : TFRE_DB_EMBEDDING_GROUP;
+  pools     : TFRE_DB_EMBEDDING_GROUP;
+  nats      : TFRE_DB_EMBEDDING_GROUP;
+begin
+  ipv4 := TFRE_DB_EMBEDDING_GROUP.Create;
+  Field('ipv4').asobject:=ipv4;
+
+  ipv6 := TFRE_DB_EMBEDDING_GROUP.Create;
+  Field('ipv6').asobject:=ipv6;
+
+  pools := TFRE_DB_EMBEDDING_GROUP.Create;
+  Field('pools').AsObject:=pools;
+
+  nats := TFRE_DB_EMBEDDING_GROUP.Create;
+  Field('nat').AsObject:=nats;
+
+  refs := conn.GetReferencesDetailed(UID,false);
+  for i:=0 to high(refs) do
+    begin
+      CheckDbResult(conn.Fetch(refs[i].linked_uid,obj),' could not fetch referencing object '+refs[i].linked_uid.AsHexString);
+      if obj.IsA(TFRE_DB_FIREWALL_RULE,rule) then
+        begin
+          rule.Embed(conn);
+          self.Field(rule.Field('ipversion').asstring).asobject.Field(IntToHex(rule.Field('number').asuint32,8)+'_'+rule.UID_String).AsObject:=rule;
+        end
+      else
+        if obj.IsA(TFRE_DB_FIREWALL_POOL,pool) then
+          begin
+            pool.Embed(conn);
+            pools.Field(pool.UID_String).AsObject:=pool;
+          end
+        else
+          if obj.IsA(TFRE_DB_FIREWALL_NAT,nat) then
+            begin
+              nat.Embed(conn);
+              nats.Field(IntToHex(nat.Field('number').asuint32,8)+'_'+nat.UID_String).AsObject:=nat;
+            end
+          else
+            obj.Finalize;
+    end;
+end;
+
+function TFRE_DB_FIREWALL_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+begin
+  writeln('SWL WRITE FW RULES');
+  WriteIPFRulesIPv4 (cFRE_HAL_CFG_DIR+DirectorySeparator+'ipf4.conf');
+  WriteIPFRulesIPv6 (cFRE_HAL_CFG_DIR+DirectorySeparator+'ipf6.conf');
+  WriteIPFPools     (cFRE_HAL_CFG_DIR+DirectorySeparator+'ippools.conf');
+  WriteIPFNatRules  (cFRE_HAL_CFG_DIR+DirectorySeparator+'ipnat.conf');
+end;
+
 { TFRE_DB_IPV6_ROUTE }
+
+function TFRE_DB_IPV6_ROUTE.GetHostOnlySubnetBits: int16;
+begin
+  result := 128;
+end;
 
 class procedure TFRE_DB_IPV6_ROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var group : IFRE_DB_InputGroupSchemeDefinition;
@@ -1416,7 +2520,17 @@ begin
   end;
 end;
 
+function TFRE_DB_IPV6_ROUTE.GetNetbaseIPWithSubnet: TFRE_DB_String;
+begin
+  result := InternalGetNetbasewithSubnetIPV6;
+end;
+
 { TFRE_DB_IPV4_ROUTE }
+
+function TFRE_DB_IPV4_ROUTE.GetHostOnlySubnetBits: int16;
+begin
+  result := 32;
+end;
 
 class procedure TFRE_DB_IPV4_ROUTE.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var group : IFRE_DB_InputGroupSchemeDefinition;
@@ -1448,6 +2562,11 @@ begin
     StoreTranslateableText(conn,'scheme_gateway','Gateway');
     StoreTranslateableText(conn,'scheme_ip_net_group','IP/Subnet');
   end;
+end;
+
+function TFRE_DB_IPV4_ROUTE.GetNetbaseIPWithSubnet: TFRE_DB_String;
+begin
+  result := InternalGetNetbasewithSubnetIPV4;
 end;
 
 { TFRE_DB_IMAGE_FILE }
@@ -2563,6 +3682,41 @@ end;
 
 { TFRE_DB_IP_ADDRESS }
 
+procedure TFRE_DB_IP_HOSTNET.InternalSetIPCIDR(const value: TFRE_DB_String);
+var p: integer;
+begin
+  p:= Pos('/',value);
+  if p>0 then
+    begin
+      Field('ip').AsString     :=GFRE_BT.SepLeft(value,'/');
+      Field('subnet').asint16  := strtoint(GFRE_BT.SepRight(value,'/'));
+    end
+  else
+    begin
+      Field('ip').AsString     := value;
+      Field('subnet').asint16  := GetHostOnlySubnetBits;
+    end;
+end;
+
+function TFRE_DB_IP_HOSTNET.InternalGetNetbasewithSubnetIPV4: string;
+var maskip:TFRE_HAL_IP4;
+    netip :TFRE_HAL_IP4;
+    ip    :string;
+    s     :string;
+begin
+ ip    := Field('ip').AsString;
+ maskip:= NMask(Field('subnet').asint16);
+ netip := StringtoIP4(ip);
+
+ netip._long := netip._long and maskip._long;
+ result      := IP4toString(netip)+'/'+Field('subnet').asstring;
+end;
+
+function TFRE_DB_IP_HOSTNET.InternalGetNetbasewithSubnetIPV6: string;
+begin  //FIXXME IMPLEMENT CALCULATION
+  result      := Field('ip').asstring+'/'+Field('subnet').asstring;
+end;
+
 function TFRE_DB_IP_HOSTNET.GetAddrObjAlias: string;
 begin
   result :='v'+Copy(UID.AsHexString,1,24); // 30 works for ipv4, 28 for ipv6
@@ -2601,6 +3755,21 @@ begin
   InternalSetIPCIDR(value);
 end;
 
+function TFRE_DB_IP_HOSTNET.GetIPWithoutSubnet: TFRE_DB_String;
+begin
+  result := Field('ip').asstring;
+end;
+
+function TFRE_DB_IP_HOSTNET.GetIPWithSubnet: TFRE_DB_String;
+begin
+  result := Field('ip').asstring;
+  if FieldExists('subnet') then
+    result := result +'/'+inttostr(Field('subnet').asint16)
+  else
+    result := result +'/'+inttostr(GetHostOnlySubnetBits)
+end;
+
+
 function TFRE_DB_IP_HOSTNET.RIF_CreateOrUpdateService: IFRE_DB_Object;
 var servicename : string;
 begin
@@ -2610,7 +3779,7 @@ begin
     begin
       servicename := Copy(GetFMRI,6,maxint);
       writeln('SWL: CREATE SVC ROUTING ',ObjectName,' ',servicename);
-      SetSvcNameandType(servicename,'FirmOS Routing Service '+Field('IP_NET').asstring+' '+Field('gateway').asstring,'transient','core,signal',true);
+      SetSvcNameandType(servicename,'FirmOS Routing Service '+Field('ip').asstring+' '+Field('gateway').asstring,'transient','core,signal',true);
       SetSvcEnvironment('/opt/local/fre','root','root','LANG=C');
       SetSvcStart('/opt/local/fre/bin/fossvc --start --routing='+UID.AsHexString,60);
       SetSvcStop('/opt/local/fre/bin/fossvc --stop --routing='+UID.AsHexString,60);
@@ -2622,7 +3791,7 @@ begin
       servicename := Copy(GetFMRI,6,maxint);
       writeln('SWL: CREATE SVC IP HOSTNET ',ObjectName,' ',servicename);
 
-      SetSvcNameandType(servicename,'FirmOS IP Service '+Field('IP_NET').asstring,'transient','core,signal',true);
+      SetSvcNameandType(servicename,'FirmOS IP Service '+Field('ip').asstring,'transient','core,signal',true);
       SetSvcEnvironment('/opt/local/fre','root','root','LANG=C');
       SetSvcStart('/opt/local/fre/bin/fossvc --start --ip='+UID.AsHexString,60);
       SetSvcStop('/opt/local/fre/bin/fossvc --stop --ip='+UID.AsHexString,60);
@@ -2637,6 +3806,11 @@ end;
 
 
 { TFRE_DB_IPV6_ADDRESS }
+
+function TFRE_DB_IPV6_HOSTNET.GetHostOnlySubnetBits: int16;
+begin
+  result:=128;
+end;
 
 class procedure TFRE_DB_IPV6_HOSTNET.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var
@@ -2674,6 +3848,12 @@ begin
   end;
 end;
 
+function TFRE_DB_IPV6_HOSTNET.GetNetbaseIPWithSubnet: TFRE_DB_String;
+begin
+  result := InternalGetNetbasewithSubnetIPV6;
+end;
+
+
 function TFRE_DB_IPV6_HOSTNET.StartService: IFRE_DB_Object;
 var linkname    : string;
     aliasname   : string;
@@ -2686,7 +3866,7 @@ begin
   writeln('SWL: IPV6 START');
   if FieldExists('gateway') then
     begin
-      ip_hostnet := Field('ip_net').asstring;
+      ip_hostnet := GetIPWithSubnet;
       gateway    := Field('gateway').asstring;
       writeln('SWL: ADD ROUTING ',ip_hostnet,' GW ',gateway);
       if add_ipv6routing(gateway,ip_hostnet,errorstring) then
@@ -2718,7 +3898,7 @@ begin
       else
         begin
           create_ipv6slaac(linkname,'addrconf',errorstring);  // ignore result, has to be activated before fixed ipv6 addressess
-          ip_hostnet := Field('ip_net').asstring;
+          ip_hostnet := Get
           if create_ipv6address(linkname,aliasname,ip_hostnet,errorstring) then
             begin
               result.Field('STARTED').asboolean:=true;
@@ -2745,7 +3925,7 @@ begin
   writeln('SWL: IPV6 STOP');
   if FieldExists('gateway') then
     begin
-      ip_hostnet := Field('ip_net').asstring;
+      ip_hostnet := GetIPWithSubnet;
       gateway    := Field('gateway').asstring;
       writeln('SWL: DELETE ROUTING ',ip_hostnet,' GW ',gateway);
       if delete_ipv6routing(gateway,ip_hostnet,errorstring) then
@@ -2782,6 +3962,11 @@ end;
 
 { TFRE_DB_IPV4 }
 
+function TFRE_DB_IPV4_HOSTNET.GetHostOnlySubnetBits: int16;
+begin
+  result := 32;
+end;
+
 class procedure TFRE_DB_IPV4_HOSTNET.RegisterSystemScheme(const scheme: IFRE_DB_SCHEMEOBJECT);
 var
   group : IFRE_DB_InputGroupSchemeDefinition;
@@ -2817,6 +4002,11 @@ begin
   end;
 end;
 
+function TFRE_DB_IPV4_HOSTNET.GetNetbaseIPWithSubnet: TFRE_DB_String;
+begin
+  result := InternalGetNetbasewithSubnetIPV4;
+end;
+
 function TFRE_DB_IPV4_HOSTNET.StartService: IFRE_DB_Object;
 var linkname    : string;
     aliasname   : string;
@@ -2829,7 +4019,7 @@ begin
   result := GFRE_DBI.NewObject;
   if FieldExists('gateway') then
     begin
-      ip_hostnet := Field('ip_net').asstring;
+      ip_hostnet := GetIPWithSubnet;
       gateway    := Field('gateway').asstring;
       writeln('SWL: ADD ROUTING ',ip_hostnet,' GW ',gateway);
       if add_ipv4routing(gateway,ip_hostnet,errorstring) then
@@ -2847,7 +4037,7 @@ begin
       writeln('SWL: IPV4 START');
       linkname   := Field('datalinkname').asstring;
       aliasname  := GetAddrObjAlias;
-      ip_hostnet := Field('ip_net').asstring;
+      ip_hostnet := GetIPWithSubnet;
       if FieldExists('dhcp') and Field('dhcp').AsBoolean=true then
         res := create_ipv4dhcp(linkname,aliasname,errorstring)
       else
@@ -2876,7 +4066,7 @@ begin
   result := GFRE_DBI.NewObject;
   if FieldExists('gateway') then
     begin
-      ip_hostnet := Field('ip_net').asstring;
+      ip_hostnet := GetIPWithSubnet;
       gateway    := Field('gateway').asstring;
       writeln('SWL: DELETE ROUTING ',ip_hostnet,' GW ',gateway);
       if delete_ipv4routing(gateway,ip_hostnet,errorstring) then
@@ -2958,8 +4148,8 @@ var icount     : integer;
               ExecuteProcess('/sbin/dhclient',param,[]);
             end
           else
-            if ipv4.Field('ip_net').asstring<>'' then
-              ExecuteCMD('ifconfig '+devname+' '+ipv4.Field('ip_net').asstring+' up',outstring);
+            if ipv4.GetIPWithSubnet<>'' then
+              ExecuteCMD('ifconfig '+devname+' '+ipv4.GetIPWithSubnet+' up',outstring);
         end;
       if ip.IsA(TFRE_DB_IPV6_HOSTNET,ipv6) then
         begin
@@ -2967,8 +4157,8 @@ var icount     : integer;
           if (ipv6.FieldExists('slaac')) and (ipv6.Field('slaac').asboolean=true) then
             ExecuteCMD('ifconfig '+devname+' inet6 up',outstring)
           else
-            if ipv6.Field('ip_net').asstring<>'' then
-              ExecuteCMD('ifconfig '+devname+' add '+ipv6.Field('ip_net').asstring+' up',outstring);
+            if ipv6.GetIPWithSubnet<>'' then
+              ExecuteCMD('ifconfig '+devname+' add '+ipv6.GetIPWithSubnet+' up',outstring);
         end;
     end;
 
@@ -2978,13 +4168,13 @@ var icount     : integer;
       devname := iptun.ObjectName;
       if ip.IsA(TFRE_DB_IPV4_HOSTNET,ipv4) then
         begin
-          if ipv4.Field('ip_net').asstring<>'' then
-            ExecuteCMD('ip addr add '+ipv4.Field('ip_net').asstring+' dev '+devname,outstring);
+          if ipv4.GetIPWithSubnet<>'' then
+            ExecuteCMD('ip addr add '+ipv4.GetIPWithSubnet+' dev '+devname,outstring);
         end;
       if ip.IsA(TFRE_DB_IPV6_HOSTNET,ipv6) then
         begin
-          if ipv6.Field('ip_net').asstring<>'' then
-            ExecuteCMD('ip -6 addr add '+ipv6.Field('ip_net').asstring+' dev '+devname,outstring);
+          if ipv6.GetIPWithSubnet<>'' then
+            ExecuteCMD('ip -6 addr add '+ipv6.GetIPWithSubnet+' dev '+devname,outstring);
         end;
     end;
 
@@ -3019,7 +4209,7 @@ var icount     : integer;
         if ipv6.FieldExists('gateway') then
           begin
             writeln('ROUTE6:',ipv6.ObjectName);
-            ExecuteCMD('ip -6 route add '+ ipv6.Field('ip_net').asstring+' via '+ipv6.Field('gateway').asstring,outstring,false);
+            ExecuteCMD('ip -6 route add '+ ipv6.GetIPWithSubnet+' via '+ipv6.Field('gateway').asstring,outstring,false);
           end;
       end;
     if device.IsA(TFRE_DB_IPV4_HOSTNET,ipv4) then
@@ -3027,7 +4217,7 @@ var icount     : integer;
         if ipv4.FieldExists('gateway') then
           begin
             writeln('ROUTE4:',ipv4.ObjectName);
-            ExecuteCMD('ip route add '+ ipv4.Field('ip_net').asstring+' via '+ipv4.Field('gateway').asstring,outstring,false);
+            ExecuteCMD('ip route add '+ ipv4.GetIPWithSubnet+' via '+ipv4.Field('gateway').asstring,outstring,false);
           end;
       end;
 
@@ -7897,6 +9087,14 @@ begin
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_LDAP_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_PHPFPM_SERVICE);
 
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FIREWALL_SERVICE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FIREWALL_RULE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FIREWALL_POOL);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FIREWALL_POOLENTRY);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FIREWALL_POOLENTRY_TABLE);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FIREWALL_POOLENTRY_GROUP);
+   GFRE_DBI.RegisterObjectClassEx(TFRE_DB_FIREWALL_NAT);
+
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CRYPTOCPE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_NETWORK_SERVICE);
    GFRE_DBI.RegisterObjectClassEx(TFRE_DB_CPE_OPENVPN_SERVICE);
@@ -7974,6 +9172,22 @@ begin
 
   if not conn.CollectionExists(CFRE_DB_IMAGEFILE_COLLECTION) then begin
     collection  := conn.CreateCollection(CFRE_DB_IMAGEFILE_COLLECTION);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_FIREWALL_RULE_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_FIREWALL_RULE_COLLECTION);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_FIREWALL_POOL_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_FIREWALL_POOL_COLLECTION);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_FIREWALL_POOLENTRY_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_FIREWALL_POOLENTRY_COLLECTION);
+  end;
+
+  if not conn.CollectionExists(CFRE_DB_FIREWALL_NAT_COLLECTION) then begin
+    collection  := conn.CreateCollection(CFRE_DB_FIREWALL_NAT_COLLECTION);
   end;
 
 end;

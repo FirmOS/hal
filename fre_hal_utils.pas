@@ -119,6 +119,7 @@ type
   function GetIPDots(const ip:string; co:integer):string;
   function IP4toString(const ip:TFRE_HAL_IP4):string;
   function StringtoIP4(const ips:string): TFRE_HAL_IP4;
+  function NMask(bits:integer):TFRE_HAL_IP4;
 
 implementation
 
