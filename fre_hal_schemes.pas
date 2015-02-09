@@ -1153,11 +1153,16 @@ type
   { TFRE_DB_FIREWALL_SERVICE }
 
   TFRE_DB_FIREWALL_SERVICE=class(TFRE_DB_SERVICE)
+  const
+    c_ipf_command    = 'ipf';
+    c_ippool_command = 'ippool';
+    c_ipnat_command  = 'ipnat';
+
   private
-    procedure       WriteIPFRulesIPv4    (const filename:string);
-    procedure       WriteIPFRulesIPv6    (const filename:string);
-    procedure       WriteIPFPools        (const filename:string);
-    procedure       WriteIPFNatRules     (const filename:string);
+    function        GenerateIPFRulesIPv4 : string;
+    function        GenerateIPFRulesIPv6 : string;
+    function        GenerateIPFPools     : string;
+    function        GenerateIPFNatRules  : string;
   protected
     class procedure RegisterSystemScheme (const scheme: IFRE_DB_SCHEMEOBJECT); override;
     class procedure InstallDBObjects     (const conn:IFRE_DB_SYS_CONNECTION; var currentVersionId: TFRE_DB_NameType; var newVersionId: TFRE_DB_NameType); override;
@@ -1165,8 +1170,9 @@ type
     function        GetFMRI              : TFRE_DB_STRING; override;
     procedure       Embed                (const conn: IFRE_DB_CONNECTION); override;
   published
-    function        RIF_CreateOrUpdateService : IFRE_DB_Object; override;
-  end;
+    function        RIF_EnableService    (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
+    function        RIF_DisableService   (const runnning_ctx : TObject) : IFRE_DB_Object; virtual;
+   end;
 
   { TFRE_DB_FIREWALL_RULE }
 
@@ -1675,7 +1681,7 @@ begin
     if FieldExists('proxy_name') then
       cmd := cmd +' proxy '+Field('proxy_name').asstring;
 
-  writeln('SWL NAT:',cmd);
+//  writeln('SWL NAT:',cmd);
   result :=cmd;
 end;
 
@@ -1844,7 +1850,7 @@ var line : string;
   end;
 
 begin
-  writeln('SWL ADD POOL');
+//  writeln('SWL ADD POOL');
   line := Field('mapping').asstring;
   if Field('mapping').asstring='group-map' then
     line := line +' '+Field('direction').asstring;
@@ -1863,7 +1869,7 @@ begin
   if FieldExists('default_group') then
     line := line+' group = '+Field('default_group').asstring;
 
-  writeln('SWL POOL:'+line);
+//  writeln('SWL POOL:'+line);
   sl.add(line);
 
   line := '    {';
@@ -1874,7 +1880,7 @@ begin
 
 
 
-  writeln('SWL POOL ENTRYS:'+line);
+//  writeln('SWL POOL ENTRYS:'+line);
 
   sl.add(line);
 
@@ -2298,13 +2304,13 @@ begin
     cmd := cmd +' set-tag(log='+field('set_tag_log').asstring+')';
 
 
-  writeln('SWL RULE:',cmd);
+//  writeln('SWL RULE:',cmd);
   result := cmd;
 end;
 
 { TFRE_DB_FIREWALL_SERVICE }
 
-procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFRulesIPv4(const filename: string);
+function TFRE_DB_FIREWALL_SERVICE.GenerateIPFRulesIPv4 : string;
 var sl : TStringList;
 
   procedure _ForAllRules(const obj:IFRE_DB_Object);
@@ -2318,18 +2324,17 @@ var sl : TStringList;
   end;
 
 begin
-  writeln('SWL WRITE IPV4');
   sl:=TStringList.Create;
   try
     if fieldExists('ipv4') then
       field('ipv4').AsObject.ForAllObjects(@_ForAllRules,true);
-    sl.SaveToFile(filename);
+    result := sl.Text;
   finally
     sl.Free;
   end;
 end;
 
-procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFRulesIPv6(const filename: string);
+function TFRE_DB_FIREWALL_SERVICE.GenerateIPFRulesIPv6 : string;
 var sl : TStringList;
 
   procedure _ForAllRules(const obj:IFRE_DB_Object);
@@ -2348,13 +2353,14 @@ begin
   try
     if fieldExists('ipv6') then
       field('ipv6').AsObject.ForAllObjects(@_ForAllRules,true);
-    sl.SaveToFile(filename);
+    result := sl.Text;
   finally
     sl.Free;
   end;
 end;
 
-procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFPools(const filename: string);
+
+function TFRE_DB_FIREWALL_SERVICE.GenerateIPFPools : string;
 var sl : TStringList;
 
   procedure _ForAllPools(const obj:IFRE_DB_Object);
@@ -2373,13 +2379,13 @@ begin
   try
     if fieldExists('pools') then
       field('pools').AsObject.ForAllObjects(@_ForAllPools,true);
-    sl.SaveToFile(filename);
+    result := sl.text;
   finally
     sl.Free;
   end;
 end;
 
-procedure TFRE_DB_FIREWALL_SERVICE.WriteIPFNatRules(const filename: string);
+function TFRE_DB_FIREWALL_SERVICE.GenerateIPFNatRules: string;
 var sl : TStringList;
 
   procedure _ForAllNAT(const obj:IFRE_DB_Object);
@@ -2398,7 +2404,7 @@ begin
   try
     if fieldExists('nat') then
       field('nat').AsObject.ForAllObjects(@_ForAllNAT,true);
-    sl.SaveToFile(filename);
+    result := sl.text;
   finally
     sl.Free;
   end;
@@ -2473,13 +2479,144 @@ begin
     end;
 end;
 
-function TFRE_DB_FIREWALL_SERVICE.RIF_CreateOrUpdateService: IFRE_DB_Object;
+
+function TFRE_DB_FIREWALL_SERVICE.RIF_EnableService(const runnning_ctx: TObject): IFRE_DB_Object;
+var cmd : string;
+    res : integer;
+    instring    : string;
+    outstring   : string;
+    errorstring : string;
+
+    procedure AddZone;
+    begin
+     if FieldExists('zonename') then
+       cmd := cmd +' '+Field('zonename').asstring;
+    end;
+
+    procedure SetResult (const postfix:string);
+    begin
+      result.Field('cmd_'+postfix).asstring    := cmd;
+      result.Field('input_'+postfix).asstring  := instring;
+      result.Field('output_'+postfix).asstring := outstring;
+      result.Field('error_'+postfix).asstring  := errorstring;
+      result.Field('result_'+postfix).asint32  := res;
+    end;
+
 begin
-  writeln('SWL WRITE FW RULES');
-  WriteIPFRulesIPv4 (cFRE_HAL_CFG_DIR+DirectorySeparator+'ipf4.conf');
-  WriteIPFRulesIPv6 (cFRE_HAL_CFG_DIR+DirectorySeparator+'ipf6.conf');
-  WriteIPFPools     (cFRE_HAL_CFG_DIR+DirectorySeparator+'ippools.conf');
-  WriteIPFNatRules  (cFRE_HAL_CFG_DIR+DirectorySeparator+'ipnat.conf');
+  writeln('RIF ENABLE FIREWALL SERVICE ',Field('zonename').asstring,' ',GetFMRI);
+  result := GFRE_DBI.NewObject;
+  {$IFDEF SOLARIS}
+    cmd := c_ipf_command+' -G -E';
+    AddZone;
+    instring := '';
+    res := FRE_ProcessCMD(cmd,outstring,errorstring);
+    SetResult('enable');
+    if res<>0 then
+      begin
+        writeln('FIREWALL ENABLE ERROR ',result.DumpToString);
+        exit;
+      end;
+
+    // HACK clear pools, -F -G not working, so unset it
+    cmd := c_ippool_command+' -l -G';
+    AddZone;
+    instring := '';
+    res := FRE_ProcessCMD(cmd,outstring,errorstring);
+    SetResult('pool_list');
+    if outstring<>'' then // unset
+      begin
+        instring := StringReplace(outstring,';;',';',[rfReplaceAll]);
+        cmd := c_ippool_command+' -f - -v -G ';
+        AddZone;
+        cmd := cmd +' -u';
+        res := FRE_ProcessCMDwithInput(cmd,instring,outstring,errorstring);
+        SetResult('pool_unload');
+      end;
+
+    cmd := c_ippool_command+' -f - -v -G';
+    AddZone;
+    instring := GenerateIPFPools;
+    res := FRE_ProcessCMDwithInput(cmd,instring,outstring,errorstring);
+    SetResult('ippool');
+    if res<>0 then
+      begin
+        writeln('FIREWALL IPPOOL ERROR ',result.DumpToString);
+        exit;
+      end;
+
+    cmd := c_ipf_command+' -G -F -a -v -f -';
+    AddZone;
+    instring := GenerateIPFRulesIPv4;
+    res := FRE_ProcessCMDwithInput(cmd,instring,outstring,errorstring);
+    SetResult('ipfv4');
+    if res<>0 then
+      begin
+        writeln('FIREWALL IPF RULES IPV4 ERROR ',result.DumpToString);
+        exit;
+      end;
+
+    cmd := c_ipf_command+' -6 -G -F -a -v -f -';
+    AddZone;
+    instring := GenerateIPFRulesIPv6;
+    res := FRE_ProcessCMDwithInput(cmd,instring,outstring,errorstring);
+    SetResult('ipfv6');
+    if res<>0 then
+      begin
+        writeln('FIREWALL IPF RULES IPV6 ERROR ',result.DumpToString);
+        exit;
+      end;
+
+    cmd := c_ipnat_command+' -C -f - -v -G';
+    AddZone;
+    instring := GenerateIPFNatRules;
+    res := FRE_ProcessCMDwithInput(cmd,instring,outstring,errorstring);
+    SetResult('ipfnat');
+    if res<>0 then
+      begin
+        writeln('FIREWALL IPF NAT RULES ERROR ',result.DumpToString);
+        exit;
+      end;
+
+    writeln(result.DumpToString);
+
+  {$ELSE}
+    writeln(GenerateIPFPools);
+    writeln(GenerateIPFNatRules);
+    writeln(GenerateIPFRulesIPv4);
+    writeln(GenerateIPFRulesIPv6);
+  {$ENDIF}
+
+end;
+
+function TFRE_DB_FIREWALL_SERVICE.RIF_DisableService(const runnning_ctx: TObject): IFRE_DB_Object;
+var cmd : string;
+    res : integer;
+    outstring   : string;
+    errorstring : string;
+
+begin
+  writeln('RIF DISABLE FIREWALL SERVICE ',Field('zonename').asstring,' ',GetFMRI);
+  result := GFRE_DBI.NewObject;
+  {$IFDEF SOLARIS}
+    cmd := c_ipf_command+' -G -D';
+    if FieldExists('zonename') then
+      cmd := cmd +' '+Field('zonename').asstring;
+    res := FRE_ProcessCMD(cmd,outstring,errorstring);
+    result.Field('cmd').asstring    := cmd;
+    result.Field('output').asstring := outstring;
+    result.Field('error').asstring  := errorstring;
+    result.Field('result').asint32  := res;
+    if res<>0 then
+      begin
+        writeln('FIREWALL DISABLE ERROR ',result.DumpToString);
+        exit;
+      end;
+
+    writeln(result.DumpToString);
+
+  {$ELSE}
+    writeln('SWL DISABLESERVICE FIREWALL');
+  {$ENDIF}
 end;
 
 { TFRE_DB_IPV6_ROUTE }
@@ -3943,7 +4080,7 @@ begin
       else
         begin
           create_ipv6slaac(linkname,'addrconf',errorstring);  // ignore result, has to be activated before fixed ipv6 addressess
-          ip_hostnet := Get
+          ip_hostnet := GetIPWithSubnet;
           if create_ipv6address(linkname,aliasname,ip_hostnet,errorstring) then
             begin
               result.Field('STARTED').asboolean:=true;
@@ -7082,13 +7219,18 @@ end;
 
  procedure TFRE_DB_ZONE.BootingHookConfigure;
 
+   procedure setzonename(const obj:IFRE_DB_Object);
+   begin
+     obj.Field('zonename').asstring := UID.AsHexString;
+     writeln('SWL ZONENAME:',UID.AsHexString);
+   end;
+
    procedure _vnicIterator(const obj:IFRE_DB_Object);
    var dl_vnic : TFRE_DB_DATALINK_VNIC;
    begin
      if obj.IsA(TFRE_DB_DATALINK_VNIC,dl_vnic) then
        begin
-         dl_vnic.Field('zonename').asstring := UID.AsHexString;
-         writeln('SWL ZONENAME:',UID.AsHexString);
+         setzonename(dl_vnic);
          dl_vnic.RIF_CreateVNIC;
        end;
    end;
@@ -7098,14 +7240,25 @@ end;
    begin
      if obj.isA(TFRE_DB_VMACHINE,vm) then
        begin
-         vm.Field('zonename').asstring := UID.AsHexString;
+         setzonename(vm);
          vm.RIF_CreateVNDforVNics;
+       end;
+   end;
+
+   procedure _firewallIterator(const obj:IFRE_DB_Object);
+   var fws      : TFRE_DB_FIREWALL_SERVICE;
+   begin
+     if obj.isA(TFRE_DB_FIREWALL_SERVICE,fws) then
+       begin
+         setzonename(fws);
+         fws.RIF_EnableService(nil);
        end;
    end;
 
  begin
    ForAllObjects(@_vnicIterator,true);
    ForAllObjects(@_vmIterator,true);
+   ForAllObjects(@_firewallIterator,true);
  end;
 
  procedure TFRE_DB_ZONE.CALC_GetDisplayName(const setter: IFRE_DB_CALCFIELD_SETTER);
@@ -8805,10 +8958,10 @@ end;
  function TFRE_DB_SERVICE.RIF_EnableService(const runnning_ctx: TObject): IFRE_DB_Object;
  var servicename:string;
  begin
-   writeln('RIF ENABLE SERVICE ',Field('zone').asstring,' ',GetFMRI);
+   writeln('RIF ENABLE SERVICE ',Field('zonename').asstring,' ',GetFMRI);
    {$IFDEF SOLARIS}
    servicename := Copy(GetFMRI,6,maxint);
-   fre_enable_or_disable_service(servicename,true,Field('zone').asstring);
+   fre_enable_or_disable_service(servicename,true,Field('zonename').asstring);
    result := GFRE_DBI.NewObject;
    {$ENDIF}
  end;
@@ -8816,10 +8969,10 @@ end;
  function TFRE_DB_SERVICE.RIF_DisableService(const runnning_ctx: TObject): IFRE_DB_Object;
  var servicename:string;
  begin
-   writeln('RIF DISABLE SERVICE ',Field('zone').asstring,' ',GetFMRI);
+   writeln('RIF DISABLE SERVICE ',Field('zonename').asstring,' ',GetFMRI);
    {$IFDEF SOLARIS}
    servicename := Copy(GetFMRI,6,maxint);
-   fre_enable_or_disable_service(servicename,false,Field('zone').asstring);
+   fre_enable_or_disable_service(servicename,false,Field('zonename').asstring);
    result := GFRE_DBI.NewObject;
    {$ENDIF}
  end;
