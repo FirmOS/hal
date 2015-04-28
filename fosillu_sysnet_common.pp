@@ -938,7 +938,8 @@ type
     datalink_media_t = uint64_t;
 
   { was #define dname def_expr }
-  //function DATALINK_ANY_MEDIATYPE : datalink_media_t;
+  function DATALINK_ANY_MEDIATYPE : datalink_media_t;
+
 
   { was #define dname(params) para_def_expr }
   { argument types are unknown }
@@ -1117,10 +1118,6 @@ typedef struct dlmgmt_linkid_retval_s	dlmgmt_create_retval_t,
 //implementation
 //
 //  { was #define dname def_expr }
-//  function DATALINK_ANY_MEDIATYPE : datalink_media_t;
-//    begin
-//      DATALINK_ANY_MEDIATYPE:=datalink_media_t((datalink_media_t($01)) shl 32);
-//    end;
 //
 //  { was #define dname(params) para_def_expr }
 //  { argument types are unknown }
@@ -3728,6 +3725,12 @@ const
 
 
 implementation
+
+function DATALINK_ANY_MEDIATYPE: datalink_media_t;
+begin
+  DATALINK_ANY_MEDIATYPE:=datalink_media_t((datalink_media_t($01)) shl 32);
+end;
+
 
 
 {  ----------------------------------- }

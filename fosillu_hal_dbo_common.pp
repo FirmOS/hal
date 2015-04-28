@@ -45,7 +45,7 @@ interface
 
 uses
   Classes, SysUtils,
-  fosillu_nvpair,fosillu_libzfs, fosillu_zfs, fos_illumos_defs;
+  fosillu_nvpair,fosillu_libzfs, fosillu_zfs, fos_illumos_defs,fosillu_libdladm,fosillu_dladm;
 
 var
   GILLUMOS_LIBZFS_HANDLE : Plibzfs_handle_t = nil;
@@ -70,10 +70,17 @@ begin
 end;
 
 procedure InitIllumosLibraryHandles;
+var dlres : dladm_status_t;
 begin
   if not Assigned(GILLUMOS_LIBZFS_HANDLE) then
     GILLUMOS_LIBZFS_HANDLE := libzfs_init();
   CheckIllumosZFSLib;
+
+  dlres := dladm_open(@GILLU_DLADM);
+  if dlres<>DLADM_STATUS_OK then
+    raise Exception.Create('could not initialze libdlam');
+
+
 end;
 
 procedure FinishIllumosLibraryHandles;

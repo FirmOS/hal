@@ -98,7 +98,9 @@ const
     DLADM_WALK_TERMINATE = 0;    
     DLADM_WALK_CONTINUE = -(1);    
     DLADM_MAX_ARG_CNT = 32;    
-    DLADM_MAX_ARG_VALS = 64;    
+    DLADM_MAX_ARG_VALS = 64;
+
+
 
   type
     dladm_status_t = (DLADM_STATUS_OK := 0,DLADM_STATUS_BADARG,
@@ -304,6 +306,53 @@ const
 { C++ end of extern C conditionnal removed }
   { _LIBDLVNIC_H  }
 
+  // libdlsim.c
+
+  function dladm_simnet_create(_para1:dladm_handle_t; simnetname:PChar; media: uint_t; flags: uint32_t) : dladm_status_t; cdecl; external External_library name 'dladm_simnet_create';
+  function dladm_simnet_delete(_para1:dladm_handle_t; _para2:datalink_id_t; flags: uint32_t) : dladm_status_t; cdecl; external External_Library name 'dladm_simnet_delete';
+
+// dlpi.h
+
+// DLPI media types supported
+const
+  DL_CSMACD = $0;
+  DL_TPB = $1;
+  DL_TPR = $2;
+  DL_METRO = $3;
+  DL_ETHER = $4;
+  DL_HDLC = $05;
+  DL_CHAR = $06;
+  DL_CTCA = $07;
+  DL_FDDI = $08;
+  DL_FC = $10;
+  DL_ATM = $11;
+  DL_IPATM = $12;
+  DL_X25 = $13;
+  DL_ISDN = $14;
+  DL_HIPPI = $15;
+  DL_100VG = $16;
+  DL_100VGTPR = $17;
+  DL_ETH_CSMA = $18;
+  DL_100BT = $19;
+  DL_IB = $1a;
+  DL_FRAME = $0a;
+  DL_MPFRAME = $0b;
+  DL_ASYNC = $0c;
+  DL_IPX25 = $0d;
+  DL_LOOP = $0e;
+  DL_OTHER = $09;
+
+  DL_IPV4 = $80000001;
+  DL_IPV6 = $80000002;
+  SUNW_DL_VNI = $80000003;
+  DL_WIFI = $80000004;
+  DL_IPNET = $80000005;
+  SUNW_DL_IPMP = $80000006;
+  DL_6TO4 = $80000007;
+
+
+
+
 // >--- LIBDLLINK ---
 
 type
@@ -460,6 +509,276 @@ function dladm_walk_hwgrp(_para1:dladm_handle_t; _para2:datalink_id_t; _para3:po
 function dladm_link_get_proplist(_para1:dladm_handle_t; _para2:datalink_id_t; _para3:PPdladm_arg_list_t):dladm_status_t;cdecl;external External_library name 'dladm_link_get_proplist';
 function i_dladm_set_link_proplist_db(_para1:Pchar; _para2:Pdladm_arg_list_t):dladm_status_t;cdecl;external External_library name 'i_dladm_set_link_proplist_db';
 // <---LIBDLLINK ---
+
+
+//ether.h
+
+const
+  ETHERADDRL = 6;
+{ ethernet FCS length in octets  }
+  ETHERFCSL = 4;
+{
+ * Ethernet address - 6 octets
+  }
+
+type
+  ether_addr_t = array[0..(ETHERADDRL)-1] of uchar_t;
+
+// uid_stp.h
+
+const
+  STP_DBG = 1;
+  NAME_LEN = 20;
+
+
+type
+  UID_PORT_ID = word;
+  UID_STP_MODE_T = (STP_DISABLED,STP_ENABLED);
+
+  UID_BRIDGE_ID_T = record
+      prio : word;
+      addr : array[0..5] of byte;
+    end;
+{ name of the VLAN, key of the bridge  }
+{ 1-create, 0- delete  }
+
+  UID_STP_BR_CTRL_T = record
+      vlan_name : array[0..(NAME_LEN)-1] of char;
+      action : char;
+    end;
+
+const
+  BR_CFG_STATE = 1 shl 0;
+  BR_CFG_PRIO = 1 shl 1;
+  BR_CFG_AGE = 1 shl 2;
+  BR_CFG_HELLO = 1 shl 3;
+  BR_CFG_DELAY = 1 shl 4;
+  BR_CFG_FORCE_VER = 1 shl 5;
+  BR_CFG_AGE_MODE = 1 shl 6;
+  BR_CFG_AGE_TIME = 1 shl 7;
+  BR_CFG_HOLD_TIME = 1 shl 8;
+
+type
+  UID_STP_CFG_T = record
+      field_mask : dword;
+      stp_enabled : UID_STP_MODE_T;
+      vlan_name : array[0..(NAME_LEN)-1] of char;
+      bridge_priority : longint;
+      max_age : longint;
+      hello_time : longint;
+      forward_delay : longint;
+      force_version : longint;
+      hold_time : longint;
+    end;
+
+  UID_STP_STATE_T = record
+      vlan_name : array[0..(NAME_LEN)-1] of char;
+      vlan_id : dword;
+      stp_enabled : UID_STP_MODE_T;
+      designated_root : UID_BRIDGE_ID_T;
+      root_path_cost : dword;
+      timeSince_Topo_Change : dword;
+      Topo_Change_Count : dword;
+      Topo_Change : byte;
+      root_port : word;
+      max_age : longint;
+      hello_time : longint;
+      forward_delay : longint;
+      bridge_id : UID_BRIDGE_ID_T;
+    end;
+
+  RSTP_PORT_STATE = (UID_PORT_DISABLED := 0,UID_PORT_DISCARDING,
+    UID_PORT_LEARNING,UID_PORT_FORWARDING,
+    UID_PORT_NON_STP,UID_PORT_BADSDU);
+
+type
+  UID_STP_PORT_STATE_T = record
+      vlan_name : array[0..(NAME_LEN)-1] of char;
+      port_no : dword;
+      port_id : UID_PORT_ID;
+      state : RSTP_PORT_STATE;
+      path_cost : dword;
+      designated_root : UID_BRIDGE_ID_T;
+      designated_cost : dword;
+      designated_bridge : UID_BRIDGE_ID_T;
+      designated_port : UID_PORT_ID;
+      infoIs : longint;
+      handshake_flags : word;
+      rx_cfg_bpdu_cnt : dword;
+      rx_rstp_bpdu_cnt : dword;
+      rx_tcn_bpdu_cnt : dword;
+      fdWhile : longint;
+      helloWhen : longint;
+      mdelayWhile : longint;
+      rbWhile : longint;
+      rcvdInfoWhile : longint;
+      rrWhile : longint;
+      tcWhile : longint;
+      txCount : longint;
+      lnkWhile : longint;
+      uptime : dword;
+      oper_port_path_cost : dword;
+      role : byte;
+      oper_point2point : byte;
+      oper_edge : byte;
+      oper_stp_neigb : byte;
+      top_change_ack : byte;
+      tc : byte;
+    end;
+
+//stp_in.h
+
+const
+  DEF_BR_PRIO = 32768;
+  MIN_BR_PRIO = 0;
+  MAX_BR_PRIO = 61440;
+  DEF_BR_HELLOT = 2;
+  MIN_BR_HELLOT = 1;
+  MAX_BR_HELLOT = 10;
+  DEF_BR_MAXAGE = 20;
+  MIN_BR_MAXAGE = 6;
+  MAX_BR_MAXAGE = 40;
+  DEF_BR_FWDELAY = 15;
+  MIN_BR_FWDELAY = 4;
+  MAX_BR_FWDELAY = 30;
+  IEEE_TIMER_SCALE = 256;
+  DEF_FORCE_VERS = 2;
+
+// libdlbridge.h
+
+type
+  dladm_bridge_prot_t = (DLADM_BRIDGE_PROT_UNKNOWN := 0,DLADM_BRIDGE_PROT_STP,
+    DLADM_BRIDGE_PROT_TRILL);
+
+Type
+  Pboolean_t  = ^boolean_t;
+  Pbridge_listfwd_t  = ^bridge_listfwd_t;
+  Pchar  = ^char;
+  Pdatalink_id_t  = ^datalink_id_t;
+  Pdladm_bridge_prot_t  = ^dladm_bridge_prot_t;
+  Plongint  = ^longint;
+//  Ptrill_listnick_t  = ^trill_listnick_t;
+  PUID_STP_CFG_T  = ^UID_STP_CFG_T;
+  PUID_STP_PORT_STATE_T  = ^UID_STP_PORT_STATE_T;
+  PUID_STP_STATE_T  = ^UID_STP_STATE_T;
+
+  bridge_listfwd_s = record
+      blf_name : array[0..(MAXNAMELEN)-1] of char;
+      blf_dest : ether_addr_t;
+      blf_trill_nick : uint16_t;
+      blf_ms_age : uint_t;
+      blf_is_local : boolean_t;
+      blf_linkid : datalink_id_t;
+    end;
+  bridge_listfwd_t = bridge_listfwd_s;
+
+{ Utility functions to accept bridge protection options  }
+(* Const before type ignored *)
+
+function dladm_bridge_str2prot(_para1:Pchar; _para2:Pdladm_bridge_prot_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_str2prot';
+
+(* Const before type ignored *)
+function dladm_bridge_prot2str(_para1:dladm_bridge_prot_t):Pchar;cdecl;external External_library name 'dladm_bridge_prot2str';
+
+{ Retrieve bridge properties from SMF  }
+(* Const before type ignored *)
+function dladm_bridge_get_properties(_para1:Pchar; _para2:PUID_STP_CFG_T; _para3:Pdladm_bridge_prot_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_get_properties';
+
+(* Const before type ignored *)
+function dladm_bridge_run_properties(_para1:Pchar; _para2:PUID_STP_CFG_T; _para3:Pdladm_bridge_prot_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_run_properties';
+
+{ Create new bridge and configure SMF properties  }
+(* Const before type ignored *)
+(* Const before type ignored *)
+function dladm_bridge_configure(_para1:dladm_handle_t; _para2:Pchar; _para3:PUID_STP_CFG_T; _para4:dladm_bridge_prot_t; _para5:uint32_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_configure';
+
+{ Enable a newly created bridge in SMF  }
+(* Const before type ignored *)
+function dladm_bridge_enable(_para1:Pchar):dladm_status_t;cdecl;external External_library name 'dladm_bridge_enable';
+
+{ Delete a previously created bridge  }
+(* Const before type ignored *)
+function dladm_bridge_delete(_para1:dladm_handle_t; _para2:Pchar; _para3:uint32_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_delete';
+
+{ Retrieve bridge state from running bridge daemon and get bridge port list  }
+(* Const before type ignored *)
+function dladm_bridge_state(_para1:Pchar; _para2:PUID_STP_STATE_T):dladm_status_t;cdecl;external External_library name 'dladm_bridge_state';
+
+(* Const before type ignored *)
+function dladm_bridge_get_portlist(_para1:Pchar; _para2:Puint_t):pdatalink_id_t;cdecl;external External_library name 'dladm_bridge_get_portlist';
+
+procedure dladm_bridge_free_portlist(_para1:Pdatalink_id_t);cdecl;external External_library name 'dladm_bridge_free_portlist';
+
+{ Set/remove bridge link membership and retreive bridge from member link  }
+(* Const before type ignored *)
+function dladm_bridge_setlink(_para1:dladm_handle_t; _para2:datalink_id_t; _para3:Pchar):dladm_status_t;cdecl;external External_library name 'dladm_bridge_setlink';
+
+function dladm_bridge_getlink(_para1:dladm_handle_t; _para2:datalink_id_t; _para3:Pchar; _para4:size_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_getlink';
+
+{ Retrieve bridge port status  }
+function dladm_bridge_link_state(_para1:dladm_handle_t; _para2:datalink_id_t; _para3:PUID_STP_PORT_STATE_T):dladm_status_t;cdecl;external External_library name 'dladm_bridge_link_state';
+
+{ Check valid bridge name  }
+(* Const before type ignored *)
+function dladm_valid_bridgename(_para1:Pchar):boolean_t;cdecl;external External_library name 'dladm_valid_bridgename';
+
+{ Convert bridge observability node name to bridge name  }
+function dladm_observe_to_bridge(_para1:Pchar):boolean_t;cdecl;external External_library name 'dladm_observe_to_bridge';
+
+{ Retrieve bridge forwarding table entries  }
+(* Const before type ignored *)
+function dladm_bridge_get_fwdtable(_para1:dladm_handle_t; _para2:Pchar; _para3:Puint_t):pbridge_listfwd_t;cdecl;external External_library name 'dladm_bridge_get_fwdtable';
+
+procedure dladm_bridge_free_fwdtable(_para1:Pbridge_listfwd_t);cdecl;external External_library name 'dladm_bridge_free_fwdtable';
+
+{ Retrive TRILL nicknames list  }
+(* Const before type ignored *)
+//function dladm_bridge_get_trillnick(_para1:Pchar; _para2:Puint_t):^trill_listnick_t;cdecl;external External_library name 'dladm_bridge_get_trillnick';
+
+//procedure dladm_bridge_free_trillnick(_para1:Ptrill_listnick_t);cdecl;external External_library name 'dladm_bridge_free_trillnick';
+
+{ Store and retrieve TRILL nickname from TRILL SMF service configuration   }
+(* Const before type ignored *)
+function dladm_bridge_get_nick(_para1:Pchar):uint16_t;cdecl;external External_library name 'dladm_bridge_get_nick';
+
+(* Const before type ignored *)
+procedure dladm_bridge_set_nick(_para1:Pchar; _para2:uint16_t);cdecl;external External_library name 'dladm_bridge_set_nick';
+
+{ Retrieve undocumented private properties from bridge SMF service config  }
+(* Const before type ignored *)
+function dladm_bridge_get_privprop(_para1:Pchar; _para2:Pboolean_t; _para3:Puint32_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_get_privprop';
+
+{ Internal to libdladm  }
+function dladm_bridge_get_port_cfg(_para1:dladm_handle_t; _para2:datalink_id_t; _para3:longint; _para4:Plongint):dladm_status_t;cdecl;external External_library name 'dladm_bridge_get_port_cfg';
+
+function dladm_bridge_get_forwarding(_para1:dladm_handle_t; _para2:datalink_id_t; _para3:Puint_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_get_forwarding';
+
+function dladm_bridge_refresh(_para1:dladm_handle_t; _para2:datalink_id_t):dladm_status_t;cdecl;external External_library name 'dladm_bridge_refresh';
+
+{ Bridge connection; used only between libdladm and bridged for status  }
+const
+  DOOR_DIRNAME = '/var/run/bridge_door';
+
+type
+  bridge_door_type_e = (bdcBridgeGetConfig,bdcBridgeGetState,
+    bdcBridgeGetPorts,bdcBridgeGetRefreshCount,
+    bdcPortGetConfig,bdcPortGetState,bdcPortGetForwarding
+    );
+  bridge_door_type_t = bridge_door_type_e;
+
+  bridge_door_cmd_s = record
+      bdc_type : bridge_door_type_t;
+      bdc_linkid : datalink_id_t;
+    end;
+  bridge_door_cmd_t = bridge_door_cmd_s;
+
+  bridge_door_cfg_s = record
+      bdcf_cfg : UID_STP_CFG_T;
+      bdcf_prot : dladm_bridge_prot_t;
+    end;
+  bridge_door_cfg_t = bridge_door_cfg_s;
+
+// end libdlbridge
 
 implementation
 
